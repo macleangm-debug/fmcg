@@ -49,8 +49,8 @@ Software Galaxy is a comprehensive multi-tenant retail/FMCG management system fe
 - Database: MongoDB
 
 ## URLs
-- Frontend: https://fmcg-work.preview.emergentagent.com
-- API: https://fmcg-work.preview.emergentagent.com/api
+- Frontend: https://fmcg-preview-sms.preview.emergentagent.com
+- API: https://fmcg-preview-sms.preview.emergentagent.com/api
 
 ## Test Credentials
 - Superadmin: superadmin@retail.com / SuperAdmin123!
