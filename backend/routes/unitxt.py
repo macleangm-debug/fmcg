@@ -736,6 +736,302 @@ async def send_sms(
     return {"message": "SMS sent successfully", "status": "delivered"}
 
 
+# ============== TIGO SMPP INTEGRATION ==============
+
+class TigoSendRequest(BaseModel):
+    to: str
+    message: str
+    sender_id: Optional[str] = None
+
+
+class TigoBulkSendRequest(BaseModel):
+    recipients: List[Dict[str, str]]  # List of {"phone": "...", "name": "..."}
+    message: str
+    sender_id: Optional[str] = None
+
+
+@router.post("/tigo/send")
+async def send_via_tigo(
+    request: TigoSendRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Send a single SMS via Tigo SMPP
+    
+    This endpoint uses the Tigo SMPP service to send SMS.
+    Note: Requires VPN connectivity to Tigo when sandbox=false.
+    """
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+    
+    business_id = current_user.get("business_id")
+    if not business_id:
+        raise HTTPException(status_code=400, detail="No business associated")
+    
+    # Check credits
+    credits = await db.sms_credits.find_one({"business_id": str(business_id)})
+    if not credits or credits.get("balance", 0) < 1:
+        raise HTTPException(status_code=402, detail="Insufficient SMS credits")
+    
+    try:
+        # Import and get Tigo service
+        from services.tigo_smpp_service import get_tigo_service
+        
+        tigo_service = get_tigo_service()
+        result = tigo_service.send_sms(
+            to=request.to,
+            message=request.message,
+            sender_id=request.sender_id
+        )
+        
+        # Record message in database
+        message_doc = {
+            "business_id": str(business_id),
+            "recipient": request.to,
+            "message": request.message,
+            "sender_id": request.sender_id,
+            "provider": "tigo_smpp",
+            "message_id": result.message_id,
+            "status": result.status.value,
+            "segments": result.segments,
+            "cost": result.cost,
+            "sent_at": datetime.utcnow()
+        }
+        await db.sms_messages.insert_one(message_doc)
+        
+        # Deduct credits if successful
+        if result.success:
+            await db.sms_credits.update_one(
+                {"business_id": str(business_id)},
+                {"$inc": {"balance": -result.segments, "used": result.segments}}
+            )
+        
+        return {
+            "success": result.success,
+            "message_id": result.message_id,
+            "status": result.status.value,
+            "segments": result.segments,
+            "cost": result.cost,
+            "error": result.error
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to send SMS: {str(e)}")
+
+
+@router.post("/tigo/bulk-send")
+async def send_bulk_via_tigo(
+    request: TigoBulkSendRequest,
+    background_tasks: BackgroundTasks,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Send bulk SMS via Tigo SMPP
+    
+    Sends SMS to multiple recipients using the Tigo SMPP service.
+    Message can include {{name}} placeholder for personalization.
+    """
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+    
+    business_id = current_user.get("business_id")
+    if not business_id:
+        raise HTTPException(status_code=400, detail="No business associated")
+    
+    # Check credits
+    total_recipients = len(request.recipients)
+    credits = await db.sms_credits.find_one({"business_id": str(business_id)})
+    if not credits or credits.get("balance", 0) < total_recipients:
+        raise HTTPException(
+            status_code=402, 
+            detail=f"Insufficient credits. Need {total_recipients}, have {credits.get('balance', 0) if credits else 0}"
+        )
+    
+    # Create batch record
+    batch_id = str(uuid.uuid4())
+    batch_doc = {
+        "_id": batch_id,
+        "business_id": str(business_id),
+        "total_recipients": total_recipients,
+        "message_template": request.message,
+        "sender_id": request.sender_id,
+        "status": "processing",
+        "sent_count": 0,
+        "delivered_count": 0,
+        "failed_count": 0,
+        "created_at": datetime.utcnow(),
+        "created_by": current_user.get("email")
+    }
+    await db.sms_batches.insert_one(batch_doc)
+    
+    # Process bulk send in background
+    background_tasks.add_task(
+        process_tigo_bulk_send,
+        batch_id,
+        str(business_id),
+        request.recipients,
+        request.message,
+        request.sender_id
+    )
+    
+    return {
+        "batch_id": batch_id,
+        "message": f"Bulk SMS job started for {total_recipients} recipients",
+        "status": "processing"
+    }
+
+
+async def process_tigo_bulk_send(
+    batch_id: str,
+    business_id: str,
+    recipients: List[Dict[str, str]],
+    message: str,
+    sender_id: Optional[str]
+):
+    """Background task to process bulk SMS via Tigo"""
+    try:
+        from services.tigo_smpp_service import get_tigo_service
+        
+        tigo_service = get_tigo_service()
+        results = tigo_service.send_bulk_sms(recipients, message, sender_id)
+        
+        sent_count = 0
+        delivered_count = 0
+        failed_count = 0
+        total_cost = 0.0
+        
+        for i, result in enumerate(results):
+            recipient = recipients[i]
+            
+            # Record each message
+            message_doc = {
+                "batch_id": batch_id,
+                "business_id": business_id,
+                "recipient": recipient.get("phone"),
+                "recipient_name": recipient.get("name"),
+                "message": message.replace("{{name}}", recipient.get("name", "")),
+                "sender_id": sender_id,
+                "provider": "tigo_smpp",
+                "message_id": result.message_id,
+                "status": result.status.value,
+                "segments": result.segments,
+                "cost": result.cost,
+                "sent_at": datetime.utcnow()
+            }
+            await db.sms_messages.insert_one(message_doc)
+            
+            sent_count += 1
+            total_cost += result.cost
+            
+            if result.success:
+                delivered_count += 1
+            else:
+                failed_count += 1
+            
+            # Update batch progress periodically
+            if sent_count % 10 == 0:
+                await db.sms_batches.update_one(
+                    {"_id": batch_id},
+                    {"$set": {
+                        "sent_count": sent_count,
+                        "delivered_count": delivered_count,
+                        "failed_count": failed_count
+                    }}
+                )
+        
+        # Update final batch status
+        await db.sms_batches.update_one(
+            {"_id": batch_id},
+            {"$set": {
+                "status": "completed",
+                "sent_count": sent_count,
+                "delivered_count": delivered_count,
+                "failed_count": failed_count,
+                "total_cost": total_cost,
+                "completed_at": datetime.utcnow()
+            }}
+        )
+        
+        # Deduct credits
+        await db.sms_credits.update_one(
+            {"business_id": business_id},
+            {"$inc": {"balance": -sent_count, "used": sent_count}}
+        )
+        
+    except Exception as e:
+        # Mark batch as failed
+        await db.sms_batches.update_one(
+            {"_id": batch_id},
+            {"$set": {
+                "status": "failed",
+                "error": str(e),
+                "completed_at": datetime.utcnow()
+            }}
+        )
+
+
+@router.get("/tigo/batch/{batch_id}")
+async def get_tigo_batch_status(
+    batch_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get status of a bulk SMS batch"""
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+    
+    business_id = current_user.get("business_id")
+    
+    batch = await db.sms_batches.find_one({
+        "_id": batch_id,
+        "business_id": str(business_id)
+    })
+    
+    if not batch:
+        raise HTTPException(status_code=404, detail="Batch not found")
+    
+    return {
+        "batch_id": batch_id,
+        "status": batch.get("status"),
+        "total_recipients": batch.get("total_recipients", 0),
+        "sent_count": batch.get("sent_count", 0),
+        "delivered_count": batch.get("delivered_count", 0),
+        "failed_count": batch.get("failed_count", 0),
+        "total_cost": batch.get("total_cost", 0),
+        "progress_percent": (batch.get("sent_count", 0) / batch.get("total_recipients", 1)) * 100,
+        "created_at": batch.get("created_at").isoformat() if batch.get("created_at") else None,
+        "completed_at": batch.get("completed_at").isoformat() if batch.get("completed_at") else None
+    }
+
+
+@router.get("/tigo/status")
+async def get_tigo_service_status(
+    current_user: dict = Depends(get_current_user)
+):
+    """Get Tigo SMPP service status"""
+    try:
+        from services.tigo_smpp_service import get_tigo_service
+        
+        tigo_service = get_tigo_service()
+        status = tigo_service.get_connection_status()
+        
+        return {
+            "provider": "Tigo Tanzania (SMPP)",
+            "status": "connected" if status["connected"] else "disconnected",
+            "sandbox": status["sandbox"],
+            "host": status["host"],
+            "port": status["port"],
+            "cost_per_sms": status["cost_per_sms"],
+            "note": "VPN connectivity required for production" if not status["sandbox"] else "Running in sandbox mode"
+        }
+        
+    except Exception as e:
+        return {
+            "provider": "Tigo Tanzania (SMPP)",
+            "status": "error",
+            "error": str(e)
+        }
+
+
 # ============== ANALYTICS ==============
 
 @router.get("/analytics")
