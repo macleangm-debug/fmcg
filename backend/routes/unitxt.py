@@ -810,9 +810,9 @@ async def send_via_tigo(
         
         # Deduct credits if successful
         if result.success:
-            await db.sms_credits.update_one(
-                {"business_id": str(business_id)},
-                {"$inc": {"balance": -result.segments, "used": result.segments}}
+            await db.unitxt_credits.update_one(
+                {"$or": [{"user_id": current_user.get("id")}, {"business_id": str(business_id)}]},
+                {"$inc": {"balance": -result.segments, "total_used": result.segments}}
             )
         
         return {
