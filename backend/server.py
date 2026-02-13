@@ -3913,6 +3913,12 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Health check endpoint
+@api_router.get("/health")
+async def health_check():
+    """Health check endpoint"""
+    return {"status": "healthy", "service": "retail-management-api"}
+
 # Include the router
 app.include_router(api_router)
 
