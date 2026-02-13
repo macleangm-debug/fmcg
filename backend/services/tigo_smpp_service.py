@@ -324,6 +324,16 @@ class TigoSMPPService:
         """Get delivery status for a message"""
         return self._delivery_reports.get(message_id, SMPPMessageStatus.UNKNOWN)
     
+    def get_pending_delivery_reports(self) -> List[Dict[str, Any]]:
+        """Get and clear pending delivery reports for database sync"""
+        reports = self._pending_reports.copy()
+        self._pending_reports.clear()
+        return reports
+    
+    def get_all_delivery_statuses(self) -> Dict[str, str]:
+        """Get all cached delivery statuses"""
+        return {k: v.value for k, v in self._delivery_reports.items()}
+    
     def get_connection_status(self) -> Dict[str, Any]:
         """Get current connection status"""
         return {
@@ -332,7 +342,8 @@ class TigoSMPPService:
             "port": self.config.port,
             "sandbox": self.config.sandbox,
             "system_id": self.config.system_id,
-            "cost_per_sms": self.cost_per_sms
+            "cost_per_sms": self.cost_per_sms,
+            "pending_reports": len(self._pending_reports)
         }
     
     def _sandbox_send(
