@@ -964,9 +964,9 @@ async def process_tigo_bulk_send(
         )
         
         # Deduct credits
-        await db.sms_credits.update_one(
-            {"business_id": business_id},
-            {"$inc": {"balance": -sent_count, "used": sent_count}}
+        await db.unitxt_credits.update_one(
+            {"$or": [{"business_id": business_id}]},
+            {"$inc": {"balance": -sent_count, "total_used": sent_count}}
         )
         
     except Exception as e:
