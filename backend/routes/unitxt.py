@@ -132,8 +132,8 @@ async def add_credits(
         raise HTTPException(status_code=400, detail="No business associated")
     
     # Update credits
-    await db.sms_credits.update_one(
-        {"business_id": str(business_id)},
+    await db.unitxt_credits.update_one(
+        {"$or": [{"user_id": current_user.get("id")}, {"business_id": str(business_id)}]},
         {"$inc": {"balance": request.amount}},
         upsert=True
     )
