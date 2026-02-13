@@ -362,27 +362,63 @@ class TigoSMPPService:
         )
     
     def _handle_delivery_report(self, pdu):
-        """Handle incoming delivery reports"""
+        """Handle incoming delivery reports from SMPP"""
         try:
             message_id = pdu.message_id
             state = pdu.message_state
             
             # Map SMPP states to our statuses
+            # SMPP message_state values:
+            # 1=ENROUTE, 2=DELIVERED, 3=EXPIRED, 4=DELETED, 5=UNDELIVERABLE
+            # 6=ACCEPTED, 7=UNKNOWN, 8=REJECTED
             status_map = {
-                1: SMPPMessageStatus.SUBMITTED,
-                2: SMPPMessageStatus.DELIVERED,
-                3: SMPPMessageStatus.EXPIRED,
-                4: SMPPMessageStatus.REJECTED,
-                5: SMPPMessageStatus.FAILED,
-                6: SMPPMessageStatus.FAILED,
-                7: SMPPMessageStatus.FAILED,
-                8: SMPPMessageStatus.DELIVERED,
+                1: SMPPMessageStatus.PENDING,      # ENROUTE
+                2: SMPPMessageStatus.DELIVERED,    # DELIVERED
+                3: SMPPMessageStatus.EXPIRED,      # EXPIRED
+                4: SMPPMessageStatus.FAILED,       # DELETED
+                5: SMPPMessageStatus.FAILED,       # UNDELIVERABLE
+                6: SMPPMessageStatus.SUBMITTED,    # ACCEPTED
+                7: SMPPMessageStatus.UNKNOWN,      # UNKNOWN
+                8: SMPPMessageStatus.REJECTED,     # REJECTED
             }
             
             status = status_map.get(state, SMPPMessageStatus.UNKNOWN)
             self._delivery_reports[message_id] = status
             
-            logger.info(f"Delivery report: {message_id} -> {status.value}")
+            # Store detailed report for database sync
+            report_data = {
+                "message_id": message_id,
+                "status": status.value,
+                "smpp_state": state,
+                "timestamp": datetime.utcnow().isoformat(),
+                "source": "smpp"
+            }
+            
+            # Try to extract additional info from PDU
+            try:
+                if hasattr(pdu, 'short_message') and pdu.short_message:
+                    # Parse delivery receipt text
+                    # Format: "id:XXXXX sub:001 dlvrd:001 submit date:... done date:... stat:DELIVRD err:000"
+                    receipt_text = pdu.short_message.decode('utf-8', errors='ignore')
+                    report_data["receipt_text"] = receipt_text
+                    
+                    # Parse fields from receipt
+                    import re
+                    stat_match = re.search(r'stat:(\w+)', receipt_text)
+                    err_match = re.search(r'err:(\d+)', receipt_text)
+                    
+                    if stat_match:
+                        report_data["receipt_status"] = stat_match.group(1)
+                    if err_match:
+                        report_data["error_code"] = err_match.group(1)
+                        
+            except Exception as parse_err:
+                logger.debug(f"Could not parse receipt text: {parse_err}")
+            
+            # Store in pending reports queue for async database sync
+            self._pending_reports.append(report_data)
+            
+            logger.info(f"SMPP Delivery report: {message_id} -> {status.value}")
             
         except Exception as e:
             logger.error(f"Error handling delivery report: {e}")
