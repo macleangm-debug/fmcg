@@ -4,6 +4,7 @@ Handles SMS messaging, campaigns, sender IDs, and gateway management
 """
 
 from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
 from datetime import datetime, timedelta
@@ -12,24 +13,26 @@ import uuid
 import asyncio
 
 router = APIRouter(prefix="/unitxt", tags=["UniTxt SMS"])
+security = HTTPBearer()
 
 # Module-level variables
 db = None
-_get_current_user = None
+_get_current_user_func = None
 
 
 def set_dependencies(database, current_user_dep):
     """Initialize router dependencies"""
-    global db, _get_current_user
+    global db, _get_current_user_func
     db = database
-    _get_current_user = current_user_dep
+    _get_current_user_func = current_user_dep
 
 
-async def get_current_user():
-    """Wrapper for current user dependency"""
-    if _get_current_user is None:
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Wrapper for current user dependency - properly handles authentication"""
+    if _get_current_user_func is None:
         raise HTTPException(status_code=500, detail="Auth not initialized")
-    return await _get_current_user()
+    # Call the original get_current_user with credentials
+    return await _get_current_user_func(credentials)
 
 
 # ============== PYDANTIC MODELS ==============
