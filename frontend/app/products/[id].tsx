@@ -1014,6 +1014,8 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: THEME.lightBg,
+    height: '100%',
+    ...(Platform.OS === 'web' ? { overflow: 'auto' as any } : {}),
   },
   errorContainer: {
     flex: 1,
