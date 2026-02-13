@@ -1,84 +1,69 @@
-# Software Galaxy - FMCG/Retail Management System
+# FMCG Application - Product Requirements Document
 
 ## Original Problem Statement
-Pull code from https://github.com/macleangm-debug/fmcg and preview it to allow user to work on it.
-
-## Project Overview
-Software Galaxy is a comprehensive multi-tenant retail/FMCG management system featuring:
-- **Frontend**: Expo React Native with web support (expo-router)
-- **Backend**: FastAPI Python with MongoDB
-- **Authentication**: JWT-based auth with Google OAuth support
+Set up and preview the FMCG application from GitHub repository (`https://github.com/macleangm-debug/fmcg`) and integrate UniTxt Bulk SMS with Tigo Tanzania using SMPP protocol.
 
 ## Architecture
+- **Frontend**: React Native Expo (running as web via `expo start --web`)
+- **Backend**: Python FastAPI
+- **Database**: MongoDB
+- **Branch**: `conflict_050226_1426` (contains latest code)
+
+## What's Been Implemented
+
+### February 13, 2026 - Tigo SMPP Integration
+- ✅ Created `/app/backend/services/tigo_smpp_service.py` - Full SMPP client service
+- ✅ Added Tigo SMPP API endpoints to `/app/backend/routes/unitxt.py`:
+  - `POST /api/unitxt/tigo/send` - Send single SMS
+  - `POST /api/unitxt/tigo/bulk-send` - Send bulk SMS with personalization
+  - `GET /api/unitxt/tigo/batch/{batch_id}` - Check bulk SMS batch status
+  - `GET /api/unitxt/tigo/status` - Check Tigo service status
+- ✅ Added Tigo credentials to backend `.env`
+- ✅ Fixed scrolling issue on product pages
+- ✅ All backend APIs tested and working (sandbox mode)
+
+### Tigo SMPP Configuration
 ```
-/app/
-├── backend/           # FastAPI Python backend
-│   └── server.py      # Main API (3900+ lines)
-├── frontend/          # Expo React Native app
-│   ├── app/           # Expo Router pages
-│   │   ├── (auth)/    # Login, Register
-│   │   ├── (tabs)/    # Dashboard, Products, Orders, Customers, Cart
-│   │   ├── admin/     # Settings, Staff, Reports, Stock, Promotions
-│   │   └── galaxy/    # Product switching, home
-│   └── src/           # Shared components, stores, API client
-└── test_reports/      # Test results
+Host: smpp01.tigo.co.tz
+Port: 10501
+Username: datavision
+Password: dat@vis
+Sender ID: UNITXT
+Status: SANDBOX MODE (set TIGO_SANDBOX=false for production)
 ```
 
-## Core Features Implemented
-- Multi-tenant business registration and management
-- User authentication (email + Google OAuth)
-- Role-based access control (Superadmin, Admin, Manager, Sales Staff, Finance)
-- Product & Category management with variants
-- Customer management
-- Order processing with multiple payment methods
-- Inventory/Stock management with movement tracking
-- Expenses tracking
-- Promotions/Campaigns
-- Dashboard with analytics
-- Reports generation
+**Important**: The SMPP connection requires VPN connectivity to Tigo's gateway (41.222.182.6). The code is complete and ready - deploy to a VPN-connected server and set `TIGO_SANDBOX=false` to go live.
 
-## User Personas
-1. **Business Admin**: Full control over business, staff, products, settings
-2. **Manager**: Product, stock, and staff management
-3. **Sales Staff**: POS operations, order creation
-4. **Finance**: Access to reports and expenses
+## Key Files
+- `/app/backend/services/tigo_smpp_service.py` - Tigo SMPP service
+- `/app/backend/routes/unitxt.py` - UniTxt SMS routes including Tigo integration
+- `/app/backend/.env` - Tigo credentials
+- `/app/frontend/app/products/[id].tsx` - Product pages with scrolling fix
 
-## Tech Stack
-- Frontend: Expo SDK 54, React Native Web, Zustand (state), Axios
-- Backend: FastAPI, Motor (async MongoDB), PyJWT, bcrypt
-- Database: MongoDB
+## P0 - Completed
+- [x] Tigo SMPP integration (sandbox mode working)
+- [x] Single SMS sending via Tigo
+- [x] Bulk SMS sending with personalization ({{name}} placeholder)
+- [x] Batch status tracking
+- [x] Product page scrolling fix
 
-## URLs
-- Frontend: https://fmcg-preview-sms.preview.emergentagent.com
-- API: https://fmcg-preview-sms.preview.emergentagent.com/api
+## P1 - In Progress/Known Issues
+- [ ] Frontend occasionally runs out of memory (mitigated with NODE_OPTIONS)
+- [ ] Deploy to VPN-connected server for live Tigo connection
 
-## Test Credentials
-- Superadmin: superadmin@retail.com / SuperAdmin123!
-- Test User: test@example.com / testpass123
+## P2 - Future Tasks
+- [ ] UniTxt admin dashboard for managing SMS campaigns
+- [ ] Full production build for Expo web (`expo export:web`)
+- [ ] Delivery report handling (webhooks)
 
-## What's Been Implemented (Feb 13, 2026)
-- [x] Cloned repository from GitHub
-- [x] Configured Expo web on port 3000
-- [x] Backend running on port 8001
-- [x] MongoDB connected
-- [x] Added /api/health endpoint
-- [x] Landing page loads with product suite display
-- [x] Login/Registration flow working
-- [x] All backend APIs functional
+## Testing Credentials
+- **API Test User**: admin@test.com / admin123
+- **Preview URL**: https://fmcg-preview-sms.preview.emergentagent.com
 
-## Prioritized Backlog
-### P0 (Critical)
-- None currently
-
-### P1 (High)
-- Investigate intermittent frontend loading delays (Expo bundling)
-- Update deprecated React Native shadow* props to boxShadow
-
-### P2 (Medium)
-- Add more comprehensive error handling
-- Implement password reset flow
-- Add email notifications
-
-## Next Steps
-1. User can now work on feature additions or bug fixes
-2. Potential areas: Reports visualization, Export functionality, Email integrations
+## API Endpoints
+- `GET /api/health` - Health check
+- `POST /api/auth/login` - User login
+- `POST /api/unitxt/tigo/send` - Send single SMS
+- `POST /api/unitxt/tigo/bulk-send` - Send bulk SMS
+- `GET /api/unitxt/tigo/batch/{id}` - Get batch status
+- `GET /api/unitxt/tigo/status` - Tigo service status
