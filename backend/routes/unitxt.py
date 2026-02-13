@@ -735,9 +735,9 @@ async def send_sms(
     await db.sms_messages.insert_one(message)
     
     # Deduct credit
-    await db.sms_credits.update_one(
-        {"business_id": str(business_id)},
-        {"$inc": {"balance": -1, "used": 1}}
+    await db.unitxt_credits.update_one(
+        {"$or": [{"user_id": current_user.get("id")}, {"business_id": str(business_id)}]},
+        {"$inc": {"balance": -1, "total_used": 1}}
     )
     
     return {"message": "SMS sent successfully", "status": "delivered"}
