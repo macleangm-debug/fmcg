@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import api from '../api/client';
+import { useAuthStore } from '../store/authStore';
 
 const isWeb = Platform.OS === 'web';
 
@@ -47,10 +48,18 @@ interface FreeTrialModalProps {
 
 export default function FreeTrialModal({ visible, product, onClose, onSuccess }: FreeTrialModalProps) {
   const router = useRouter();
+  const { isAuthenticated } = useAuthStore();
   const [isSubscribing, setIsSubscribing] = useState(false);
 
   const handleStartTrial = async () => {
     if (!product) return;
+    
+    // If not authenticated, redirect to login
+    if (!isAuthenticated) {
+      onClose();
+      router.push('/(auth)/login');
+      return;
+    }
     
     setIsSubscribing(true);
     try {
@@ -150,13 +159,16 @@ export default function FreeTrialModal({ visible, product, onClose, onSuccess }:
               style={[styles.startTrialButton, { backgroundColor: product.color }]}
               onPress={handleStartTrial}
               disabled={isSubscribing}
+              data-testid="modal-start-trial-btn"
             >
               {isSubscribing ? (
                 <ActivityIndicator color={THEME.white} size="small" />
               ) : (
                 <>
                   <Ionicons name="rocket-outline" size={18} color={THEME.white} />
-                  <Text style={styles.startTrialButtonText}>Start Free Trial</Text>
+                  <Text style={styles.startTrialButtonText}>
+                    {isAuthenticated ? 'Start Free Trial' : 'Sign Up & Start Trial'}
+                  </Text>
                 </>
               )}
             </TouchableOpacity>

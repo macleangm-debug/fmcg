@@ -12,6 +12,7 @@ import {
   Alert,
   useWindowDimensions,
   Platform,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -20,6 +21,10 @@ import { useAuthStore } from '../../src/store/authStore';
 import { useBusinessStore } from '../../src/store/businessStore';
 import ProductSwitcher from '../../src/components/ProductSwitcher';
 import api from '../../src/api/client';
+import ConfirmationModal from '../../src/components/ConfirmationModal';
+import WebModal from '../../src/components/WebModal';
+import { PieChart, BarChart, LineChart } from 'react-native-gifted-charts';
+import { format } from 'date-fns';
 
 const isWeb = Platform.OS === 'web';
 
@@ -36,6 +41,16 @@ const COLORS = {
   gray: '#6B7280',
   lightGray: '#F3F4F6',
   white: '#FFFFFF',
+  danger: '#DC2626',
+};
+
+const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string }> = {
+  draft: { label: 'Draft', color: '#6B7280', bg: '#F3F4F6' },
+  sent: { label: 'Sent', color: '#2563EB', bg: '#DBEAFE' },
+  paid: { label: 'Paid', color: '#059669', bg: '#D1FAE5' },
+  partial: { label: 'Partial', color: '#D97706', bg: '#FEF3C7' },
+  overdue: { label: 'Overdue', color: '#DC2626', bg: '#FEE2E2' },
+  cancelled: { label: 'Cancelled', color: '#6B7280', bg: '#F3F4F6' },
 };
 
 interface Invoice {
@@ -43,13 +58,22 @@ interface Invoice {
   invoice_number: string;
   customer_name: string;
   customer_email: string;
+  customer_phone?: string;
+  customer_address?: string;
   invoice_date: string;
   due_date: string;
   total: number;
+  subtotal?: number;
+  tax_total?: number;
   amount_paid: number;
   balance_due: number;
   status: string;
-  items: any[];
+  items: Array<{
+    description?: string;
+    quantity?: number;
+    unit_price?: number;
+    total?: number;
+  }>;
 }
 
 interface Summary {
@@ -77,19 +101,32 @@ export default function InvoicingDashboard() {
   
   const [summary, setSummary] = useState<Summary | null>(null);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [chartData, setChartData] = useState<{
+    monthly_revenue: Array<{ month: string; invoiced: number; paid: number }>;
+  } | null>(null);
   
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  
+  // Invoice view modal state
+  const [viewingInvoice, setViewingInvoice] = useState<Invoice | null>(null);
+  
+  // Success modal state
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState({ title: '', subtitle: '' });
 
   const fetchData = async () => {
     try {
       const status = activeTab === 'all' ? '' : activeTab;
-      const [summaryRes, invoicesRes] = await Promise.all([
+      const [summaryRes, invoicesRes, chartRes] = await Promise.all([
         api.get('/invoices/summary'),
-        api.get(`/invoices?status=${status}${searchQuery ? `&search=${searchQuery}` : ''}`)
+        api.get(`/invoices?status=${status}${searchQuery ? `&search=${searchQuery}` : ''}`),
+        api.get('/invoices/chart-data')
       ]);
       setSummary(summaryRes.data);
       setInvoices(invoicesRes.data);
+      setChartData(chartRes.data);
     } catch (error) {
       console.log('Failed to fetch invoices:', error);
     } finally {
@@ -116,14 +153,18 @@ export default function InvoicingDashboard() {
 
   const handleDeleteInvoice = async () => {
     if (!invoiceToDelete) return;
+    setDeleting(true);
     try {
       await api.delete(`/invoices/${invoiceToDelete.id}`);
       setShowConfirmDelete(false);
+      setSuccessMessage({ title: 'Invoice Deleted', subtitle: `Invoice "${invoiceToDelete.invoice_number}" has been deleted.` });
       setInvoiceToDelete(null);
+      setShowSuccessModal(true);
       fetchData();
-      Alert.alert('Success', 'Invoice deleted successfully');
     } catch (error: any) {
       Alert.alert('Error', error.response?.data?.detail || 'Failed to delete invoice');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -214,27 +255,48 @@ export default function InvoicingDashboard() {
     </ScrollView>
   );
 
-  const renderInvoiceRow = (invoice: Invoice) => (
+  const renderInvoiceCard = (invoice: Invoice) => (
     <TouchableOpacity
       key={invoice.id}
-      style={styles.invoiceRow}
+      style={styles.invoiceCard}
       onPress={() => router.push(`/invoicing/${invoice.id}`)}
       onLongPress={() => { setInvoiceToDelete(invoice); setShowConfirmDelete(true); }}
     >
-      <View style={styles.invoiceInfo}>
-        <Text style={styles.invoiceNumber}>{invoice.invoice_number}</Text>
-        <Text style={styles.customerName}>{invoice.customer_name}</Text>
-        <Text style={styles.invoiceDate}>{formatDate(invoice.invoice_date)}</Text>
-      </View>
-      <View style={styles.invoiceRight}>
-        <Text style={styles.invoiceAmount}>{formatCurrency(invoice.total)}</Text>
+      {/* Card Header */}
+      <View style={styles.cardHeader}>
+        <View style={styles.cardIconContainer}>
+          <Ionicons name="document-text" size={24} color={COLORS.primary} />
+        </View>
         <View style={[styles.statusBadge, { backgroundColor: getStatusBgColor(invoice.status) }]}>
           <Text style={[styles.statusText, { color: getStatusColor(invoice.status) }]}>
             {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
           </Text>
         </View>
       </View>
-      <Ionicons name="chevron-forward" size={20} color={COLORS.gray} />
+      
+      {/* Invoice Details */}
+      <Text style={styles.invoiceNumber}>{invoice.invoice_number}</Text>
+      <Text style={styles.customerName}>{invoice.customer_name}</Text>
+      
+      {/* Card Footer */}
+      <View style={styles.cardFooter}>
+        <View>
+          <Text style={styles.cardLabel}>Amount</Text>
+          <Text style={styles.invoiceAmount}>{formatCurrency(invoice.total)}</Text>
+        </View>
+        <View style={styles.cardDates}>
+          <Text style={styles.cardLabel}>Due Date</Text>
+          <Text style={styles.invoiceDate}>{formatDate(invoice.due_date)}</Text>
+        </View>
+      </View>
+      
+      {/* Balance Due */}
+      {invoice.balance_due > 0 && (
+        <View style={styles.balanceDueContainer}>
+          <Text style={styles.balanceDueLabel}>Balance Due:</Text>
+          <Text style={styles.balanceDueAmount}>{formatCurrency(invoice.balance_due)}</Text>
+        </View>
+      )}
     </TouchableOpacity>
   );
 
@@ -250,98 +312,649 @@ export default function InvoicingDashboard() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Web Header with Product Switcher */}
-      {isWeb && (
-        <View style={styles.webHeader}>
-          <View style={styles.webHeaderLeft}>
-            <View style={styles.invoicingBadge}>
-              <Ionicons name="document-text" size={24} color="#7C3AED" />
-            </View>
-            <View>
-              <Text style={styles.webHeaderTitle}>Invoicing</Text>
-              <Text style={styles.webHeaderSubtitle}>Create & Track Invoices</Text>
-            </View>
-          </View>
-          <View style={styles.webHeaderRight}>
-            <TouchableOpacity style={styles.addBtn} onPress={() => router.push('/invoicing/create')}>
-              <Ionicons name="add" size={24} color="#FFFFFF" />
-            </TouchableOpacity>
-            <ProductSwitcher currentProductId="invoicing" />
-          </View>
-        </View>
-      )}
-      
       {/* Mobile Header */}
       {!isWeb && (
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.replace('/galaxy/home')}>
-            <Ionicons name="arrow-back" size={24} color={COLORS.dark} />
-          </TouchableOpacity>
           <Text style={styles.headerTitle}>Invoices</Text>
-          <TouchableOpacity style={styles.addBtn} onPress={() => router.push('/invoicing/create')}>
-            <Ionicons name="add" size={24} color="#FFFFFF" />
+        </View>
+      )}
+
+      {/* Web Page Header */}
+      {isWeb && (
+        <View style={styles.webPageHeader}>
+          <View>
+            <Text style={styles.webPageTitle}>Dashboard</Text>
+            <Text style={styles.webPageSubtitle}>Overview of your invoicing activity</Text>
+          </View>
+          <TouchableOpacity style={styles.createInvoiceBtn} onPress={() => router.push('/invoicing/list?action=create')}>
+            <Ionicons name="add" size={20} color="#FFFFFF" />
+            <Text style={styles.createInvoiceBtnText}>New Invoice</Text>
           </TouchableOpacity>
         </View>
       )}
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
-      >
-        {/* Stats */}
-        {renderStats()}
-        
-        {/* Tabs */}
-        {renderTabs()}
-        
-        {/* Search */}
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={20} color={COLORS.gray} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search invoices..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholderTextColor={COLORS.gray}
-          />
-        </View>
-        
-        {/* Invoice List */}
-        <View style={styles.listContainer}>
-          {invoices.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Ionicons name="document-text-outline" size={64} color={COLORS.gray} />
-              <Text style={styles.emptyText}>No invoices found</Text>
-              <TouchableOpacity style={styles.emptyBtn} onPress={() => router.push('/invoicing/create')}>
-                <Text style={styles.emptyBtnText}>Create First Invoice</Text>
-              </TouchableOpacity>
+      {/* WEB DASHBOARD LAYOUT */}
+      {isWeb ? (
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
+          contentContainerStyle={styles.webDashboardContent}
+        >
+          {/* Stats Row */}
+          <View style={styles.webStatsRow}>
+            <View style={styles.webStatCard}>
+              <View style={[styles.webStatIcon, { backgroundColor: '#DBEAFE' }]}>
+                <Ionicons name="document-text" size={24} color="#2563EB" />
+              </View>
+              <View style={styles.webStatInfo}>
+                <Text style={styles.webStatValue}>{summary?.total_invoices || 0}</Text>
+                <Text style={styles.webStatLabel}>Total Invoices</Text>
+              </View>
             </View>
-          ) : (
-            invoices.map(renderInvoiceRow)
-          )}
-        </View>
-        
-        <View style={{ height: 40 }} />
-      </ScrollView>
+            
+            <View style={styles.webStatCard}>
+              <View style={[styles.webStatIcon, { backgroundColor: '#D1FAE5' }]}>
+                <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+              </View>
+              <View style={styles.webStatInfo}>
+                <Text style={styles.webStatValue}>{formatCurrency(summary?.total_paid || 0)}</Text>
+                <Text style={styles.webStatLabel}>Total Paid</Text>
+              </View>
+            </View>
+            
+            <View style={styles.webStatCard}>
+              <View style={[styles.webStatIcon, { backgroundColor: '#FEF3C7' }]}>
+                <Ionicons name="time" size={24} color="#F59E0B" />
+              </View>
+              <View style={styles.webStatInfo}>
+                <Text style={styles.webStatValue}>{formatCurrency(summary?.total_outstanding || 0)}</Text>
+                <Text style={styles.webStatLabel}>Outstanding</Text>
+              </View>
+            </View>
+            
+            <View style={styles.webStatCard}>
+              <View style={[styles.webStatIcon, { backgroundColor: '#FEE2E2' }]}>
+                <Ionicons name="alert-circle" size={24} color="#EF4444" />
+              </View>
+              <View style={styles.webStatInfo}>
+                <Text style={styles.webStatValue}>{summary?.overdue_count || 0}</Text>
+                <Text style={styles.webStatLabel}>Overdue</Text>
+              </View>
+            </View>
+          </View>
 
-      {/* Delete Confirmation */}
-      <Modal visible={showConfirmDelete} transparent animationType="fade">
-        <View style={styles.confirmOverlay}>
-          <View style={styles.confirmModal}>
-            <Ionicons name="warning" size={48} color={COLORS.primary} />
-            <Text style={styles.confirmTitle}>Delete Invoice?</Text>
-            <Text style={styles.confirmMessage}>Are you sure you want to delete invoice "{invoiceToDelete?.invoice_number}"?</Text>
-            <View style={styles.confirmButtons}>
-              <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowConfirmDelete(false)}>
-                <Text style={styles.cancelBtnText}>Cancel</Text>
+          {/* Charts Row - Analytics Section */}
+          <View style={styles.webChartsRow}>
+            {/* Invoice Status Distribution - Pie Chart */}
+            <View style={styles.webChartCard}>
+              <Text style={styles.webChartTitle}>Invoice Status</Text>
+              <View style={styles.webChartContainer}>
+                <PieChart
+                  data={[
+                    { value: summary?.paid_count || 1, color: '#10B981', text: 'Paid' },
+                    { value: summary?.sent_count || 1, color: '#3B82F6', text: 'Sent' },
+                    { value: summary?.draft_count || 1, color: '#6B7280', text: 'Draft' },
+                    { value: summary?.overdue_count || 1, color: '#EF4444', text: 'Overdue' },
+                  ]}
+                  donut
+                  radius={70}
+                  innerRadius={45}
+                  centerLabelComponent={() => (
+                    <View style={{ alignItems: 'center' }}>
+                      <Text style={{ fontSize: 18, fontWeight: '700', color: '#111827' }}>{summary?.total_invoices || 0}</Text>
+                      <Text style={{ fontSize: 11, color: '#6B7280' }}>Total</Text>
+                    </View>
+                  )}
+                />
+              </View>
+              <View style={styles.webChartLegend}>
+                <View style={styles.webLegendItem}>
+                  <View style={[styles.webLegendDot, { backgroundColor: '#10B981' }]} />
+                  <Text style={styles.webLegendText}>Paid ({summary?.paid_count || 0})</Text>
+                </View>
+                <View style={styles.webLegendItem}>
+                  <View style={[styles.webLegendDot, { backgroundColor: '#3B82F6' }]} />
+                  <Text style={styles.webLegendText}>Sent ({summary?.sent_count || 0})</Text>
+                </View>
+                <View style={styles.webLegendItem}>
+                  <View style={[styles.webLegendDot, { backgroundColor: '#6B7280' }]} />
+                  <Text style={styles.webLegendText}>Draft ({summary?.draft_count || 0})</Text>
+                </View>
+                <View style={styles.webLegendItem}>
+                  <View style={[styles.webLegendDot, { backgroundColor: '#EF4444' }]} />
+                  <Text style={styles.webLegendText}>Overdue ({summary?.overdue_count || 0})</Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Monthly Revenue - Bar Chart */}
+            <View style={styles.webChartCard}>
+              <Text style={styles.webChartTitle}>Monthly Revenue</Text>
+              <View style={styles.webChartContainer}>
+                {chartData?.monthly_revenue && chartData.monthly_revenue.length > 0 ? (
+                  <BarChart
+                    data={chartData.monthly_revenue.map((m, idx) => ({
+                      value: m.invoiced || 0,
+                      label: m.month,
+                      frontColor: idx === chartData.monthly_revenue.length - 1 ? '#10B981' : '#7C3AED',
+                    }))}
+                    barWidth={28}
+                    barBorderRadius={6}
+                    height={120}
+                    width={220}
+                    noOfSections={4}
+                    yAxisThickness={0}
+                    xAxisThickness={1}
+                    xAxisColor="#E5E7EB"
+                    xAxisLabelTextStyle={{ fontSize: 10, color: '#6B7280' }}
+                    hideRules
+                    isAnimated
+                  />
+                ) : (
+                  <View style={styles.chartPlaceholder}>
+                    <Ionicons name="bar-chart-outline" size={48} color="#D1D5DB" />
+                    <Text style={styles.chartPlaceholderText}>No data yet</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+
+            {/* Payment Trend - Line Chart */}
+            <View style={styles.webChartCard}>
+              <Text style={styles.webChartTitle}>Payment Trend</Text>
+              <View style={styles.webChartContainer}>
+                {chartData?.monthly_revenue && chartData.monthly_revenue.length > 0 ? (
+                  <LineChart
+                    data={chartData.monthly_revenue.map(m => ({ value: m.invoiced || 0 }))}
+                    data2={chartData.monthly_revenue.map(m => ({ value: m.paid || 0 }))}
+                    height={120}
+                    width={220}
+                    spacing={40}
+                    color1="#7C3AED"
+                    color2="#10B981"
+                    thickness={3}
+                    hideDataPoints={false}
+                    dataPointsColor1="#7C3AED"
+                    dataPointsColor2="#10B981"
+                    dataPointsRadius={5}
+                    curved
+                    noOfSections={4}
+                    yAxisThickness={0}
+                    xAxisThickness={1}
+                    xAxisColor="#E5E7EB"
+                    hideRules
+                    xAxisLabelTexts={chartData.monthly_revenue.map(m => m.month)}
+                    xAxisLabelTextStyle={{ fontSize: 10, color: '#6B7280' }}
+                    isAnimated
+                  />
+                ) : (
+                  <View style={styles.chartPlaceholder}>
+                    <Ionicons name="trending-up-outline" size={48} color="#D1D5DB" />
+                    <Text style={styles.chartPlaceholderText}>No data yet</Text>
+                  </View>
+                )}
+              </View>
+              <View style={styles.webChartLegend}>
+                <View style={styles.webLegendItem}>
+                  <View style={[styles.webLegendDot, { backgroundColor: '#7C3AED' }]} />
+                  <Text style={styles.webLegendText}>Invoiced</Text>
+                </View>
+                <View style={styles.webLegendItem}>
+                  <View style={[styles.webLegendDot, { backgroundColor: '#10B981' }]} />
+                  <Text style={styles.webLegendText}>Collected</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+
+          {/* Main Content Area */}
+          <View style={styles.webMainContent}>
+            {/* Recent Invoices Table */}
+            <View style={styles.webTableCard}>
+              <View style={styles.webTableHeader}>
+                <Text style={styles.webTableTitle}>Recent Invoices</Text>
+                <TouchableOpacity onPress={() => router.push('/invoicing/list')}>
+                  <Text style={styles.webViewAllLink}>View All →</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {/* Filter Tabs */}
+              <View style={styles.webFilterRow}>
+                <View style={styles.webTabs}>
+                  {[
+                    { key: 'all', label: 'All' },
+                    { key: 'draft', label: 'Draft' },
+                    { key: 'sent', label: 'Sent' },
+                    { key: 'paid', label: 'Paid' },
+                    { key: 'overdue', label: 'Overdue' },
+                  ].map((tab) => (
+                    <TouchableOpacity
+                      key={tab.key}
+                      style={[styles.webTab, activeTab === tab.key && styles.webTabActive]}
+                      onPress={() => setActiveTab(tab.key as any)}
+                    >
+                      <Text style={[styles.webTabText, activeTab === tab.key && styles.webTabTextActive]}>
+                        {tab.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                
+                <View style={styles.webSearchBox}>
+                  <Ionicons name="search" size={18} color={COLORS.gray} />
+                  <TextInput
+                    style={styles.webSearchInput}
+                    placeholder="Search invoices..."
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    placeholderTextColor={COLORS.gray}
+                  />
+                </View>
+              </View>
+
+              {/* Table Header */}
+              <View style={styles.webTableHeaderRow}>
+                <Text style={[styles.webTableHeaderCell, { flex: 1.5 }]}>INVOICE</Text>
+                <Text style={[styles.webTableHeaderCell, { flex: 2 }]}>CLIENT</Text>
+                <Text style={[styles.webTableHeaderCell, { flex: 1 }]}>DATE</Text>
+                <Text style={[styles.webTableHeaderCell, { flex: 1 }]}>AMOUNT</Text>
+                <Text style={[styles.webTableHeaderCell, { flex: 1 }]}>STATUS</Text>
+                <Text style={[styles.webTableHeaderCell, { flex: 0.5 }]}>ACTIONS</Text>
+              </View>
+
+              {/* Table Body */}
+              {invoices.length === 0 ? (
+                <View style={styles.webEmptyState}>
+                  <Ionicons name="document-text-outline" size={48} color={COLORS.gray} />
+                  <Text style={styles.webEmptyText}>No invoices found</Text>
+                  <TouchableOpacity style={styles.webEmptyBtn} onPress={() => router.push('/invoicing/list?action=create')}>
+                    <Text style={styles.webEmptyBtnText}>Create First Invoice</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                invoices.slice(0, 10).map((invoice) => (
+                  <TouchableOpacity 
+                    key={invoice.id} 
+                    style={styles.webTableRow}
+                    onPress={() => setViewingInvoice(invoice)}
+                  >
+                    <Text style={[styles.webTableCell, { flex: 1.5, fontWeight: '600' }]}>{invoice.invoice_number}</Text>
+                    <Text style={[styles.webTableCell, { flex: 2 }]}>{invoice.customer_name}</Text>
+                    <Text style={[styles.webTableCell, { flex: 1 }]}>{new Date(invoice.created_at).toLocaleDateString()}</Text>
+                    <Text style={[styles.webTableCell, { flex: 1, fontWeight: '600' }]}>{formatCurrency(invoice.total)}</Text>
+                    <View style={{ flex: 1 }}>
+                      <View style={[styles.webStatusBadge, { backgroundColor: getStatusBgColor(invoice.status) }]}>
+                        <Text style={[styles.webStatusText, { color: getStatusColor(invoice.status) }]}>
+                          {invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1)}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={{ flex: 0.5, flexDirection: 'row', gap: 8 }}>
+                      <TouchableOpacity onPress={(e) => { e.stopPropagation(); setInvoiceToDelete(invoice); setShowConfirmDelete(true); }}>
+                        <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
+                      </TouchableOpacity>
+                    </View>
+                  </TouchableOpacity>
+                ))
+              )}
+            </View>
+
+            {/* Quick Actions Sidebar */}
+            <View style={styles.webSidebar}>
+              <View style={styles.webQuickActionsCard}>
+                <Text style={styles.webQuickActionsTitle}>Quick Actions</Text>
+                <TouchableOpacity style={styles.webQuickActionBtn} onPress={() => router.push('/invoicing/list?action=create')}>
+                  <Ionicons name="add-circle" size={20} color={COLORS.primary} />
+                  <Text style={styles.webQuickActionText}>Create Invoice</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.webQuickActionBtn} onPress={() => router.push('/invoicing/clients')}>
+                  <Ionicons name="person-add" size={20} color={COLORS.primary} />
+                  <Text style={styles.webQuickActionText}>Add Client</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.webQuickActionBtn} onPress={() => router.push('/invoicing/products')}>
+                  <Ionicons name="cube" size={20} color={COLORS.primary} />
+                  <Text style={styles.webQuickActionText}>Add Product</Text>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.webLinksCard}>
+                <Text style={styles.webLinksTitle}>Navigation</Text>
+                <TouchableOpacity style={styles.webLinkItem} onPress={() => router.push('/invoicing/clients')}>
+                  <Ionicons name="people-outline" size={20} color="#6B7280" />
+                  <Text style={styles.webLinkText}>Manage Clients</Text>
+                  <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.webLinkItem} onPress={() => router.push('/invoicing/products')}>
+                  <Ionicons name="cube-outline" size={20} color="#6B7280" />
+                  <Text style={styles.webLinkText}>Products & Services</Text>
+                  <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.webLinkItem} onPress={() => router.push('/invoicing/reports')}>
+                  <Ionicons name="bar-chart-outline" size={20} color="#6B7280" />
+                  <Text style={styles.webLinkText}>Reports</Text>
+                  <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.webLinkItem} onPress={() => router.push('/invoicing/settings')}>
+                  <Ionicons name="settings-outline" size={20} color="#6B7280" />
+                  <Text style={styles.webLinkText}>Settings</Text>
+                  <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </ScrollView>
+      ) : (
+        /* MOBILE LAYOUT */
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
+          contentContainerStyle={{ flexGrow: 1 }}
+        >
+          
+          {/* Stats - Only show summary cards on mobile */}
+          <View style={styles.summaryRow}>
+            <View style={[styles.summaryCard, { backgroundColor: COLORS.warningLight }]}>
+              <Ionicons name="time-outline" size={24} color={COLORS.warning} />
+              <View style={styles.summaryContent}>
+                <Text style={styles.summaryLabel}>Outstanding</Text>
+                <Text style={[styles.summaryValue, { color: COLORS.warning }]}>{formatCurrency(summary?.total_outstanding || 0)}</Text>
+              </View>
+            </View>
+            <View style={[styles.summaryCard, { backgroundColor: COLORS.primaryLight }]}>
+              <Ionicons name="alert-circle-outline" size={24} color={COLORS.primary} />
+              <View style={styles.summaryContent}>
+                <Text style={styles.summaryLabel}>Overdue</Text>
+                <Text style={[styles.summaryValue, { color: COLORS.primary }]}>{formatCurrency(summary?.total_outstanding || 0)}</Text>
+              </View>
+            </View>
+          </View>
+          
+          {/* Main Card Container - Contains Tabs, Search, and Invoice List */}
+          <View style={styles.mainCard}>
+            {/* Tabs inside the card */}
+            <View style={styles.tabsWrapper}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsContent}>
+                {[
+                  { key: 'all', label: 'All' },
+                  { key: 'draft', label: 'Draft' },
+                  { key: 'sent', label: 'Sent' },
+                  { key: 'paid', label: 'Paid' },
+                  { key: 'overdue', label: 'Overdue' },
+                ].map((tab) => (
+                  <TouchableOpacity
+                    key={tab.key}
+                    style={[styles.tab, activeTab === tab.key && styles.tabActive]}
+                    onPress={() => setActiveTab(tab.key as any)}
+                  >
+                    <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>
+                      {tab.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+            
+            {/* Search inside the card */}
+            <View style={styles.searchInsideCard}>
+              <Ionicons name="search" size={20} color={COLORS.gray} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search invoices..."
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholderTextColor={COLORS.gray}
+              />
+            </View>
+            
+            {/* Invoice List inside the card - this scrolls internally */}
+            <ScrollView 
+              style={styles.invoiceListScroll}
+              showsVerticalScrollIndicator={true}
+              nestedScrollEnabled={true}
+            >
+              {invoices.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Ionicons name="document-text-outline" size={48} color={COLORS.gray} />
+                  <Text style={styles.emptyText}>No invoices found</Text>
+                  <TouchableOpacity style={styles.emptyBtn} onPress={() => router.push('/invoicing/list?action=create')}>
+                    <Text style={styles.emptyBtnText}>Create First Invoice</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.invoiceListContent}>
+                  {invoices.map(renderInvoiceCard)}
+                </View>
+              )}
+            </ScrollView>
+          </View>
+          
+          {/* Quick Actions Card */}
+          <View style={[styles.adminCard, { backgroundColor: '#EDE9FE' }]}>
+            <Text style={styles.adminCardTitle}>Quick Actions</Text>
+            <View style={styles.adminToolsGrid}>
+              <TouchableOpacity style={styles.adminToolItem} onPress={() => router.push('/invoicing/list?action=create')}>
+                <View style={[styles.adminToolIcon, { backgroundColor: '#DDD6FE' }]}>
+                  <Ionicons name="add-circle" size={24} color="#7C3AED" />
+                </View>
+                <Text style={styles.adminToolLabel}>New Invoice</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.deleteBtn} onPress={handleDeleteInvoice}>
-                <Text style={styles.deleteBtnText}>Delete</Text>
+              
+              <TouchableOpacity style={styles.adminToolItem} onPress={() => router.push('/invoicing/payments')}>
+                <View style={[styles.adminToolIcon, { backgroundColor: '#D1FAE5' }]}>
+                  <Ionicons name="card" size={24} color="#059669" />
+                </View>
+                <Text style={styles.adminToolLabel}>Payments</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.adminToolItem} onPress={() => router.push('/invoicing/quotes')}>
+                <View style={[styles.adminToolIcon, { backgroundColor: '#FEF3C7' }]}>
+                  <Ionicons name="clipboard" size={24} color="#F59E0B" />
+                </View>
+                <Text style={styles.adminToolLabel}>Quotes</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.adminToolItem} onPress={() => router.push('/invoicing/clients/create')}>
+                <View style={[styles.adminToolIcon, { backgroundColor: '#E0F2FE' }]}>
+                  <Ionicons name="person-add" size={24} color="#0EA5E9" />
+                </View>
+                <Text style={styles.adminToolLabel}>New Client</Text>
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+
+          {/* Admin Tools Card */}
+          <View style={[styles.adminCard, { backgroundColor: '#F8FAFC' }]}>
+            <Text style={styles.adminCardTitle}>Admin Tools</Text>
+            <View style={styles.adminToolsGrid}>
+              <TouchableOpacity style={styles.adminToolItem} onPress={() => router.push('/invoicing/clients')}>
+                <View style={[styles.adminToolIcon, { backgroundColor: '#E0F2FE' }]}>
+                  <Ionicons name="people" size={24} color="#0EA5E9" />
+                </View>
+                <Text style={styles.adminToolLabel}>Clients</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.adminToolItem} onPress={() => router.push('/invoicing/products')}>
+                <View style={[styles.adminToolIcon, { backgroundColor: '#F0FDF4' }]}>
+                  <Ionicons name="cube" size={24} color="#22C55E" />
+                </View>
+                <Text style={styles.adminToolLabel}>Products</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.adminToolItem} onPress={() => router.push('/invoicing/reports')}>
+                <View style={[styles.adminToolIcon, { backgroundColor: '#FEF3C7' }]}>
+                  <Ionicons name="bar-chart" size={24} color="#F59E0B" />
+                </View>
+                <Text style={styles.adminToolLabel}>Reports</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.adminToolItem} onPress={() => router.push('/invoicing/settings')}>
+                <View style={[styles.adminToolIcon, { backgroundColor: '#E2E8F0' }]}>
+                  <Ionicons name="settings" size={24} color="#475569" />
+                </View>
+                <Text style={styles.adminToolLabel}>Settings</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.adminToolItem} onPress={() => router.push('/invoicing/staff')}>
+                <View style={[styles.adminToolIcon, { backgroundColor: '#FCE7F3' }]}>
+                  <Ionicons name="person" size={24} color="#EC4899" />
+                </View>
+                <Text style={styles.adminToolLabel}>Staff</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.adminToolItem} onPress={() => router.push('/invoicing/categories')}>
+                <View style={[styles.adminToolIcon, { backgroundColor: '#FEF9C3' }]}>
+                  <Ionicons name="folder" size={24} color="#CA8A04" />
+                </View>
+                <Text style={styles.adminToolLabel}>Categories</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity style={styles.adminToolItem} onPress={() => router.push('/invoicing/recurring')}>
+                <View style={[styles.adminToolIcon, { backgroundColor: '#E0E7FF' }]}>
+                  <Ionicons name="repeat" size={24} color="#6366F1" />
+                </View>
+                <Text style={styles.adminToolLabel}>Recurring</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          
+          <View style={{ height: 20 }} />
+        </ScrollView>
+      )}
+
+      {/* Success Modal */}
+      <Modal visible={showSuccessModal} transparent animationType="fade">
+        <Pressable style={styles.confirmOverlay} onPress={() => setShowSuccessModal(false)}>
+          <View style={styles.confirmModal}>
+            <Ionicons name="checkmark-circle" size={64} color={COLORS.success} />
+            <Text style={styles.confirmTitle}>{successMessage.title}</Text>
+            <Text style={styles.confirmMessage}>{successMessage.subtitle}</Text>
+            <TouchableOpacity style={[styles.deleteBtn, { backgroundColor: COLORS.blue }]} onPress={() => setShowSuccessModal(false)}>
+              <Text style={styles.deleteBtnText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
       </Modal>
+
+      {/* View Invoice Modal */}
+      <WebModal
+        visible={!!viewingInvoice}
+        onClose={() => setViewingInvoice(null)}
+        title={viewingInvoice?.invoice_number || 'Invoice Details'}
+        subtitle={`Billed to ${viewingInvoice?.customer_name || ''}`}
+        icon="document-text"
+        iconColor={COLORS.primary}
+        maxWidth={650}
+      >
+        {viewingInvoice && (
+          <View>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <View style={[styles.viewStatusBadge, { backgroundColor: STATUS_CONFIG[viewingInvoice.status]?.bg || '#F3F4F6' }]}>
+                <Text style={[styles.viewStatusText, { color: STATUS_CONFIG[viewingInvoice.status]?.color || '#6B7280' }]}>
+                  {STATUS_CONFIG[viewingInvoice.status]?.label || viewingInvoice.status}
+                </Text>
+              </View>
+              <Text style={{ color: '#6B7280', fontSize: 13 }}>
+                Due: {viewingInvoice.due_date ? format(new Date(viewingInvoice.due_date), 'MMMM d, yyyy') : 'N/A'}
+              </Text>
+            </View>
+            
+            <View style={styles.viewSection}>
+              <Text style={styles.viewSectionTitle}>Client Details</Text>
+              <View style={styles.viewCard}>
+                <Text style={styles.viewCardTitle}>{viewingInvoice.customer_name}</Text>
+                {viewingInvoice.customer_email && <Text style={styles.viewCardSubtitle}>{viewingInvoice.customer_email}</Text>}
+                {viewingInvoice.customer_phone && <Text style={styles.viewCardSubtitle}>{viewingInvoice.customer_phone}</Text>}
+                {viewingInvoice.customer_address && <Text style={styles.viewCardSubtitle}>{viewingInvoice.customer_address}</Text>}
+              </View>
+            </View>
+            
+            <View style={styles.viewSection}>
+              <Text style={styles.viewSectionTitle}>Items</Text>
+              <View style={styles.viewItemsTable}>
+                <View style={styles.viewItemsHeader}>
+                  <Text style={[styles.viewItemsHeaderCell, { flex: 3 }]}>Description</Text>
+                  <Text style={[styles.viewItemsHeaderCell, { flex: 1, textAlign: 'center' }]}>Qty</Text>
+                  <Text style={[styles.viewItemsHeaderCell, { flex: 1.5, textAlign: 'right' }]}>Price</Text>
+                  <Text style={[styles.viewItemsHeaderCell, { flex: 1.5, textAlign: 'right' }]}>Total</Text>
+                </View>
+                {viewingInvoice.items.map((item, idx) => (
+                  <View key={idx} style={[styles.viewItemsRow, idx % 2 === 1 && { backgroundColor: '#F9FAFB' }]}>
+                    <Text style={[styles.viewItemsCell, { flex: 3 }]}>{item.description || 'N/A'}</Text>
+                    <Text style={[styles.viewItemsCell, { flex: 1, textAlign: 'center' }]}>{item.quantity || 0}</Text>
+                    <Text style={[styles.viewItemsCell, { flex: 1.5, textAlign: 'right' }]}>${(item.unit_price || 0).toFixed(2)}</Text>
+                    <Text style={[styles.viewItemsCell, { flex: 1.5, textAlign: 'right', fontWeight: '600' }]}>${(item.total || (item.quantity || 0) * (item.unit_price || 0)).toFixed(2)}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+            
+            <View style={styles.viewTotalsSection}>
+              <View style={styles.viewTotalRow}>
+                <Text style={styles.viewTotalLabel}>Subtotal</Text>
+                <Text style={styles.viewTotalValue}>${(viewingInvoice.subtotal || viewingInvoice.total || 0).toFixed(2)}</Text>
+              </View>
+              {viewingInvoice.tax_total && viewingInvoice.tax_total > 0 && (
+                <View style={styles.viewTotalRow}>
+                  <Text style={styles.viewTotalLabel}>Tax</Text>
+                  <Text style={styles.viewTotalValue}>${(viewingInvoice.tax_total || 0).toFixed(2)}</Text>
+                </View>
+              )}
+              <View style={[styles.viewTotalRow, styles.viewGrandTotalRow]}>
+                <Text style={styles.viewGrandTotalLabel}>Total</Text>
+                <Text style={styles.viewGrandTotalValue}>${(viewingInvoice.total || 0).toFixed(2)}</Text>
+              </View>
+              {viewingInvoice.amount_paid > 0 && (
+                <View style={styles.viewPaymentRow}>
+                  <Text style={styles.viewPaymentLabel}>Amount Paid</Text>
+                  <Text style={styles.viewPaymentValue}>-${(viewingInvoice.amount_paid || 0).toFixed(2)}</Text>
+                </View>
+              )}
+              {viewingInvoice.balance_due > 0 && (
+                <View style={styles.viewBalanceRow}>
+                  <Text style={styles.viewBalanceLabel}>Balance Due</Text>
+                  <Text style={styles.viewBalanceValue}>${(viewingInvoice.balance_due || 0).toFixed(2)}</Text>
+                </View>
+              )}
+            </View>
+            
+            <View style={styles.viewActionsRow}>
+              {viewingInvoice.status === 'draft' && (
+                <TouchableOpacity style={[styles.viewActionBtn, { backgroundColor: '#3B82F6' }]} onPress={() => { setViewingInvoice(null); router.push(`/invoicing/${viewingInvoice.id}`); }}>
+                  <Ionicons name="send" size={18} color="#FFFFFF" />
+                  <Text style={styles.viewActionBtnText}>Send Invoice</Text>
+                </TouchableOpacity>
+              )}
+              {(viewingInvoice.status === 'sent' || viewingInvoice.status === 'partial' || viewingInvoice.status === 'overdue') && (
+                <TouchableOpacity style={[styles.viewActionBtn, { backgroundColor: COLORS.success }]} onPress={() => { setViewingInvoice(null); router.push(`/invoicing/${viewingInvoice.id}`); }}>
+                  <Ionicons name="cash-outline" size={18} color="#FFFFFF" />
+                  <Text style={styles.viewActionBtnText}>Record Payment</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity style={[styles.viewActionBtn, { backgroundColor: COLORS.primary }]} onPress={() => { setViewingInvoice(null); router.push(`/invoicing/${viewingInvoice.id}`); }}>
+                <Ionicons name="pencil" size={18} color="#FFFFFF" />
+                <Text style={styles.viewActionBtnText}>Edit</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.viewActionBtn, { backgroundColor: '#059669' }]} onPress={() => { /* TODO: implement print/PDF */ }}>
+                <Ionicons name="print-outline" size={18} color="#FFFFFF" />
+                <Text style={styles.viewActionBtnText}>Print / PDF</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+      </WebModal>
+
+      {/* Delete Confirmation */}
+      <ConfirmationModal
+        visible={showConfirmDelete}
+        title="Delete Invoice?"
+        message={invoiceToDelete ? `Are you sure you want to delete invoice "${invoiceToDelete.invoice_number}"? This action cannot be undone.` : ''}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={handleDeleteInvoice}
+        onCancel={() => { setShowConfirmDelete(false); setInvoiceToDelete(null); }}
+        variant="danger"
+        loading={deleting}
+      />
     </SafeAreaView>
   );
 }
@@ -350,51 +963,52 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFB' },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   
-  // Web Header
-  webHeader: {
+  // Web Page Header
+  webPageHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 32,
-    paddingVertical: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 20,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
-  webHeaderLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  invoicingBadge: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: '#EDE9FE',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  webHeaderTitle: {
-    fontSize: 20,
+  webPageTitle: {
+    fontSize: 24,
     fontWeight: '700',
     color: '#111827',
   },
-  webHeaderSubtitle: {
-    fontSize: 13,
+  webPageSubtitle: {
+    fontSize: 14,
     color: '#6B7280',
-    marginTop: 2,
+    marginTop: 4,
   },
-  webHeaderRight: {
+  createInvoiceBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
+    backgroundColor: '#7C3AED',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  createInvoiceBtnText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   
   // Mobile Header
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
-  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.lightGray, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: COLORS.dark },
+  header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
+  headerTitle: { fontSize: 22, fontWeight: '700', color: COLORS.dark },
   addBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#7C3AED', alignItems: 'center', justifyContent: 'center' },
+  
+  // Quick Actions
+  quickActions: { flexDirection: 'row', paddingHorizontal: 16, paddingTop: 16, gap: 12 },
+  quickActionBtn: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12, gap: 10, flex: 1 },
+  quickActionIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  quickActionText: { fontSize: 14, fontWeight: '600', color: COLORS.dark },
   
   statsContainer: { padding: 16 },
   statsRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
@@ -403,25 +1017,181 @@ const styles = StyleSheet.create({
   statValue: { fontSize: 18, fontWeight: '800', color: COLORS.dark },
   statLabel: { fontSize: 12, color: COLORS.gray, marginTop: 4 },
   
+  // Summary Row (2 cards at top)
+  summaryRow: { 
+    flexDirection: 'row', 
+    paddingHorizontal: 16, 
+    paddingTop: 16,
+    paddingBottom: 12,
+    gap: 12 
+  },
+  summaryCard: { 
+    flex: 1, 
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 16, 
+    padding: 16, 
+    gap: 12,
+  },
+  summaryContent: { flex: 1 },
+  summaryLabel: { fontSize: 13, color: COLORS.dark, fontWeight: '500' },
+  summaryValue: { fontSize: 16, fontWeight: '800', marginTop: 2 },
+  
+  // Main Card Container (Invoice List)
+  mainCard: {
+    backgroundColor: '#FEF7ED',  // Light orange/cream color
+    marginHorizontal: 16,
+    borderRadius: 20,
+    overflow: 'hidden',
+    maxHeight: 320,  // Smaller height
+  },
+  
+  // Admin Tools Card
+  adminCard: {
+    backgroundColor: '#F3E8FF',  // Light purple to match Invoicing theme
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 20,
+    padding: 20,
+  },
+  adminCardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: COLORS.dark,
+    marginBottom: 16,
+  },
+  adminToolsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  adminToolItem: {
+    width: '23%',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
+  },
+  adminToolIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  adminToolLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: COLORS.dark,
+    textAlign: 'center',
+  },
+  
+  // Tabs wrapper and content
+  tabsWrapper: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  tabsContent: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  tabsInsideCard: { 
+    paddingHorizontal: 16, 
+    paddingTop: 20,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
   tabsContainer: { paddingHorizontal: 16, marginBottom: 12 },
-  tab: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 25, backgroundColor: '#FFF', marginRight: 10, borderWidth: 1, borderColor: '#E5E7EB' },
-  tabActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  tabText: { fontSize: 14, fontWeight: '500', color: COLORS.gray },
+  tab: { paddingHorizontal: 20, paddingVertical: 10, borderRadius: 25, backgroundColor: COLORS.lightGray, marginRight: 10 },
+  tabActive: { backgroundColor: COLORS.primary },
+  tabText: { fontSize: 14, fontWeight: '600', color: COLORS.gray },
   tabTextActive: { color: '#FFF' },
   
+  // Search inside card
+  searchInsideCard: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    marginHorizontal: 16, 
+    marginVertical: 12, 
+    backgroundColor: COLORS.lightGray, 
+    borderRadius: 12, 
+    paddingHorizontal: 16, 
+    paddingVertical: 12, 
+    gap: 12 
+  },
   searchContainer: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, marginBottom: 12, backgroundColor: '#FFF', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12, gap: 12 },
   searchInput: { flex: 1, fontSize: 16, color: COLORS.dark },
   
+  // Invoice list scroll area
+  invoiceListScroll: {
+    flex: 1,
+    maxHeight: 200,
+  },
+  invoiceListContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+  
   listContainer: { paddingHorizontal: 16 },
-  invoiceRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#FFF', borderRadius: 12, padding: 16, marginBottom: 10, shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 },
-  invoiceInfo: { flex: 1 },
+  
+  // Invoice Card Styles (inside the main card)
+  invoiceCard: { 
+    backgroundColor: COLORS.lightGray, 
+    borderRadius: 16, 
+    padding: 16, 
+    marginBottom: 12, 
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  cardIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: COLORS.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   invoiceNumber: { fontSize: 16, fontWeight: '700', color: COLORS.dark },
   customerName: { fontSize: 14, color: COLORS.gray, marginTop: 2 },
-  invoiceDate: { fontSize: 13, color: COLORS.gray },
-  invoiceRight: { alignItems: 'flex-end', marginRight: 8 },
-  invoiceAmount: { fontSize: 18, fontWeight: '700', color: COLORS.dark },
-  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, marginTop: 4 },
-  statusText: { fontSize: 12, fontWeight: '600', textTransform: 'capitalize' },
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  cardLabel: { fontSize: 11, color: COLORS.gray, marginBottom: 2, textTransform: 'uppercase', letterSpacing: 0.5 },
+  invoiceAmount: { fontSize: 18, fontWeight: '800', color: COLORS.dark },
+  cardDates: { alignItems: 'flex-end' },
+  invoiceDate: { fontSize: 14, fontWeight: '600', color: COLORS.dark },
+  balanceDueContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 10,
+    paddingTop: 10,
+    paddingHorizontal: 12,
+    paddingBottom: 10,
+    backgroundColor: COLORS.primaryLight,
+    marginHorizontal: -16,
+    marginBottom: -16,
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+  },
+  balanceDueLabel: { fontSize: 13, fontWeight: '600', color: COLORS.primary },
+  balanceDueAmount: { fontSize: 16, fontWeight: '800', color: COLORS.primary },
+  statusBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 16 },
+  statusText: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
   
   emptyState: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
   emptyText: { fontSize: 16, color: COLORS.gray, marginTop: 12 },
@@ -437,4 +1207,460 @@ const styles = StyleSheet.create({
   cancelBtnText: { fontSize: 16, fontWeight: '600', color: COLORS.dark },
   deleteBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: COLORS.primary, alignItems: 'center' },
   deleteBtnText: { fontSize: 16, fontWeight: '600', color: '#FFF' },
+
+  // ========== WEB DASHBOARD STYLES ==========
+  webDashboardContent: {
+    padding: 24,
+  },
+  webStatsRow: {
+    flexDirection: 'row',
+    gap: 20,
+    marginBottom: 24,
+  },
+  webStatCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    gap: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  webStatIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  webStatInfo: {
+    flex: 1,
+  },
+  webStatValue: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  webStatLabel: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 4,
+  },
+  webMainContent: {
+    flexDirection: 'row',
+    gap: 24,
+  },
+  webTableCard: {
+    flex: 3,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  webTableHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  webTableTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  webViewAllLink: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#7C3AED',
+  },
+  webFilterRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  webTabs: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  webTab: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
+  },
+  webTabActive: {
+    backgroundColor: '#7C3AED',
+  },
+  webTabText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6B7280',
+  },
+  webTabTextActive: {
+    color: '#FFFFFF',
+  },
+  webSearchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 8,
+    minWidth: 250,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  webSearchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#111827',
+    outlineStyle: 'none',
+  },
+  webTableHeaderRow: {
+    flexDirection: 'row',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    marginBottom: 8,
+  },
+  webTableHeaderCell: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6B7280',
+    textTransform: 'uppercase',
+  },
+  webTableRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  webTableCell: {
+    fontSize: 14,
+    color: '#374151',
+  },
+  webStatusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  webStatusText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  webEmptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+  },
+  webEmptyText: {
+    fontSize: 16,
+    color: '#6B7280',
+    marginTop: 12,
+  },
+  webEmptyBtn: {
+    marginTop: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    backgroundColor: '#7C3AED',
+    borderRadius: 12,
+  },
+  webEmptyBtnText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  webSidebar: {
+    flex: 1,
+    gap: 20,
+  },
+  webQuickActionsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  webQuickActionsTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 16,
+  },
+  webQuickActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 10,
+    marginBottom: 8,
+  },
+  webQuickActionText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+  },
+  webLinksCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  webLinksTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 16,
+  },
+  webLinkItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  webLinkText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#374151',
+  },
+
+  // Charts Row
+  webChartsRow: {
+    flexDirection: 'row',
+    gap: 20,
+    marginTop: 24,
+  },
+  webChartCard: {
+    flex: 1,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 20,
+    padding: 20,
+  },
+  webChartTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 16,
+  },
+  webChartContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    minHeight: 160,
+  },
+  chartPlaceholder: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+  },
+  chartPlaceholderText: {
+    fontSize: 13,
+    color: '#9CA3AF',
+    marginTop: 8,
+  },
+  webChartLegend: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 16,
+    marginTop: 16,
+  },
+  webLegendItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  webLegendDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  webLegendText: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  
+  // View Invoice Modal Styles
+  viewStatusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+  },
+  viewStatusText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  viewSection: {
+    marginBottom: 20,
+  },
+  viewSectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  viewCard: {
+    backgroundColor: '#F9FAFB',
+    padding: 16,
+    borderRadius: 12,
+  },
+  viewCardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  viewCardSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  viewItemsTable: {
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  viewItemsHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#F3F4F6',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  viewItemsHeaderCell: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6B7280',
+    textTransform: 'uppercase',
+  },
+  viewItemsRow: {
+    flexDirection: 'row',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  viewItemsCell: {
+    fontSize: 14,
+    color: '#111827',
+  },
+  viewTotalsSection: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  viewTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+  },
+  viewTotalLabel: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  viewTotalValue: {
+    fontSize: 14,
+    color: '#111827',
+    fontWeight: '500',
+  },
+  viewGrandTotalRow: {
+    marginTop: 8,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  viewGrandTotalLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  viewGrandTotalValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  viewPaymentRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 6,
+    marginTop: 8,
+  },
+  viewPaymentLabel: {
+    fontSize: 14,
+    color: '#059669',
+  },
+  viewPaymentValue: {
+    fontSize: 14,
+    color: '#059669',
+    fontWeight: '600',
+  },
+  viewBalanceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#FEF2F2',
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  viewBalanceLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#DC2626',
+  },
+  viewBalanceValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#DC2626',
+  },
+  viewActionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginTop: 24,
+  },
+  viewActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    gap: 8,
+  },
+  viewActionBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
+  },
 });

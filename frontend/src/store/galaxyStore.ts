@@ -4,7 +4,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
 
-export type GalaxyAppId = 'retail_pro' | 'inventory' | 'payments' | 'bulk_sms' | 'invoicing' | 'accounting';
+export type GalaxyAppId = 'retail_pro' | 'inventory' | 'payments' | 'bulk_sms' | 'invoicing' | 'accounting' | 'kwikpay' | 'unitxt' | 'crm' | 'expenses';
 export type GalaxyAppStatus = 'available' | 'coming_soon' | 'beta';
 export type SubscriptionStatus = 'active' | 'expired' | 'grace_period' | 'suspended';
 
@@ -33,24 +33,56 @@ export interface UserAppAccess {
   subscription: AppSubscription;
 }
 
+// Ecosystem types
+export interface EcosystemProduct {
+  id: string;
+  product_id: string;
+  product_name: string;
+  product_icon: string;
+  product_color: string;
+  status: 'active' | 'trial' | 'inactive';
+  plan?: string;
+  linked_at?: string;
+  setup_completed: boolean;
+  setup_route: string;
+}
+
+export interface AvailableProduct {
+  id: string;
+  name: string;
+  tagline: string;
+  icon: string;
+  color: string;
+  category: string;
+}
+
 interface GalaxyState {
   apps: GalaxyApp[];
   userAppAccess: UserAppAccess[];
+  // Ecosystem state
+  linkedProducts: EcosystemProduct[];
+  availableProducts: AvailableProduct[];
   isLoading: boolean;
   error: string | null;
   
   // Actions
   fetchApps: () => Promise<void>;
   fetchUserAccess: (token: string) => Promise<void>;
+  fetchEcosystemProducts: (token: string) => Promise<void>;
   subscribeToApp: (token: string, appId: GalaxyAppId) => Promise<{ success: boolean; message: string }>;
+  linkProduct: (token: string, productId: string, plan?: string) => Promise<{ success: boolean; message: string; setup_route?: string }>;
+  unlinkProduct: (token: string, productId: string, reason?: string) => Promise<{ success: boolean; message: string }>;
   generateSSOToken: (token: string, appId: GalaxyAppId) => Promise<string | null>;
   hasAppAccess: (appId: GalaxyAppId) => boolean;
+  isProductLinked: (productId: string) => boolean;
   clearError: () => void;
 }
 
 export const useGalaxyStore = create<GalaxyState>((set, get) => ({
   apps: [],
   userAppAccess: [],
+  linkedProducts: [],
+  availableProducts: [],
   isLoading: false,
   error: null,
 
@@ -82,6 +114,23 @@ export const useGalaxyStore = create<GalaxyState>((set, get) => ({
     }
   },
 
+  fetchEcosystemProducts: async (token: string) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await axios.get(`${API_URL}/api/ecosystem/my-products`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      set({ 
+        linkedProducts: response.data.linked || [],
+        availableProducts: response.data.available || [],
+        isLoading: false 
+      });
+    } catch (error: any) {
+      const message = error.response?.data?.detail || 'Failed to fetch ecosystem products';
+      set({ error: message, isLoading: false });
+    }
+  },
+
   subscribeToApp: async (token: string, appId: GalaxyAppId) => {
     try {
       set({ isLoading: true, error: null });
@@ -98,6 +147,52 @@ export const useGalaxyStore = create<GalaxyState>((set, get) => ({
       return { success: true, message: response.data.message };
     } catch (error: any) {
       const message = error.response?.data?.detail || 'Failed to subscribe';
+      set({ error: message, isLoading: false });
+      return { success: false, message };
+    }
+  },
+
+  linkProduct: async (token: string, productId: string, plan?: string) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await axios.post(
+        `${API_URL}/api/ecosystem/link`,
+        { product_id: productId, plan },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      // Refresh ecosystem products after linking
+      await get().fetchEcosystemProducts(token);
+      
+      set({ isLoading: false });
+      return { 
+        success: true, 
+        message: response.data.message,
+        setup_route: response.data.setup_route 
+      };
+    } catch (error: any) {
+      const message = error.response?.data?.detail || 'Failed to link product';
+      set({ error: message, isLoading: false });
+      return { success: false, message };
+    }
+  },
+
+  unlinkProduct: async (token: string, productId: string, reason?: string) => {
+    try {
+      set({ isLoading: true, error: null });
+      const response = await axios.post(
+        `${API_URL}/api/ecosystem/unlink`,
+        { product_id: productId, reason },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      
+      // Refresh ecosystem products after unlinking
+      await get().fetchEcosystemProducts(token);
+      
+      set({ isLoading: false });
+      return { success: true, message: response.data.message };
+    } catch (error: any) {
+      const message = error.response?.data?.detail || 'Failed to unlink product';
       set({ error: message, isLoading: false });
       return { success: false, message };
     }
@@ -129,6 +224,11 @@ export const useGalaxyStore = create<GalaxyState>((set, get) => ({
     const { userAppAccess } = get();
     const access = userAppAccess.find(a => a.app.app_id === appId);
     return access?.subscription?.status === 'active';
+  },
+
+  isProductLinked: (productId: string) => {
+    const { linkedProducts } = get();
+    return linkedProducts.some(p => p.product_id === productId && (p.status === 'active' || p.status === 'trial'));
   },
 
   clearError: () => set({ error: null }),

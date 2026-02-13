@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import { useRouter, useSegments } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import { useCartStore } from '../../src/store/cartStore';
 import { useBusinessStore } from '../../src/store/businessStore';
+import ConfirmationModal from '../../src/components/ConfirmationModal';
 
 interface WebLayoutProps {
   children: React.ReactNode;
@@ -27,11 +28,27 @@ export default function WebLayout({ children }: WebLayoutProps) {
   const userRole = user?.role || 'sales_staff';
   const currentTab = segments[1] || 'dashboard';
 
-  const handleLogout = async () => {
-    if (window.confirm('Are you sure you want to logout?')) {
+  // Logout confirmation state
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const handleLogoutPress = () => {
+    setShowLogoutModal(true);
+  };
+
+  const handleLogoutConfirm = async () => {
+    setLoggingOut(true);
+    try {
       await logout();
       router.replace('/(auth)/login');
+    } finally {
+      setLoggingOut(false);
+      setShowLogoutModal(false);
     }
+  };
+
+  const handleLogoutCancel = () => {
+    setShowLogoutModal(false);
   };
 
   // Define navigation items based on role
@@ -175,7 +192,7 @@ export default function WebLayout({ children }: WebLayoutProps) {
               <Text style={styles.userRole}>{userRole.replace('_', ' ').toUpperCase()}</Text>
             </View>
           </View>
-          <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+          <TouchableOpacity style={styles.logoutButton} onPress={handleLogoutPress}>
             <Ionicons name="log-out-outline" size={20} color="#DC2626" />
           </TouchableOpacity>
         </View>
@@ -185,6 +202,20 @@ export default function WebLayout({ children }: WebLayoutProps) {
       <View style={styles.mainContent}>
         {children}
       </View>
+
+      {/* Logout Confirmation Modal */}
+      <ConfirmationModal
+        visible={showLogoutModal}
+        title="Logout"
+        message="Are you sure you want to log out of your account?"
+        confirmLabel="Logout"
+        cancelLabel="Cancel"
+        onConfirm={handleLogoutConfirm}
+        onCancel={handleLogoutCancel}
+        variant="danger"
+        icon="log-out-outline"
+        loading={loggingOut}
+      />
     </View>
   );
 }

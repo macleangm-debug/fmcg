@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,12 +8,17 @@ import {
   Platform,
   useWindowDimensions,
   Linking,
+  Modal,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useSegments } from 'expo-router';
 import { useAuthStore } from '../store/authStore';
 import { useCartStore } from '../store/cartStore';
 import { useBusinessStore } from '../store/businessStore';
+import { subscriptionApi } from '../api/client';
+import ProductSwitcher from './ProductSwitcher';
+import LinkedAppsSidebar from './LinkedAppsSidebar';
+import ContextSwitcher from './ContextSwitcher';
 
 interface WebSidebarLayoutProps {
   children: React.ReactNode;
@@ -48,30 +53,60 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
   const cartItems = useCartStore((state) => state.items);
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+  const [subscriptionPlan, setSubscriptionPlan] = useState<{ name: string; is_trial: boolean } | null>(null);
+  
   const userRole = user?.role || 'sales_staff';
   const currentPath = '/' + segments.join('/');
   
   // Only show sidebar on web with width > 768px
   const isWebDesktop = Platform.OS === 'web' && width > 768;
   
+  // Fetch subscription status
+  useEffect(() => {
+    const fetchSubscription = async () => {
+      try {
+        const response = await subscriptionApi.getStatus();
+        if (response.data?.plan) {
+          setSubscriptionPlan({
+            name: response.data.plan.name || 'Starter',
+            is_trial: response.data.is_trial || false,
+          });
+        }
+      } catch (error) {
+        console.log('Could not fetch subscription status');
+      }
+    };
+    if (user) {
+      fetchSubscription();
+    }
+  }, [user]);
+  
   const handleOpenHelp = () => {
     // Navigate to help page
     router.push('/help');
   };
 
-  const handleLogout = async () => {
-    if (Platform.OS === 'web') {
-      if (window.confirm('Are you sure you want to logout?')) {
-        await logout();
-        router.replace('/(auth)/login');
-      }
-    } else {
-      await logout();
-      router.replace('/(auth)/login');
-    }
+  const handleLogout = () => {
+    setShowLogoutConfirm(true);
   };
 
-  // Define navigation items based on role
+  const confirmLogout = async () => {
+    setShowLogoutConfirm(false);
+    await logout();
+    router.replace('/(auth)/login');
+  };
+
+  // 3x3 Grid Icon Component
+  const GridIcon = () => (
+    <View style={styles.gridIconContainer}>
+      {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+        <View key={i} style={styles.gridDot} />
+      ))}
+    </View>
+  );
+
+  // Define navigation items based on role - Reorganized for better UX
   const getNavItems = () => {
     const items: { name: string; label: string; icon: string; badge?: number }[] = [];
     
@@ -80,49 +115,69 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
       items.push({ name: '/(tabs)/dashboard', label: 'Dashboard', icon: 'grid-outline' });
     }
     
-    // Add Sale - for all
-    items.push({ name: '/(tabs)/cart', label: 'Add Sale', icon: 'cart-outline', badge: cartCount });
+    // Add Sale - for all (primary action)
+    items.push({ name: '/(tabs)/cart', label: 'New Sale', icon: 'cart-outline', badge: cartCount });
     
     // Orders - for admin, manager, finance
     if (['admin', 'manager', 'superadmin', 'finance'].includes(userRole)) {
       items.push({ name: '/(tabs)/orders', label: 'Orders', icon: 'receipt-outline' });
     }
     
-    // Customers - for admin, manager
-    if (['admin', 'manager', 'superadmin'].includes(userRole)) {
-      items.push({ name: '/(tabs)/customers', label: 'Customers', icon: 'people-outline' });
-    }
-    
     return items;
   };
 
-  const getAdminItems = () => {
+  // Customers & Products section
+  const getCatalogItems = () => {
+    if (!['admin', 'manager', 'superadmin'].includes(userRole)) return [];
+    
+    return [
+      { name: '/(tabs)/customers', label: 'Customers', icon: 'people-outline' },
+      { name: '/admin/products', label: 'Products', icon: 'cube-outline' },
+      { name: '/admin/categories', label: 'Categories', icon: 'folder-outline' },
+    ];
+  };
+
+  // Promotions section (Stock is now in Inventory linked app)
+  const getPromotionsItems = () => {
+    if (!['admin', 'manager', 'superadmin'].includes(userRole)) return [];
+    
+    return [
+      { name: '/admin/promotions', label: 'Promotions', icon: 'pricetag-outline' },
+    ];
+  };
+
+  // Reports & Finance section
+  const getFinanceItems = () => {
     if (!['admin', 'manager', 'superadmin', 'finance'].includes(userRole)) return [];
     
-    const items: { name: string; label: string; icon: string }[] = [];
+    return [
+      { name: '/admin/reports', label: 'Reports', icon: 'bar-chart-outline' },
+      { name: '/admin/expenses', label: 'Expenses', icon: 'wallet-outline' },
+    ];
+  };
+
+  // Settings & Admin section
+  const getSettingsItems = () => {
+    if (!['admin', 'superadmin'].includes(userRole)) return [];
     
-    if (['admin', 'manager', 'superadmin'].includes(userRole)) {
-      items.push({ name: '/admin/products', label: 'Products', icon: 'cube-outline' });
-      items.push({ name: '/admin/stock', label: 'Stock', icon: 'layers-outline' });
-      items.push({ name: '/admin/categories', label: 'Categories', icon: 'folder-outline' });
-      items.push({ name: '/admin/promotions', label: 'Promotions', icon: 'pricetag-outline' });
-    }
+    const items = [
+      { name: '/admin/staff', label: 'Staff', icon: 'people-circle-outline' },
+      { name: '/admin/settings', label: 'Settings', icon: 'settings-outline' },
+    ];
     
-    if (['admin', 'manager', 'superadmin', 'finance'].includes(userRole)) {
-      items.push({ name: '/admin/expenses', label: 'Expenses', icon: 'wallet-outline' });
-      items.push({ name: '/admin/reports', label: 'Reports', icon: 'bar-chart-outline' });
-    }
-    
-    if (userRole === 'admin' || userRole === 'superadmin') {
-      items.push({ name: '/admin/staff', label: 'Staff', icon: 'people-circle-outline' });
-      items.push({ name: '/admin/settings', label: 'Settings', icon: 'settings-outline' });
+    // Add Platform Admin for superadmins
+    if (userRole === 'superadmin') {
+      items.push({ name: '/platform-admin', label: 'Platform Admin', icon: 'shield-outline' });
     }
     
     return items;
   };
 
   const navItems = getNavItems();
-  const adminItems = getAdminItems();
+  const catalogItems = getCatalogItems();
+  const promotionsItems = getPromotionsItems();
+  const financeItems = getFinanceItems();
+  const settingsItems = getSettingsItems();
 
   const isActive = (name: string) => {
     return currentPath.includes(name.replace('/(tabs)', ''));
@@ -151,6 +206,19 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
         </View>
         
         <View style={styles.headerRight}>
+          {/* Unified Context Switcher - Business + Location + Subscription */}
+          {['admin', 'manager', 'superadmin'].includes(userRole) && (
+            <ContextSwitcher 
+              allowAddBusiness={true} 
+              allowAddLocation={true}
+              onBusinessSwitch={() => router.replace('/(tabs)/dashboard')}
+              onLocationSwitch={() => {}}
+            />
+          )}
+          
+          {/* Apps Grid with Popup - using ProductSwitcher */}
+          <ProductSwitcher currentProductId="retail_pro" />
+          
           {/* User Info */}
           <View style={styles.userInfo}>
             <View style={styles.userAvatar}>
@@ -163,17 +231,51 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
               <Text style={styles.userRole}>{userRole.replace('_', ' ').toUpperCase()}</Text>
             </View>
           </View>
-          
-          {/* Logout Button */}
-          <TouchableOpacity 
-            style={styles.logoutButton} 
-            onPress={handleLogout}
-          >
-            <Ionicons name="log-out-outline" size={20} color={theme.error} />
-            <Text style={styles.logoutText}>Logout</Text>
-          </TouchableOpacity>
         </View>
       </View>
+
+      {/* Logout Confirmation Modal */}
+      <Modal
+        visible={showLogoutConfirm}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowLogoutConfirm(false)}
+      >
+        <View style={styles.logoutModalOverlay}>
+          <View style={styles.logoutModal}>
+            {/* Icon */}
+            <View style={styles.logoutIconContainer}>
+              <Ionicons name="log-out-outline" size={32} color="#DC2626" />
+            </View>
+            
+            {/* Title */}
+            <Text style={styles.logoutModalTitle}>Confirm Logout</Text>
+            
+            {/* Message */}
+            <Text style={styles.logoutModalMessage}>
+              Are you sure you want to log out of your account?
+            </Text>
+            
+            {/* Buttons */}
+            <View style={styles.logoutModalButtons}>
+              <TouchableOpacity 
+                style={styles.logoutCancelBtn}
+                onPress={() => setShowLogoutConfirm(false)}
+              >
+                <Text style={styles.logoutCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.logoutConfirmBtn}
+                onPress={confirmLogout}
+              >
+                <Ionicons name="log-out-outline" size={18} color="#FFFFFF" />
+                <Text style={styles.logoutConfirmText}>Logout</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Main Body with Sidebar + Content */}
       <View style={styles.bodyContainer}>
@@ -181,7 +283,7 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
         <View style={styles.sidebar}>
           {/* Main Navigation */}
           <ScrollView style={styles.navSection} showsVerticalScrollIndicator={false}>
-            <Text style={styles.navSectionTitle}>MAIN MENU</Text>
+            <Text style={styles.navSectionTitle}>SALES</Text>
             {navItems.map((item) => (
               <TouchableOpacity
                 key={item.name}
@@ -205,11 +307,11 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
               </TouchableOpacity>
             ))}
 
-            {/* Admin Section */}
-            {adminItems.length > 0 && (
+            {/* Customers & Catalog Section */}
+            {catalogItems.length > 0 && (
               <>
-                <Text style={[styles.navSectionTitle, { marginTop: 24 }]}>MANAGEMENT</Text>
-                {adminItems.map((item) => (
+                <Text style={[styles.navSectionTitle, { marginTop: 24 }]}>CATALOG</Text>
+                {catalogItems.map((item) => (
                   <TouchableOpacity
                     key={item.name}
                     style={[styles.navItem, isActive(item.name) && styles.navItemActive]}
@@ -227,6 +329,99 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
                   </TouchableOpacity>
                 ))}
               </>
+            )}
+
+            {/* Insights Section - Reports only, Expenses moves to Linked Apps */}
+            {financeItems.length > 0 && (
+              <>
+                <Text style={[styles.navSectionTitle, { marginTop: 24 }]}>INSIGHTS</Text>
+                {financeItems.filter(item => item.name === '/admin/reports').map((item) => (
+                  <TouchableOpacity
+                    key={item.name}
+                    style={[styles.navItem, isActive(item.name) && styles.navItemActive]}
+                    onPress={() => handleNavPress(item.name)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons
+                      name={item.icon as any}
+                      size={20}
+                      color={isActive(item.name) ? theme.sidebarActiveText : theme.sidebarText}
+                    />
+                    <Text style={[styles.navLabel, isActive(item.name) && styles.navLabelActive]}>
+                      {item.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </>
+            )}
+
+            {/* Settings Section */}
+            {settingsItems.length > 0 && (
+              <>
+                <Text style={[styles.navSectionTitle, { marginTop: 24 }]}>SETTINGS</Text>
+                {settingsItems.map((item) => (
+                  <TouchableOpacity
+                    key={item.name}
+                    style={[styles.navItem, isActive(item.name) && styles.navItemActive]}
+                    onPress={() => handleNavPress(item.name)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons
+                      name={item.icon as any}
+                      size={20}
+                      color={isActive(item.name) ? theme.sidebarActiveText : theme.sidebarText}
+                    />
+                    <Text style={[styles.navLabel, isActive(item.name) && styles.navLabelActive]}>
+                      {item.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </>
+            )}
+
+            {/* Refer & Earn Section - Highlighted for visibility */}
+            <View style={styles.referralSection}>
+              <TouchableOpacity
+                style={[styles.referralButton, isActive('/(tabs)/referral') && styles.referralButtonActive]}
+                onPress={() => handleNavPress('/(tabs)/referral')}
+                activeOpacity={0.7}
+                data-testid="sidebar-refer-earn-btn"
+              >
+                <View style={styles.referralIconContainer}>
+                  <Ionicons name="gift" size={18} color="#FFFFFF" />
+                </View>
+                <View style={styles.referralTextContainer}>
+                  <Text style={styles.referralButtonText}>Refer & Earn</Text>
+                  <Text style={styles.referralSubtext}>Get $10 per referral</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="#6366F1" />
+              </TouchableOpacity>
+              
+              {/* Affiliate Partner Dashboard Link */}
+              <TouchableOpacity
+                style={[styles.affiliateButton, isActive('/affiliate-dashboard') && styles.affiliateButtonActive]}
+                onPress={() => handleNavPress('/affiliate-dashboard')}
+                activeOpacity={0.7}
+                data-testid="sidebar-affiliate-dashboard-btn"
+              >
+                <View style={[styles.referralIconContainer, { backgroundColor: '#10B981' }]}>
+                  <Ionicons name="people" size={18} color="#FFFFFF" />
+                </View>
+                <View style={styles.referralTextContainer}>
+                  <Text style={styles.affiliateButtonText}>Affiliate Program</Text>
+                  <Text style={styles.referralSubtext}>Become a partner</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="#10B981" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Linked Apps Section - Dynamic apps that can be linked */}
+            {['admin', 'manager', 'superadmin'].includes(userRole) && (
+              <LinkedAppsSidebar 
+                currentProductId="retailpro"
+                themeColor={theme.primary}
+                themeBgColor={theme.primaryLight}
+              />
             )}
             
             {/* Help Section */}
@@ -327,6 +522,31 @@ const styles = StyleSheet.create({
     color: theme.textSecondary,
     marginTop: 1,
   },
+  // Subscription Badge Styles
+  subscriptionBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 16,
+    backgroundColor: '#F3E8FF',
+    marginRight: 8,
+  },
+  subscriptionBadgePro: {
+    backgroundColor: '#7C3AED',
+  },
+  subscriptionBadgeEnterprise: {
+    backgroundColor: '#1F2937',
+  },
+  subscriptionBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#7C3AED',
+  },
+  subscriptionBadgeTextLight: {
+    color: '#FFFFFF',
+  },
   logoutButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -340,6 +560,107 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
     color: theme.error,
+  },
+  // Grid Icon Styles
+  gridButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: theme.surfaceSecondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gridIconContainer: {
+    width: 20,
+    height: 20,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  gridDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: theme.textSecondary,
+  },
+  // Logout Modal Styles
+  logoutModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  logoutModal: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 28,
+    width: '100%',
+    maxWidth: 360,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 24,
+    elevation: 10,
+  },
+  logoutIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#FEE2E2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  logoutModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: theme.text,
+    marginBottom: 8,
+  },
+  logoutModalMessage: {
+    fontSize: 15,
+    color: theme.textSecondary,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  logoutModalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  logoutCancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoutCancelText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: theme.textSecondary,
+  },
+  logoutConfirmBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#DC2626',
+  },
+  logoutConfirmText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   // Body
   bodyContainer: {
@@ -400,6 +721,70 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: '#FFFFFF',
+  },
+  // Referral Section
+  referralSection: {
+    paddingHorizontal: 12,
+    paddingVertical: 16,
+    marginTop: 16,
+  },
+  referralButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: '#EEF2FF',
+    borderWidth: 1,
+    borderColor: '#C7D2FE',
+  },
+  referralButtonActive: {
+    backgroundColor: '#E0E7FF',
+    borderColor: '#A5B4FC',
+  },
+  referralIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#6366F1',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  referralTextContainer: {
+    flex: 1,
+  },
+  referralButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4F46E5',
+  },
+  referralSubtext: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 1,
+  },
+  // Affiliate Button
+  affiliateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: '#D1FAE5',
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+    marginTop: 10,
+  },
+  affiliateButtonActive: {
+    backgroundColor: '#A7F3D0',
+    borderColor: '#6EE7B7',
+  },
+  affiliateButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#059669',
   },
   // Help Section
   helpSection: {

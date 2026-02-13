@@ -10,6 +10,8 @@ import {
   Alert,
   KeyboardAvoidingView,
   Platform,
+  Modal,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,6 +27,7 @@ const COLORS = {
   gray: '#6B7280',
   lightGray: '#F3F4F6',
   white: '#FFFFFF',
+  border: '#E5E7EB',
 };
 
 interface LineItem {
@@ -40,12 +43,16 @@ export default function CreateInvoice() {
   const { formatCurrency } = useBusinessStore();
   
   const [submitting, setSubmitting] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState({ title: '', subtitle: '' });
   
   // Customer info
   const [customerName, setCustomerName] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
+  const [customerCompanyId, setCustomerCompanyId] = useState('');
+  const [customerTaxId, setCustomerTaxId] = useState('');
   
   // Invoice details
   const [dueDate, setDueDate] = useState('');
@@ -132,6 +139,8 @@ export default function CreateInvoice() {
         customer_email: customerEmail.trim() || undefined,
         customer_phone: customerPhone.trim() || undefined,
         customer_address: customerAddress.trim() || undefined,
+        customer_company_id: customerCompanyId.trim() || undefined,
+        customer_tax_id: customerTaxId.trim() || undefined,
         due_date: dueDate || undefined,
         items: validItems.map(item => ({
           description: item.description,
@@ -149,12 +158,18 @@ export default function CreateInvoice() {
       
       if (send) {
         await api.post(`/invoices/${response.data.id}/send`);
-        Alert.alert('Success', `Invoice ${response.data.invoice_number} created and sent!`);
+        setSuccessMessage({ 
+          title: 'Invoice Sent!', 
+          subtitle: `Invoice ${response.data.invoice_number} has been created and sent to the customer.` 
+        });
       } else {
-        Alert.alert('Success', `Invoice ${response.data.invoice_number} created as draft`);
+        setSuccessMessage({ 
+          title: 'Invoice Created!', 
+          subtitle: `Invoice ${response.data.invoice_number} has been saved as draft.` 
+        });
       }
       
-      router.back();
+      setShowSuccessModal(true);
     } catch (error: any) {
       Alert.alert('Error', error.response?.data?.detail || 'Failed to create invoice');
     } finally {
@@ -227,11 +242,10 @@ export default function CreateInvoice() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+          <Text style={styles.headerTitle}>New Invoice</Text>
+          <TouchableOpacity style={styles.closeBtn} onPress={() => router.back()}>
             <Ionicons name="close" size={24} color={COLORS.dark} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>New Invoice</Text>
-          <View style={{ width: 40 }} />
         </View>
 
         <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
@@ -417,6 +431,20 @@ export default function CreateInvoice() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      {/* Success Modal */}
+      <Modal visible={showSuccessModal} transparent animationType="fade">
+        <Pressable style={styles.successOverlay} onPress={() => { setShowSuccessModal(false); router.back(); }}>
+          <View style={styles.successModal}>
+            <Ionicons name="checkmark-circle" size={64} color={COLORS.success} />
+            <Text style={styles.successTitle}>{successMessage.title}</Text>
+            <Text style={styles.successSubtitle}>{successMessage.subtitle}</Text>
+            <TouchableOpacity style={styles.successBtn} onPress={() => { setShowSuccessModal(false); router.back(); }}>
+              <Text style={styles.successBtnText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -424,9 +452,10 @@ export default function CreateInvoice() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F9FAFB' },
   
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
-  backBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.lightGray, alignItems: 'center', justifyContent: 'center' },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: COLORS.dark },
+  // Header
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: COLORS.white, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  headerTitle: { flex: 1, fontSize: 22, fontWeight: '700', color: COLORS.dark },
+  closeBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.lightGray, alignItems: 'center', justifyContent: 'center' },
   
   content: { flex: 1, padding: 16 },
   
@@ -467,4 +496,12 @@ const styles = StyleSheet.create({
   saveDraftText: { fontSize: 16, fontWeight: '600', color: COLORS.dark },
   sendBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 12, backgroundColor: COLORS.primary },
   sendText: { fontSize: 16, fontWeight: '600', color: '#FFF' },
+
+  // Success Modal
+  successOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: 20 },
+  successModal: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 24, width: '100%', maxWidth: 340, alignItems: 'center' },
+  successTitle: { fontSize: 20, fontWeight: '700', color: COLORS.dark, textAlign: 'center', marginTop: 16 },
+  successSubtitle: { fontSize: 14, color: COLORS.gray, textAlign: 'center', marginTop: 8, lineHeight: 20 },
+  successBtn: { marginTop: 24, backgroundColor: COLORS.success, paddingHorizontal: 32, paddingVertical: 14, borderRadius: 12, width: '100%', alignItems: 'center' },
+  successBtnText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
 });

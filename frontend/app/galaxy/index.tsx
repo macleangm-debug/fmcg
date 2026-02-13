@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,989 +8,663 @@ import {
   Image,
   Platform,
   useWindowDimensions,
-  Linking,
-  ActivityIndicator,
-  Alert,
+  Animated,
+  Modal,
+  TextInput,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '../../src/store/authStore';
-import { useGalaxyStore, GalaxyAppId } from '../../src/store/galaxyStore';
 
-// Software Galaxy Theme Colors
-const GALAXY_THEME = {
-  primary: '#00B4D8',      // Cyan blue
-  primaryDark: '#0077B6',  // Darker blue
-  secondary: '#023E8A',    // Navy blue
-  dark: '#03071E',         // Almost black
-  light: '#CAF0F8',        // Light cyan
-  white: '#FFFFFF',
-  gray: '#6B7280',
-  lightGray: '#F3F4F6',
+// Premium Dark Theme
+const THEME = {
+  bg: '#0A0A0F',
+  bgCard: '#12121A',
+  bgCardHover: '#1A1A25',
+  primary: '#14B8A6',
+  primaryGlow: 'rgba(20, 184, 166, 0.3)',
+  secondary: '#8B5CF6',
+  accent: '#F59E0B',
+  text: '#FFFFFF',
+  textMuted: '#9CA3AF',
+  textDim: '#6B7280',
+  border: '#1F1F2E',
+  success: '#10B981',
+  danger: '#EF4444',
 };
 
-interface Solution {
-  id: string;
-  name: string;
-  tagline: string;
-  description: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  color: string;
-  gradient: string[];
-  route: string;
-  features: string[];
-  pricing: string;
-  isAvailable: boolean;
-  isNew?: boolean;
-  isPopular?: boolean;
-}
+// App data with correct availability
+const APPS = {
+  available: [
+    { id: 'retailpro', name: 'RetailPro', tagline: 'Complete POS & Retail', icon: 'cart', color: '#3B82F6', features: ['Point of Sale', 'Inventory', 'Reports'] },
+    { id: 'inventory', name: 'Inventory', tagline: 'Stock Management', icon: 'cube', color: '#10B981', features: ['Stock Tracking', 'Alerts', 'Suppliers'] },
+    { id: 'invoicing', name: 'Invoicing', tagline: 'Professional Invoices', icon: 'document-text', color: '#EF4444', features: ['Templates', 'Payments', 'Tracking'] },
+    { id: 'unitxt', name: 'UniTxt', tagline: 'Bulk SMS Platform', icon: 'chatbubbles', color: '#F59E0B', features: ['Mass SMS', 'Groups', 'Analytics'] },
+    { id: 'loyalty', name: 'Loyalty', tagline: 'Customer Rewards', icon: 'gift', color: '#EC4899', features: ['Points', 'Rewards', 'Analytics'] },
+  ],
+  comingSoon: [
+    { id: 'kwikpay', name: 'KwikPay', tagline: 'Payment Processing', icon: 'card', color: '#8B5CF6' },
+    { id: 'accounting', name: 'Accounting', tagline: 'Financial Management', icon: 'calculator', color: '#06B6D4' },
+    { id: 'crm', name: 'CRM', tagline: 'Customer Relations', icon: 'people', color: '#F97316' },
+    { id: 'expenses', name: 'Expenses', tagline: 'Expense Tracking', icon: 'wallet', color: '#84CC16' },
+  ],
+};
 
-const SOLUTIONS: Solution[] = [
-  {
-    id: 'retailpro',
-    name: 'Retail Pro',
-    tagline: 'Complete retail management',
-    description: 'Point of sale, customer management, orders, and sales analytics for retail businesses.',
-    icon: 'cart-outline',
-    color: '#2563EB',
-    gradient: ['#2563EB', '#3B82F6'],
-    route: '/products/retail-pro',
-    features: ['Point of Sale (POS)', 'Customer Management', 'Order Tracking', 'Sales Reports', 'Multi-payment Support'],
-    pricing: 'From $29/month',
-    isAvailable: true,
-    isPopular: true,
-  },
-  {
-    id: 'inventory',
-    name: 'Inventory',
-    tagline: 'Stock & product control',
-    description: 'Complete inventory management with stock tracking, product catalog, and supplier management.',
-    icon: 'cube-outline',
-    color: '#10B981',
-    gradient: ['#10B981', '#34D399'],
-    route: '/galaxy/coming-soon',
-    features: ['Product Catalog', 'Stock Tracking', 'Low Stock Alerts', 'Supplier Management', 'Barcode Support'],
-    pricing: 'From $19/month',
-    isAvailable: false,
-    isNew: true,
-  },
-  {
-    id: 'payments',
-    name: 'Payment Solution',
-    tagline: 'Accept payments anywhere',
-    description: 'Integrated payment processing with multiple gateways, mobile money, and card payments.',
-    icon: 'card-outline',
-    color: '#8B5CF6',
-    gradient: ['#8B5CF6', '#A78BFA'],
-    route: '/galaxy/coming-soon',
-    features: ['Multi-gateway Support', 'Mobile Money', 'Card Payments', 'Payment Links', 'Transaction Reports'],
-    pricing: 'From $15/month',
-    isAvailable: false,
-  },
-  {
-    id: 'bulksms',
-    name: 'Bulk SMS',
-    tagline: 'Reach customers instantly',
-    description: 'Send promotional messages, alerts, and notifications to thousands of customers at once.',
-    icon: 'chatbubbles-outline',
-    color: '#F59E0B',
-    gradient: ['#F59E0B', '#FBBF24'],
-    route: '/galaxy/coming-soon',
-    features: ['Mass Messaging', 'Contact Groups', 'Scheduled SMS', 'Delivery Reports', 'Templates'],
-    pricing: 'Pay-as-you-go',
-    isAvailable: false,
-  },
-  {
-    id: 'invoicing',
-    name: 'Invoicing',
-    tagline: 'Professional invoices',
-    description: 'Create, send, and track professional invoices. Get paid faster with online payments.',
-    icon: 'document-text-outline',
-    color: '#EF4444',
-    gradient: ['#EF4444', '#F87171'],
-    route: '/galaxy/coming-soon',
-    features: ['Invoice Templates', 'Online Payments', 'Recurring Invoices', 'Payment Reminders', 'Tax Calculations'],
-    pricing: 'From $12/month',
-    isAvailable: false,
-  },
-  {
-    id: 'accounting',
-    name: 'Accounting',
-    tagline: 'Financial clarity',
-    description: 'Complete accounting solution with expense tracking, financial reports, and tax management.',
-    icon: 'calculator-outline',
-    color: '#EC4899',
-    gradient: ['#EC4899', '#F472B6'],
-    route: '/galaxy/coming-soon',
-    features: ['Expense Tracking', 'Financial Reports', 'Tax Management', 'Bank Reconciliation', 'Multi-currency'],
-    pricing: 'From $25/month',
-    isAvailable: false,
-    isNew: true,
-  },
+// Stats for social proof
+const STATS = [
+  { value: '10,000+', label: 'Active Businesses' },
+  { value: '500K+', label: 'Transactions/Month' },
+  { value: '99.9%', label: 'Uptime' },
+  { value: '24/7', label: 'Support' },
+];
+
+// Testimonials
+const TESTIMONIALS = [
+  { name: 'James Mwangi', role: 'CEO, Nairobi Retail', text: 'Software Galaxy transformed how we manage our 5 stores. Everything is connected now.', avatar: 'JM' },
+  { name: 'Sarah Okonkwo', role: 'Owner, Lagos Fashion', text: 'The invoicing module saved us hours every week. Our cash flow improved by 40%.', avatar: 'SO' },
+  { name: 'David Kimani', role: 'Manager, Kampala Electronics', text: 'Best investment for our business. The support team is incredible.', avatar: 'DK' },
 ];
 
 export default function SoftwareGalaxyHome() {
-  const { width } = useWindowDimensions();
-  const isWeb = Platform.OS === 'web';
-  const isLargeScreen = width > 1024;
-  const isMediumScreen = width > 768;
+  const { width, height } = useWindowDimensions();
   const router = useRouter();
-  const { user, isAuthenticated, token } = useAuthStore();
-  const { fetchUserAccess, subscribeToApp, generateSSOToken, userAppAccess, isLoading: galaxyLoading } = useGalaxyStore();
-  const [selectedSolution, setSelectedSolution] = useState<Solution | null>(null);
-  const [loadingApp, setLoadingApp] = useState<string | null>(null);
-
-  // Fetch user's app access when authenticated
+  const { isAuthenticated } = useAuthStore();
+  const scrollViewRef = useRef<ScrollView>(null);
+  
+  const isMobile = width < 768;
+  const isTablet = width >= 768 && width < 1024;
+  
+  // Popup states
+  const [showTimedPopup, setShowTimedPopup] = useState(false);
+  const [showScrollPopup, setShowScrollPopup] = useState(false);
+  const [showExitPopup, setShowExitPopup] = useState(false);
+  const [hasShownTimedPopup, setHasShownTimedPopup] = useState(false);
+  const [hasShownScrollPopup, setHasShownScrollPopup] = useState(false);
+  const [email, setEmail] = useState('');
+  
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  
+  // Entrance animation
   useEffect(() => {
-    if (isAuthenticated && token) {
-      fetchUserAccess(token);
+    Animated.parallel([
+      Animated.timing(fadeAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
+      Animated.timing(slideAnim, { toValue: 0, duration: 800, useNativeDriver: true }),
+    ]).start();
+  }, []);
+  
+  // Timed popup (8 seconds)
+  useEffect(() => {
+    if (!hasShownTimedPopup && !isAuthenticated) {
+      const timer = setTimeout(() => {
+        setShowTimedPopup(true);
+        setHasShownTimedPopup(true);
+      }, 8000);
+      return () => clearTimeout(timer);
     }
-  }, [isAuthenticated, token]);
-
-  // Map solution IDs to Galaxy App IDs
-  const solutionToAppId: Record<string, GalaxyAppId> = {
-    'retailpro': 'retail_pro',
-    'inventory': 'inventory',
-    'payments': 'payments',
-    'bulksms': 'bulk_sms',
-    'invoicing': 'invoicing',
-    'accounting': 'accounting',
-  };
-
-  // Check if user has access to a specific app
-  const hasAccess = (solutionId: string): boolean => {
-    const appId = solutionToAppId[solutionId];
-    if (!appId) return false;
-    const access = userAppAccess.find(a => a.app.app_id === appId);
-    return access?.subscription?.status === 'active';
-  };
-
-  const handleSolutionPress = async (solution: Solution) => {
-    if (solution.isAvailable) {
-      // Navigate directly to the product landing page
-      router.push(solution.route as any);
-    } else {
-      // Handle coming soon apps
-      if (isAuthenticated && token) {
-        const appId = solutionToAppId[solution.id];
-        setLoadingApp(solution.id);
-        try {
-          const result = await subscribeToApp(token, appId);
-          Alert.alert('Waitlist', result.message);
-        } catch (error) {
-          router.push('/galaxy/coming-soon' as any);
-        } finally {
-          setLoadingApp(null);
+  }, [hasShownTimedPopup, isAuthenticated]);
+  
+  // Exit intent (mouse leaves viewport - web only)
+  useEffect(() => {
+    if (Platform.OS === 'web' && !isAuthenticated) {
+      const handleMouseLeave = (e: MouseEvent) => {
+        if (e.clientY <= 0 && !showExitPopup) {
+          setShowExitPopup(true);
         }
-      } else {
-        router.push('/galaxy/coming-soon' as any);
-      }
+      };
+      document.addEventListener('mouseleave', handleMouseLeave);
+      return () => document.removeEventListener('mouseleave', handleMouseLeave);
+    }
+  }, [showExitPopup, isAuthenticated]);
+  
+  // Handle scroll for scroll-triggered popup
+  const handleScroll = (event: any) => {
+    const scrollY = event.nativeEvent.contentOffset.y;
+    const contentHeight = event.nativeEvent.contentSize.height;
+    const scrollPercent = scrollY / (contentHeight - height);
+    
+    if (scrollPercent > 0.5 && !hasShownScrollPopup && !isAuthenticated) {
+      setShowScrollPopup(true);
+      setHasShownScrollPopup(true);
+    }
+  };
+  
+  const navigateToAuth = (mode: 'trial' | 'demo') => {
+    setShowTimedPopup(false);
+    setShowScrollPopup(false);
+    setShowExitPopup(false);
+    if (mode === 'trial') {
+      router.push('/(auth)/register' as any);
+    } else {
+      router.push('/(auth)/login' as any);
     }
   };
 
-  const renderHeader = () => (
-    <View style={styles.header}>
-      <View style={styles.headerContent}>
-        <View style={styles.logoContainer}>
-          {/* Software Galaxy Logo representation */}
-          <View style={styles.logoIcon}>
-            <View style={styles.logoOrbit}>
-              <View style={styles.logoDot} />
-            </View>
-          </View>
-          <View style={styles.logoTextContainer}>
-            <Text style={styles.logoTextSoftware}>SOFTWARE</Text>
-            <Text style={styles.logoTextGalaxy}>GALAXY</Text>
-          </View>
-        </View>
-        
-        <View style={styles.headerActions}>
-          {isAuthenticated ? (
-            <TouchableOpacity 
-              style={styles.userButton}
-              onPress={() => router.push('/(tabs)/dashboard')}
-            >
-              <Ionicons name="person-circle" size={32} color={GALAXY_THEME.primary} />
-              <Text style={styles.userName}>{user?.name || 'User'}</Text>
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.authButtons}>
-              <TouchableOpacity 
-                style={styles.loginButton}
-                onPress={() => router.push('/(auth)/login')}
-              >
-                <Text style={styles.loginButtonText}>Sign In</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.registerButton}
-                onPress={() => router.push('/(auth)/register')}
-              >
-                <Text style={styles.registerButtonText}>Get Started</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-      </View>
-    </View>
-  );
-
-  const renderHero = () => (
-    <LinearGradient
-      colors={[GALAXY_THEME.dark, GALAXY_THEME.secondary]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={styles.hero}
-    >
-      {/* Decorative stars */}
-      <View style={styles.starsContainer}>
-        {[...Array(20)].map((_, i) => (
-          <View 
-            key={i} 
-            style={[
-              styles.star, 
-              { 
-                left: `${Math.random() * 100}%`, 
-                top: `${Math.random() * 100}%`,
-                opacity: Math.random() * 0.5 + 0.3,
-              }
-            ]} 
-          />
-        ))}
-      </View>
-      
-      <View style={styles.heroContent}>
-        <Text style={styles.heroTitle}>One Platform.{'\n'}Infinite Possibilities.</Text>
-        <Text style={styles.heroSubtitle}>
-          Access all your business tools with a single sign-on. 
-          Retail, Inventory, Payments, SMS, Invoicing & more.
-        </Text>
-        <View style={styles.heroButtons}>
-          <TouchableOpacity 
-            style={styles.heroPrimaryButton}
-            onPress={() => router.push('/(auth)/register')}
+  // Popup Component
+  const ConversionPopup = ({ 
+    visible, 
+    onClose, 
+    title, 
+    subtitle, 
+    type 
+  }: { 
+    visible: boolean; 
+    onClose: () => void; 
+    title: string; 
+    subtitle: string;
+    type: 'exit' | 'timed' | 'scroll';
+  }) => (
+    <Modal visible={visible} transparent animationType="fade">
+      <Pressable style={styles.popupOverlay} onPress={onClose}>
+        <Pressable style={styles.popupContainer} onPress={e => e.stopPropagation()}>
+          <LinearGradient
+            colors={type === 'exit' ? ['#7C3AED', '#4F46E5'] : type === 'timed' ? ['#14B8A6', '#0D9488'] : ['#F59E0B', '#D97706']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.popupGradient}
           >
-            <Text style={styles.heroPrimaryButtonText}>Start Free Trial</Text>
-            <Ionicons name="arrow-forward" size={20} color={GALAXY_THEME.dark} />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.heroSecondaryButton}>
-            <Ionicons name="play-circle" size={24} color={GALAXY_THEME.white} />
-            <Text style={styles.heroSecondaryButtonText}>Watch Demo</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </LinearGradient>
+            <TouchableOpacity style={styles.popupClose} onPress={onClose}>
+              <Ionicons name="close" size={24} color="#FFF" />
+            </TouchableOpacity>
+            
+            <View style={styles.popupIcon}>
+              <Ionicons 
+                name={type === 'exit' ? 'gift' : type === 'timed' ? 'rocket' : 'star'} 
+                size={48} 
+                color="#FFF" 
+              />
+            </View>
+            
+            <Text style={styles.popupTitle}>{title}</Text>
+            <Text style={styles.popupSubtitle}>{subtitle}</Text>
+            
+            {type === 'exit' && (
+              <View style={styles.popupOffer}>
+                <Text style={styles.popupOfferText}>🎁 Get 30% OFF your first 3 months!</Text>
+              </View>
+            )}
+            
+            <View style={styles.popupActions}>
+              <TouchableOpacity 
+                style={styles.popupButtonPrimary}
+                onPress={() => navigateToAuth('trial')}
+              >
+                <Text style={styles.popupButtonPrimaryText}>Start Free Trial</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={styles.popupButtonSecondary}
+                onPress={() => navigateToAuth('demo')}
+              >
+                <Text style={styles.popupButtonSecondaryText}>Request Demo</Text>
+              </TouchableOpacity>
+            </View>
+          </LinearGradient>
+        </Pressable>
+      </Pressable>
+    </Modal>
   );
 
-  const renderSolutionCard = (solution: Solution) => {
-    const userHasAccess = hasAccess(solution.id);
-    const isLoadingThisApp = loadingApp === solution.id;
-    
-    return (
-      <TouchableOpacity
-        key={solution.id}
-        style={[
-          styles.solutionCard,
-          isLargeScreen && styles.solutionCardLarge,
-          isMediumScreen && !isLargeScreen && styles.solutionCardMedium,
-          userHasAccess && styles.solutionCardActive,
-        ]}
-        onPress={() => handleSolutionPress(solution)}
-        activeOpacity={0.8}
-        disabled={isLoadingThisApp}
-      >
-        {/* Badges */}
-        <View style={styles.badgeContainer}>
-          {userHasAccess && (
-            <View style={[styles.badge, styles.activeBadge]}>
-              <Ionicons name="checkmark-circle" size={10} color="#FFFFFF" />
-              <Text style={styles.badgeText}>ACTIVE</Text>
-            </View>
-          )}
-          {solution.isNew && !userHasAccess && (
-            <View style={[styles.badge, styles.newBadge]}>
-              <Text style={styles.badgeText}>NEW</Text>
-            </View>
-          )}
-          {solution.isPopular && !userHasAccess && (
-            <View style={[styles.badge, styles.popularBadge]}>
-              <Ionicons name="star" size={10} color="#FFFFFF" />
-              <Text style={styles.badgeText}>POPULAR</Text>
-            </View>
-          )}
-          {!solution.isAvailable && (
-            <View style={[styles.badge, styles.comingSoonBadge]}>
-              <Text style={styles.badgeText}>COMING SOON</Text>
-            </View>
-          )}
+  // App Card Component
+  const AppCard = ({ app, isComingSoon = false }: { app: any; isComingSoon?: boolean }) => (
+    <TouchableOpacity 
+      style={[styles.appCard, isComingSoon && styles.appCardComingSoon]}
+      activeOpacity={0.8}
+      onPress={() => !isComingSoon && router.push(`/${app.id}` as any)}
+    >
+      <View style={[styles.appIconContainer, { backgroundColor: `${app.color}20` }]}>
+        <Ionicons name={app.icon as any} size={28} color={app.color} />
+      </View>
+      <Text style={styles.appName}>{app.name}</Text>
+      <Text style={styles.appTagline}>{app.tagline}</Text>
+      {isComingSoon ? (
+        <View style={styles.comingSoonBadge}>
+          <Text style={styles.comingSoonText}>Coming Soon</Text>
         </View>
+      ) : (
+        <View style={styles.availableBadge}>
+          <Ionicons name="checkmark-circle" size={14} color={THEME.success} />
+          <Text style={styles.availableText}>Available</Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  );
 
-        {/* Icon Header */}
-        <LinearGradient
-          colors={solution.gradient}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.solutionIconContainer}
-        >
-          {isLoadingThisApp ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <Ionicons name={solution.icon} size={32} color="#FFFFFF" />
-          )}
-        </LinearGradient>
+  return (
+    <View style={styles.container}>
+      <ScrollView
+        ref={scrollViewRef}
+        style={styles.scrollView}
+        showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+      >
+        {/* Navigation */}
+        <SafeAreaView edges={['top']}>
+          <View style={styles.nav}>
+            <View style={styles.navLeft}>
+              <Image 
+                source={require('../../assets/images/software-galaxy-logo.png')}
+                style={styles.navLogo}
+                resizeMode="contain"
+              />
+            </View>
+            <View style={styles.navRight}>
+              {!isMobile && (
+                <>
+                  <TouchableOpacity style={styles.navLink}>
+                    <Text style={styles.navLinkText}>Features</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.navLink}>
+                    <Text style={styles.navLinkText}>Pricing</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+              <TouchableOpacity 
+                style={styles.navButtonOutline}
+                onPress={() => router.push('/(auth)/login' as any)}
+              >
+                <Text style={styles.navButtonOutlineText}>Sign In</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.navButtonPrimary}
+                onPress={() => router.push('/(auth)/register' as any)}
+              >
+                <Text style={styles.navButtonPrimaryText}>Start Free</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </SafeAreaView>
 
-        {/* Content */}
-        <Text style={styles.solutionName}>{solution.name}</Text>
-        <Text style={styles.solutionTagline}>{solution.tagline}</Text>
-        <Text style={styles.solutionDescription} numberOfLines={2}>
-          {solution.description}
-        </Text>
+        {/* Hero Section */}
+        <Animated.View style={[styles.hero, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+          <LinearGradient
+            colors={[THEME.bg, '#0F172A', THEME.bg]}
+            style={styles.heroGradient}
+          >
+            {/* Decorative elements */}
+            <View style={styles.heroGlow} />
+            <View style={styles.heroGlow2} />
+            
+            <View style={styles.heroContent}>
+              <View style={styles.heroBadge}>
+                <Ionicons name="sparkles" size={14} color={THEME.primary} />
+                <Text style={styles.heroBadgeText}>Trusted by 10,000+ African Businesses</Text>
+              </View>
+              
+              <Text style={styles.heroTitle}>
+                Run Your Entire{'\n'}
+                <Text style={styles.heroTitleAccent}>Business</Text> From{'\n'}
+                One Platform
+              </Text>
+              
+              <Text style={styles.heroSubtitle}>
+                Retail, inventory, invoicing, payments & more — all connected.{'\n'}
+                Stop juggling apps. Start growing your business.
+              </Text>
+              
+              <View style={styles.heroCTAs}>
+                <TouchableOpacity 
+                  style={styles.ctaPrimary}
+                  onPress={() => router.push('/(auth)/register' as any)}
+                >
+                  <LinearGradient
+                    colors={[THEME.primary, '#0D9488']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.ctaPrimaryGradient}
+                  >
+                    <Text style={styles.ctaPrimaryText}>Start 14-Day Free Trial</Text>
+                    <Ionicons name="arrow-forward" size={20} color="#FFF" />
+                  </LinearGradient>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.ctaSecondary}
+                  onPress={() => router.push('/(auth)/login' as any)}
+                >
+                  <Ionicons name="play-circle" size={24} color={THEME.primary} />
+                  <Text style={styles.ctaSecondaryText}>Watch Demo</Text>
+                </TouchableOpacity>
+              </View>
+              
+              <Text style={styles.heroNote}>No credit card required • Cancel anytime</Text>
+            </View>
+          </LinearGradient>
+        </Animated.View>
 
-        {/* Features */}
-        <View style={styles.featuresList}>
-          {solution.features.slice(0, 3).map((feature, index) => (
-            <View key={index} style={styles.featureItem}>
-              <Ionicons name="checkmark-circle" size={14} color={solution.color} />
-              <Text style={styles.featureText}>{feature}</Text>
+        {/* Stats Bar */}
+        <View style={styles.statsBar}>
+          {STATS.map((stat, index) => (
+            <View key={index} style={styles.statItem}>
+              <Text style={styles.statValue}>{stat.value}</Text>
+              <Text style={styles.statLabel}>{stat.label}</Text>
             </View>
           ))}
         </View>
 
-        {/* Pricing & Action */}
-        <View style={styles.solutionFooter}>
-          <Text style={styles.solutionPricing}>{solution.pricing}</Text>
-          <View style={[styles.solutionAction, { backgroundColor: solution.color }]}>
-            {isLoadingThisApp ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <>
-                <Text style={styles.solutionActionText}>
-                  {solution.isAvailable 
-                    ? (userHasAccess ? 'Open' : 'Get Started') 
-                    : 'Notify Me'}
-                </Text>
-                <Ionicons 
-                  name={solution.isAvailable 
-                    ? (userHasAccess ? 'arrow-forward' : 'rocket-outline')
-                    : 'notifications-outline'} 
-                  size={16} 
-                  color="#FFFFFF" 
-                />
-              </>
-            )}
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
-  const renderSolutions = () => (
-    <View style={styles.solutionsSection}>
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionTitle}>Our Solutions</Text>
-        <Text style={styles.sectionSubtitle}>
-          Everything you need to run your business, all in one place
-        </Text>
-      </View>
-      
-      <View style={styles.solutionsGrid}>
-        {SOLUTIONS.map(renderSolutionCard)}
-      </View>
-    </View>
-  );
-
-  const renderFeatures = () => (
-    <View style={styles.featuresSection}>
-      <LinearGradient
-        colors={[GALAXY_THEME.light, '#FFFFFF']}
-        style={styles.featuresGradient}
-      >
-        <Text style={styles.featuresSectionTitle}>Why Software Galaxy?</Text>
-        
-        <View style={styles.featuresGrid}>
-          <View style={styles.featureCard}>
-            <View style={[styles.featureIcon, { backgroundColor: '#EEF2FF' }]}>
-              <Ionicons name="key-outline" size={28} color="#2563EB" />
-            </View>
-            <Text style={styles.featureCardTitle}>Single Sign-On</Text>
-            <Text style={styles.featureCardDesc}>
-              One account to access all solutions. No more password fatigue.
+        {/* Available Apps Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionLabel}>OUR PRODUCTS</Text>
+            <Text style={styles.sectionTitle}>Apps Available Now</Text>
+            <Text style={styles.sectionSubtitle}>
+              Start using these powerful tools today with your free trial
             </Text>
           </View>
           
-          <View style={styles.featureCard}>
-            <View style={[styles.featureIcon, { backgroundColor: '#ECFDF5' }]}>
-              <Ionicons name="sync-outline" size={28} color="#10B981" />
-            </View>
-            <Text style={styles.featureCardTitle}>Seamless Integration</Text>
-            <Text style={styles.featureCardDesc}>
-              All apps work together. Data flows automatically between solutions.
-            </Text>
-          </View>
-          
-          <View style={styles.featureCard}>
-            <View style={[styles.featureIcon, { backgroundColor: '#FEF3C7' }]}>
-              <Ionicons name="shield-checkmark-outline" size={28} color="#F59E0B" />
-            </View>
-            <Text style={styles.featureCardTitle}>Enterprise Security</Text>
-            <Text style={styles.featureCardDesc}>
-              Bank-level encryption and compliance with global standards.
-            </Text>
-          </View>
-          
-          <View style={styles.featureCard}>
-            <View style={[styles.featureIcon, { backgroundColor: '#FCE7F3' }]}>
-              <Ionicons name="trending-up-outline" size={28} color="#EC4899" />
-            </View>
-            <Text style={styles.featureCardTitle}>Scale As You Grow</Text>
-            <Text style={styles.featureCardDesc}>
-              Start with what you need. Add more solutions as your business grows.
-            </Text>
+          <View style={[styles.appsGrid, isMobile && styles.appsGridMobile]}>
+            {APPS.available.map(app => (
+              <AppCard key={app.id} app={app} />
+            ))}
           </View>
         </View>
-      </LinearGradient>
-    </View>
-  );
 
-  const renderFooter = () => (
-    <View style={styles.footer}>
-      <View style={styles.footerContent}>
-        <View style={styles.footerBrand}>
-          <View style={styles.footerLogoContainer}>
-            <View style={styles.logoIcon}>
-              <View style={styles.logoOrbit}>
-                <View style={styles.logoDot} />
-              </View>
+        {/* Coming Soon Section */}
+        <View style={[styles.section, styles.sectionDark]}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.comingSoonHeader}>
+              <Ionicons name="rocket" size={24} color={THEME.accent} />
+              <Text style={styles.sectionLabel}>COMING SOON</Text>
             </View>
-            <View style={styles.logoTextContainer}>
-              <Text style={[styles.logoTextSoftware, { color: '#FFFFFF' }]}>SOFTWARE</Text>
-              <Text style={[styles.logoTextGalaxy, { color: GALAXY_THEME.primary }]}>GALAXY</Text>
-            </View>
+            <Text style={styles.sectionTitle}>More Apps on the Way</Text>
+            <Text style={styles.sectionSubtitle}>
+              Join the waitlist to get early access and exclusive discounts
+            </Text>
           </View>
-          <Text style={styles.footerTagline}>
-            Powering businesses with integrated solutions
-          </Text>
-        </View>
-        
-        <View style={styles.footerLinks}>
-          <View style={styles.footerColumn}>
-            <Text style={styles.footerColumnTitle}>Solutions</Text>
-            {SOLUTIONS.map(s => (
-              <TouchableOpacity key={s.id}>
-                <Text style={styles.footerLink}>{s.name}</Text>
-              </TouchableOpacity>
+          
+          <View style={[styles.appsGrid, isMobile && styles.appsGridMobile]}>
+            {APPS.comingSoon.map(app => (
+              <AppCard key={app.id} app={app} isComingSoon />
             ))}
           </View>
           
-          <View style={styles.footerColumn}>
-            <Text style={styles.footerColumnTitle}>Company</Text>
-            <TouchableOpacity><Text style={styles.footerLink}>About Us</Text></TouchableOpacity>
-            <TouchableOpacity><Text style={styles.footerLink}>Careers</Text></TouchableOpacity>
-            <TouchableOpacity><Text style={styles.footerLink}>Contact</Text></TouchableOpacity>
-            <TouchableOpacity><Text style={styles.footerLink}>Blog</Text></TouchableOpacity>
+          <TouchableOpacity style={styles.waitlistButton}>
+            <Text style={styles.waitlistButtonText}>Join Waitlist for Early Access</Text>
+            <Ionicons name="notifications" size={20} color={THEME.accent} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Features Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionLabel}>WHY CHOOSE US</Text>
+            <Text style={styles.sectionTitle}>Everything You Need to Succeed</Text>
           </View>
           
-          <View style={styles.footerColumn}>
-            <Text style={styles.footerColumnTitle}>Support</Text>
-            <TouchableOpacity><Text style={styles.footerLink}>Help Center</Text></TouchableOpacity>
-            <TouchableOpacity><Text style={styles.footerLink}>Documentation</Text></TouchableOpacity>
-            <TouchableOpacity><Text style={styles.footerLink}>API Reference</Text></TouchableOpacity>
-            <TouchableOpacity><Text style={styles.footerLink}>Status</Text></TouchableOpacity>
+          <View style={[styles.featuresGrid, isMobile && styles.featuresGridMobile]}>
+            {[
+              { icon: 'sync', title: 'All-in-One Platform', desc: 'No more switching between apps. Everything works together seamlessly.' },
+              { icon: 'phone-portrait', title: 'Works Everywhere', desc: 'Access your business from any device — desktop, tablet, or phone.' },
+              { icon: 'shield-checkmark', title: 'Bank-Level Security', desc: 'Your data is encrypted and protected with enterprise-grade security.' },
+              { icon: 'headset', title: '24/7 Support', desc: 'Our team is always here to help you succeed, day or night.' },
+              { icon: 'trending-up', title: 'Real-Time Analytics', desc: 'Make smarter decisions with live insights into your business.' },
+              { icon: 'flash', title: 'Lightning Fast', desc: 'Built for speed. No lag, no waiting, just results.' },
+            ].map((feature, index) => (
+              <View key={index} style={styles.featureCard}>
+                <View style={styles.featureIcon}>
+                  <Ionicons name={feature.icon as any} size={28} color={THEME.primary} />
+                </View>
+                <Text style={styles.featureTitle}>{feature.title}</Text>
+                <Text style={styles.featureDesc}>{feature.desc}</Text>
+              </View>
+            ))}
           </View>
         </View>
-      </View>
-      
-      <View style={styles.footerBottom}>
-        <Text style={styles.footerCopyright}>
-          © 2025 Software Galaxy. All rights reserved.
-        </Text>
-        <View style={styles.footerSocial}>
-          <TouchableOpacity style={styles.socialIcon}>
-            <Ionicons name="logo-twitter" size={20} color="#9CA3AF" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.socialIcon}>
-            <Ionicons name="logo-linkedin" size={20} color="#9CA3AF" />
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.socialIcon}>
-            <Ionicons name="logo-facebook" size={20} color="#9CA3AF" />
-          </TouchableOpacity>
-        </View>
-      </View>
-    </View>
-  );
 
-  return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {renderHeader()}
-        {renderHero()}
-        {renderSolutions()}
-        {renderFeatures()}
-        {renderFooter()}
+        {/* Testimonials */}
+        <View style={[styles.section, styles.sectionDark]}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionLabel}>TESTIMONIALS</Text>
+            <Text style={styles.sectionTitle}>Loved by Business Owners</Text>
+          </View>
+          
+          <View style={[styles.testimonialsGrid, isMobile && styles.testimonialsGridMobile]}>
+            {TESTIMONIALS.map((testimonial, index) => (
+              <View key={index} style={styles.testimonialCard}>
+                <View style={styles.testimonialStars}>
+                  {[1,2,3,4,5].map(i => (
+                    <Ionicons key={i} name="star" size={16} color={THEME.accent} />
+                  ))}
+                </View>
+                <Text style={styles.testimonialText}>"{testimonial.text}"</Text>
+                <View style={styles.testimonialAuthor}>
+                  <View style={styles.testimonialAvatar}>
+                    <Text style={styles.testimonialAvatarText}>{testimonial.avatar}</Text>
+                  </View>
+                  <View>
+                    <Text style={styles.testimonialName}>{testimonial.name}</Text>
+                    <Text style={styles.testimonialRole}>{testimonial.role}</Text>
+                  </View>
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* Final CTA */}
+        <View style={styles.finalCTA}>
+          <LinearGradient
+            colors={['#14B8A6', '#0D9488', '#0F766E']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.finalCTAGradient}
+          >
+            <Text style={styles.finalCTATitle}>Ready to Transform Your Business?</Text>
+            <Text style={styles.finalCTASubtitle}>
+              Join thousands of businesses already using Software Galaxy
+            </Text>
+            <View style={styles.finalCTAButtons}>
+              <TouchableOpacity 
+                style={styles.finalCTAButtonPrimary}
+                onPress={() => router.push('/(auth)/register' as any)}
+              >
+                <Text style={styles.finalCTAButtonPrimaryText}>Start Your Free Trial</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.finalCTAButtonSecondary}
+                onPress={() => router.push('/(auth)/login' as any)}
+              >
+                <Text style={styles.finalCTAButtonSecondaryText}>Talk to Sales</Text>
+              </TouchableOpacity>
+            </View>
+          </LinearGradient>
+        </View>
+
+        {/* Footer */}
+        <View style={styles.footer}>
+          <View style={styles.footerTop}>
+            <View style={styles.footerBrand}>
+              <Image 
+                source={require('../../assets/images/software-galaxy-logo.png')}
+                style={styles.footerLogo}
+                resizeMode="contain"
+              />
+              <Text style={styles.footerTagline}>Powering African Businesses</Text>
+            </View>
+            <View style={styles.footerLinks}>
+              <View style={styles.footerColumn}>
+                <Text style={styles.footerColumnTitle}>Products</Text>
+                {APPS.available.map(app => (
+                  <TouchableOpacity key={app.id}>
+                    <Text style={styles.footerLink}>{app.name}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <View style={styles.footerColumn}>
+                <Text style={styles.footerColumnTitle}>Company</Text>
+                <TouchableOpacity><Text style={styles.footerLink}>About Us</Text></TouchableOpacity>
+                <TouchableOpacity><Text style={styles.footerLink}>Careers</Text></TouchableOpacity>
+                <TouchableOpacity><Text style={styles.footerLink}>Contact</Text></TouchableOpacity>
+              </View>
+              <View style={styles.footerColumn}>
+                <Text style={styles.footerColumnTitle}>Support</Text>
+                <TouchableOpacity><Text style={styles.footerLink}>Help Center</Text></TouchableOpacity>
+                <TouchableOpacity><Text style={styles.footerLink}>Documentation</Text></TouchableOpacity>
+                <TouchableOpacity><Text style={styles.footerLink}>API</Text></TouchableOpacity>
+              </View>
+            </View>
+          </View>
+          <View style={styles.footerBottom}>
+            <Text style={styles.footerCopyright}>© 2025 Software Galaxy. All rights reserved.</Text>
+          </View>
+        </View>
       </ScrollView>
-    </SafeAreaView>
+
+      {/* Popups */}
+      <ConversionPopup
+        visible={showTimedPopup}
+        onClose={() => setShowTimedPopup(false)}
+        title="🚀 Ready to Scale?"
+        subtitle="Get instant access to all our business tools and start growing today."
+        type="timed"
+      />
+      
+      <ConversionPopup
+        visible={showScrollPopup}
+        onClose={() => setShowScrollPopup(false)}
+        title="⭐ You're Interested!"
+        subtitle="Take your business to the next level with our all-in-one platform."
+        type="scroll"
+      />
+      
+      <ConversionPopup
+        visible={showExitPopup}
+        onClose={() => setShowExitPopup(false)}
+        title="Wait! Don't Miss Out!"
+        subtitle="Get an exclusive 30% discount on your first 3 months."
+        type="exit"
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  // Header
-  header: {
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-  },
-  headerContent: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    maxWidth: 1200,
-    alignSelf: 'center',
-    width: '100%',
-  },
-  logoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  logoIcon: {
-    width: 40,
-    height: 40,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoOrbit: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 3,
-    borderColor: GALAXY_THEME.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: GALAXY_THEME.primary,
-    position: 'absolute',
-    top: -4,
-    right: 4,
-  },
-  logoTextContainer: {
-    flexDirection: 'column',
-  },
-  logoTextSoftware: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: GALAXY_THEME.gray,
-    letterSpacing: 2,
-  },
-  logoTextGalaxy: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: GALAXY_THEME.dark,
-    marginTop: -4,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  authButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  loginButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-  },
-  loginButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: GALAXY_THEME.dark,
-  },
-  registerButton: {
-    backgroundColor: GALAXY_THEME.primary,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-  },
-  registerButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  userButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  userName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: GALAXY_THEME.dark,
-  },
+  container: { flex: 1, backgroundColor: THEME.bg },
+  scrollView: { flex: 1 },
+  
+  // Navigation
+  nav: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, backgroundColor: THEME.bg },
+  navLeft: { flexDirection: 'row', alignItems: 'center' },
+  navLogo: { width: 160, height: 45 },
+  navRight: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  navLink: { paddingHorizontal: 12, paddingVertical: 8 },
+  navLinkText: { color: THEME.textMuted, fontSize: 14, fontWeight: '500' },
+  navButtonOutline: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: THEME.border },
+  navButtonOutlineText: { color: THEME.text, fontSize: 14, fontWeight: '600' },
+  navButtonPrimary: { paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, backgroundColor: THEME.primary },
+  navButtonPrimaryText: { color: '#FFF', fontSize: 14, fontWeight: '600' },
+  
   // Hero
-  hero: {
-    paddingVertical: 60,
-    paddingHorizontal: 20,
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  starsContainer: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  star: {
-    position: 'absolute',
-    width: 3,
-    height: 3,
-    borderRadius: 1.5,
-    backgroundColor: '#FFFFFF',
-  },
-  heroContent: {
-    maxWidth: 800,
-    alignSelf: 'center',
-    alignItems: 'center',
-  },
-  heroTitle: {
-    fontSize: 48,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    textAlign: 'center',
-    lineHeight: 56,
-  },
-  heroSubtitle: {
-    fontSize: 18,
-    color: 'rgba(255,255,255,0.8)',
-    textAlign: 'center',
-    marginTop: 20,
-    lineHeight: 28,
-    maxWidth: 600,
-  },
-  heroButtons: {
-    flexDirection: 'row',
-    gap: 16,
-    marginTop: 32,
-  },
-  heroPrimaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: GALAXY_THEME.primary,
-    paddingVertical: 14,
-    paddingHorizontal: 28,
-    borderRadius: 10,
-  },
-  heroPrimaryButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: GALAXY_THEME.dark,
-  },
-  heroSecondaryButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 14,
-    paddingHorizontal: 28,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.3)',
-  },
-  heroSecondaryButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  // Solutions
-  solutionsSection: {
-    paddingVertical: 60,
-    paddingHorizontal: 20,
-    backgroundColor: '#FFFFFF',
-  },
-  sectionHeader: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  sectionTitle: {
-    fontSize: 36,
-    fontWeight: '800',
-    color: GALAXY_THEME.dark,
-  },
-  sectionSubtitle: {
-    fontSize: 16,
-    color: GALAXY_THEME.gray,
-    marginTop: 12,
-    textAlign: 'center',
-  },
-  solutionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 20,
-    maxWidth: 1200,
-    alignSelf: 'center',
-  },
-  solutionCard: {
-    width: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 3,
-    position: 'relative',
-  },
-  solutionCardMedium: {
-    width: '47%',
-  },
-  solutionCardLarge: {
-    width: '30%',
-  },
-  solutionCardActive: {
-    borderColor: GALAXY_THEME.primary,
-    borderWidth: 2,
-  },
-  badgeContainer: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    flexDirection: 'row',
-    gap: 6,
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  newBadge: {
-    backgroundColor: '#10B981',
-  },
-  popularBadge: {
-    backgroundColor: '#F59E0B',
-  },
-  comingSoonBadge: {
-    backgroundColor: '#6B7280',
-  },
-  activeBadge: {
-    backgroundColor: GALAXY_THEME.primary,
-  },
-  badgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  solutionIconContainer: {
-    width: 60,
-    height: 60,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  solutionName: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: GALAXY_THEME.dark,
-  },
-  solutionTagline: {
-    fontSize: 14,
-    color: GALAXY_THEME.gray,
-    marginTop: 4,
-  },
-  solutionDescription: {
-    fontSize: 14,
-    color: '#6B7280',
-    marginTop: 12,
-    lineHeight: 22,
-  },
-  featuresList: {
-    marginTop: 16,
-    gap: 8,
-  },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  featureText: {
-    fontSize: 13,
-    color: '#4B5563',
-  },
-  solutionFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 20,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-  },
-  solutionPricing: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: GALAXY_THEME.dark,
-  },
-  solutionAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 8,
-  },
-  solutionActionText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  // Features Section
-  featuresSection: {
-    marginTop: 20,
-  },
-  featuresGradient: {
-    paddingVertical: 60,
-    paddingHorizontal: 20,
-  },
-  featuresSectionTitle: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: GALAXY_THEME.dark,
-    textAlign: 'center',
-    marginBottom: 40,
-  },
-  featuresGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 20,
-    maxWidth: 1000,
-    alignSelf: 'center',
-  },
-  featureCard: {
-    width: '45%',
-    minWidth: 280,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 24,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  featureIcon: {
-    width: 64,
-    height: 64,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-  },
-  featureCardTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: GALAXY_THEME.dark,
-    textAlign: 'center',
-  },
-  featureCardDesc: {
-    fontSize: 14,
-    color: GALAXY_THEME.gray,
-    textAlign: 'center',
-    marginTop: 8,
-    lineHeight: 22,
-  },
+  hero: { minHeight: 600 },
+  heroGradient: { flex: 1, paddingVertical: 80, paddingHorizontal: 20, position: 'relative', overflow: 'hidden' },
+  heroGlow: { position: 'absolute', top: -100, right: -100, width: 400, height: 400, borderRadius: 200, backgroundColor: THEME.primaryGlow, opacity: 0.5 },
+  heroGlow2: { position: 'absolute', bottom: -50, left: -100, width: 300, height: 300, borderRadius: 150, backgroundColor: 'rgba(139, 92, 246, 0.2)' },
+  heroContent: { maxWidth: 900, alignSelf: 'center', alignItems: 'center' },
+  heroBadge: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(20, 184, 166, 0.1)', paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, marginBottom: 24 },
+  heroBadgeText: { color: THEME.primary, fontSize: 13, fontWeight: '600' },
+  heroTitle: { fontSize: 52, fontWeight: '800', color: THEME.text, textAlign: 'center', lineHeight: 62, marginBottom: 20 },
+  heroTitleAccent: { color: THEME.primary },
+  heroSubtitle: { fontSize: 18, color: THEME.textMuted, textAlign: 'center', lineHeight: 28, marginBottom: 40, maxWidth: 600 },
+  heroCTAs: { flexDirection: 'row', alignItems: 'center', gap: 16, marginBottom: 24, flexWrap: 'wrap', justifyContent: 'center' },
+  ctaPrimary: { borderRadius: 12, overflow: 'hidden' },
+  ctaPrimaryGradient: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 28, paddingVertical: 16 },
+  ctaPrimaryText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
+  ctaSecondary: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingVertical: 14 },
+  ctaSecondaryText: { color: THEME.primary, fontSize: 16, fontWeight: '600' },
+  heroNote: { color: THEME.textDim, fontSize: 13 },
+  
+  // Stats
+  statsBar: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 40, paddingHorizontal: 20, backgroundColor: THEME.bgCard, flexWrap: 'wrap' },
+  statItem: { alignItems: 'center', paddingHorizontal: 20, paddingVertical: 10 },
+  statValue: { fontSize: 32, fontWeight: '800', color: THEME.primary, marginBottom: 4 },
+  statLabel: { fontSize: 14, color: THEME.textMuted },
+  
+  // Sections
+  section: { paddingVertical: 80, paddingHorizontal: 20 },
+  sectionDark: { backgroundColor: THEME.bgCard },
+  sectionHeader: { alignItems: 'center', marginBottom: 48 },
+  sectionLabel: { fontSize: 12, fontWeight: '700', color: THEME.primary, letterSpacing: 2, marginBottom: 12 },
+  sectionTitle: { fontSize: 36, fontWeight: '800', color: THEME.text, textAlign: 'center', marginBottom: 12 },
+  sectionSubtitle: { fontSize: 16, color: THEME.textMuted, textAlign: 'center', maxWidth: 500 },
+  
+  // Apps Grid
+  appsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 20, maxWidth: 1200, alignSelf: 'center' },
+  appsGridMobile: { gap: 12 },
+  appCard: { width: 200, backgroundColor: THEME.bgCard, borderRadius: 16, padding: 24, alignItems: 'center', borderWidth: 1, borderColor: THEME.border },
+  appCardComingSoon: { opacity: 0.7 },
+  appIconContainer: { width: 64, height: 64, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
+  appName: { fontSize: 18, fontWeight: '700', color: THEME.text, marginBottom: 4 },
+  appTagline: { fontSize: 13, color: THEME.textMuted, marginBottom: 12 },
+  availableBadge: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  availableText: { fontSize: 12, color: THEME.success, fontWeight: '600' },
+  comingSoonBadge: { backgroundColor: 'rgba(245, 158, 11, 0.1)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 10 },
+  comingSoonText: { fontSize: 11, color: THEME.accent, fontWeight: '600' },
+  comingSoonHeader: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
+  waitlistButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, backgroundColor: 'rgba(245, 158, 11, 0.1)', paddingVertical: 16, paddingHorizontal: 24, borderRadius: 12, marginTop: 40, alignSelf: 'center', borderWidth: 1, borderColor: 'rgba(245, 158, 11, 0.3)' },
+  waitlistButtonText: { color: THEME.accent, fontSize: 16, fontWeight: '600' },
+  
+  // Features
+  featuresGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 24, maxWidth: 1100, alignSelf: 'center' },
+  featuresGridMobile: { gap: 16 },
+  featureCard: { width: 320, backgroundColor: THEME.bgCard, borderRadius: 16, padding: 28, borderWidth: 1, borderColor: THEME.border },
+  featureIcon: { width: 56, height: 56, borderRadius: 14, backgroundColor: 'rgba(20, 184, 166, 0.1)', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
+  featureTitle: { fontSize: 18, fontWeight: '700', color: THEME.text, marginBottom: 8 },
+  featureDesc: { fontSize: 14, color: THEME.textMuted, lineHeight: 22 },
+  
+  // Testimonials
+  testimonialsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 24, maxWidth: 1100, alignSelf: 'center' },
+  testimonialsGridMobile: { gap: 16 },
+  testimonialCard: { width: 340, backgroundColor: THEME.bg, borderRadius: 16, padding: 28, borderWidth: 1, borderColor: THEME.border },
+  testimonialStars: { flexDirection: 'row', gap: 2, marginBottom: 16 },
+  testimonialText: { fontSize: 15, color: THEME.text, lineHeight: 24, marginBottom: 20, fontStyle: 'italic' },
+  testimonialAuthor: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  testimonialAvatar: { width: 44, height: 44, borderRadius: 22, backgroundColor: THEME.primary, alignItems: 'center', justifyContent: 'center' },
+  testimonialAvatarText: { color: '#FFF', fontWeight: '700', fontSize: 14 },
+  testimonialName: { fontSize: 15, fontWeight: '700', color: THEME.text },
+  testimonialRole: { fontSize: 13, color: THEME.textMuted },
+  
+  // Final CTA
+  finalCTA: { margin: 20, borderRadius: 24, overflow: 'hidden' },
+  finalCTAGradient: { paddingVertical: 60, paddingHorizontal: 24, alignItems: 'center' },
+  finalCTATitle: { fontSize: 32, fontWeight: '800', color: '#FFF', textAlign: 'center', marginBottom: 12 },
+  finalCTASubtitle: { fontSize: 16, color: 'rgba(255,255,255,0.8)', textAlign: 'center', marginBottom: 32 },
+  finalCTAButtons: { flexDirection: 'row', gap: 16, flexWrap: 'wrap', justifyContent: 'center' },
+  finalCTAButtonPrimary: { backgroundColor: '#FFF', paddingHorizontal: 28, paddingVertical: 16, borderRadius: 12 },
+  finalCTAButtonPrimaryText: { color: THEME.primary, fontSize: 16, fontWeight: '700' },
+  finalCTAButtonSecondary: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 28, paddingVertical: 16, borderRadius: 12 },
+  finalCTAButtonSecondaryText: { color: '#FFF', fontSize: 16, fontWeight: '600' },
+  
   // Footer
-  footer: {
-    backgroundColor: GALAXY_THEME.dark,
-    paddingTop: 60,
-  },
-  footerContent: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    paddingHorizontal: 40,
-    paddingBottom: 40,
-    maxWidth: 1200,
-    alignSelf: 'center',
-    width: '100%',
-    gap: 40,
-  },
-  footerBrand: {
-    maxWidth: 300,
-  },
-  footerLogoContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 16,
-  },
-  footerTagline: {
-    fontSize: 14,
-    color: '#9CA3AF',
-    lineHeight: 22,
-  },
-  footerLinks: {
-    flexDirection: 'row',
-    gap: 60,
-  },
-  footerColumn: {
-    gap: 12,
-  },
-  footerColumnTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    marginBottom: 8,
-  },
-  footerLink: {
-    fontSize: 14,
-    color: '#9CA3AF',
-  },
-  footerBottom: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 20,
-    paddingHorizontal: 40,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.1)',
-  },
-  footerCopyright: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  footerSocial: {
-    flexDirection: 'row',
-    gap: 16,
-  },
-  socialIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  footer: { backgroundColor: THEME.bgCard, paddingTop: 60, paddingHorizontal: 20 },
+  footerTop: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', maxWidth: 1100, alignSelf: 'center', width: '100%', marginBottom: 40 },
+  footerBrand: { marginBottom: 24 },
+  footerLogo: { width: 180, height: 50, marginBottom: 12 },
+  footerTagline: { color: THEME.textMuted, fontSize: 14 },
+  footerLinks: { flexDirection: 'row', flexWrap: 'wrap', gap: 60 },
+  footerColumn: { minWidth: 120 },
+  footerColumnTitle: { color: THEME.text, fontSize: 14, fontWeight: '700', marginBottom: 16 },
+  footerLink: { color: THEME.textMuted, fontSize: 14, marginBottom: 10 },
+  footerBottom: { borderTopWidth: 1, borderTopColor: THEME.border, paddingVertical: 24, alignItems: 'center' },
+  footerCopyright: { color: THEME.textDim, fontSize: 13 },
+  
+  // Popups
+  popupOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.8)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  popupContainer: { width: '100%', maxWidth: 440, borderRadius: 24, overflow: 'hidden' },
+  popupGradient: { padding: 32, alignItems: 'center' },
+  popupClose: { position: 'absolute', top: 16, right: 16, padding: 8 },
+  popupIcon: { width: 80, height: 80, borderRadius: 40, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginBottom: 20 },
+  popupTitle: { fontSize: 26, fontWeight: '800', color: '#FFF', textAlign: 'center', marginBottom: 8 },
+  popupSubtitle: { fontSize: 15, color: 'rgba(255,255,255,0.85)', textAlign: 'center', marginBottom: 20, lineHeight: 22 },
+  popupOffer: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12, marginBottom: 24 },
+  popupOfferText: { color: '#FFF', fontSize: 16, fontWeight: '700' },
+  popupActions: { width: '100%', gap: 12 },
+  popupButtonPrimary: { backgroundColor: '#FFF', paddingVertical: 16, borderRadius: 12, alignItems: 'center' },
+  popupButtonPrimaryText: { color: '#0D9488', fontSize: 16, fontWeight: '700' },
+  popupButtonSecondary: { backgroundColor: 'rgba(255,255,255,0.2)', paddingVertical: 16, borderRadius: 12, alignItems: 'center' },
+  popupButtonSecondaryText: { color: '#FFF', fontSize: 16, fontWeight: '600' },
 });

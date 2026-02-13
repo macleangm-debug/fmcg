@@ -8,10 +8,16 @@ interface BusinessSettings {
   countryCode: string;
   country: string;
   city: string;
+  address: string;
+  phone: string;
+  email: string;
+  payment_details?: string;
+  footer_message?: string;
 }
 
 interface BusinessStore {
   settings: BusinessSettings;
+  businessDetails: BusinessSettings; // Alias for settings
   isLoading: boolean;
   loadSettings: () => Promise<void>;
   formatCurrency: (amount: number, compact?: boolean) => string;
@@ -53,6 +59,25 @@ export const useBusinessStore = create<BusinessStore>((set, get) => ({
     countryCode: '+255',
     country: '',
     city: '',
+    address: '',
+    phone: '',
+    email: '',
+    payment_details: '',
+    footer_message: '',
+  },
+  // businessDetails is a direct reference (will be same as settings)
+  businessDetails: {
+    name: '',
+    currency: 'USD',
+    currencySymbol: '$',
+    countryCode: '+255',
+    country: '',
+    city: '',
+    address: '',
+    phone: '',
+    email: '',
+    payment_details: '',
+    footer_message: '',
   },
   isLoading: false,
 
@@ -65,15 +90,23 @@ export const useBusinessStore = create<BusinessStore>((set, get) => ({
       const currency = data.currency || 'USD';
       const currencySymbol = currencySymbols[currency] || currency;
       
+      const businessData = {
+        name: data.name || '',
+        currency: currency,
+        currencySymbol: currencySymbol,
+        countryCode: data.country_code || '+255',
+        country: data.country || '',
+        city: data.city || '',
+        address: data.address || '',
+        phone: data.phone || '',
+        email: data.email || '',
+        payment_details: data.payment_details || '',
+        footer_message: data.footer_message || '',
+      };
+      
       set({
-        settings: {
-          name: data.name || '',
-          currency: currency,
-          currencySymbol: currencySymbol,
-          countryCode: data.country_code || '+255',
-          country: data.country || '',
-          city: data.city || '',
-        },
+        settings: businessData,
+        businessDetails: businessData,
         isLoading: false,
       });
     } catch (error) {
@@ -90,15 +123,15 @@ export const useBusinessStore = create<BusinessStore>((set, get) => ({
       if (Math.abs(amount) >= 1000000000) {
         // Billions
         const value = amount / 1000000000;
-        return `${currencySymbol}${value.toFixed(1)}B`;
+        return `${currencySymbol} ${value.toFixed(1)}B`;
       } else if (Math.abs(amount) >= 1000000) {
         // Millions
         const value = amount / 1000000;
-        return `${currencySymbol}${value.toFixed(1)}M`;
+        return `${currencySymbol} ${value.toFixed(1)}M`;
       } else if (Math.abs(amount) >= 1000) {
         // Thousands
         const value = amount / 1000;
-        return `${currencySymbol}${value.toFixed(1)}K`;
+        return `${currencySymbol} ${value.toFixed(1)}K`;
       }
     }
     
@@ -108,7 +141,8 @@ export const useBusinessStore = create<BusinessStore>((set, get) => ({
       maximumFractionDigits: 2,
     });
     
-    return `${currencySymbol}${formattedAmount}`;
+    // Add space between currency symbol and amount
+    return `${currencySymbol} ${formattedAmount}`;
   },
 
   formatNumber: (value: number, decimals: number = 0) => {

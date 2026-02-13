@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,8 +7,8 @@ import {
   TouchableOpacity,
   Platform,
   useWindowDimensions,
+  Animated,
   Image,
-  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,34 +18,41 @@ import { useAuthStore } from '../src/store/authStore';
 import ProductSwitcher from '../src/components/ProductSwitcher';
 import FreeTrialModal, { ProductInfo } from '../src/components/FreeTrialModal';
 import WaitlistModal, { WaitlistProductInfo } from '../src/components/WaitlistModal';
+import GeneralTrialModal from '../src/components/GeneralTrialModal';
+import VideoModal from '../src/components/VideoModal';
+import InteractiveDemo from './components/InteractiveDemo';
+import MarketingNav from './components/MarketingNav';
 import api from '../src/api/client';
 
 const isWeb = Platform.OS === 'web';
 
-// Software Galaxy Theme
+// Professional Dark Theme
 const THEME = {
-  primary: '#00B4D8',
-  dark: '#03071E',
-  secondary: '#023E8A',
-  accent: '#0096C7',
-  light: '#CAF0F8',
-  white: '#FFFFFF',
-  gray: '#6B7280',
-  lightGray: '#F3F4F6',
+  primary: '#00D4FF',
+  secondary: '#7B61FF',
+  accent: '#FF6B6B',
+  dark: '#0A0A0F',
+  darker: '#050508',
+  card: '#12121A',
+  cardHover: '#1A1A25',
+  border: '#2A2A35',
+  text: '#FFFFFF',
+  textMuted: '#8B8B9E',
+  textSubtle: '#5A5A6E',
+  success: '#00C48C',
+  warning: '#FFB800',
 };
 
-// Product Apps Data with dashboard routes
-const PRODUCTS = [
+// Available Apps
+const AVAILABLE_APPS = [
   {
     id: 'retail_pro',
-    name: 'Retail Pro',
+    name: 'RetailPro',
     tagline: 'Complete Retail Management',
-    description: 'All-in-one retail management platform for sales, inventory, customers, and analytics. Perfect for stores of any size.',
+    description: 'All-in-one retail management platform for sales, inventory, customers, and analytics.',
     icon: 'storefront-outline',
-    color: '#2563EB',
-    bgColor: '#EEF2FF',
-    features: ['Point of Sale (POS)', 'Inventory Management', 'Customer Tracking', 'Sales Analytics', 'Multi-location Support', 'Staff Management'],
-    pricing: { starter: 'Free', business: '$29/mo', enterprise: '$99/mo' },
+    color: '#3B82F6',
+    features: ['Point of Sale', 'Inventory', 'Analytics', 'Multi-location'],
     route: '/products/retail-pro',
     dashboardRoute: '/(tabs)/dashboard',
   },
@@ -53,12 +60,10 @@ const PRODUCTS = [
     id: 'inventory',
     name: 'Inventory',
     tagline: 'Smart Stock Management',
-    description: 'Powerful inventory management system with real-time tracking, low stock alerts, and comprehensive reporting.',
+    description: 'Powerful inventory tracking with real-time alerts and comprehensive reporting.',
     icon: 'cube-outline',
-    color: '#059669',
-    bgColor: '#D1FAE5',
-    features: ['Real-time Stock Tracking', 'Low Stock Alerts', 'Barcode Scanning', 'Stock Movement History', 'Supplier Management', 'Bulk Import/Export'],
-    pricing: { starter: 'Free', business: '$19/mo', enterprise: '$59/mo' },
+    color: '#10B981',
+    features: ['Real-time Tracking', 'Low Stock Alerts', 'Barcode Support', 'Reports'],
     route: '/products/inventory',
     dashboardRoute: '/inventory',
   },
@@ -66,84 +71,142 @@ const PRODUCTS = [
     id: 'invoicing',
     name: 'Invoicing',
     tagline: 'Professional Invoicing',
-    description: 'Create, send, and track professional invoices effortlessly. Get paid faster with automated reminders.',
+    description: 'Create and track professional invoices. Get paid faster with automated reminders.',
     icon: 'document-text-outline',
-    color: '#7C3AED',
-    bgColor: '#EDE9FE',
-    features: ['Custom Invoice Templates', 'Automated Reminders', 'Payment Tracking', 'Multi-currency Support', 'Client Portal', 'Financial Reports'],
-    pricing: { starter: 'Free', business: '$15/mo', enterprise: '$49/mo' },
+    color: '#8B5CF6',
+    features: ['Custom Templates', 'Auto Reminders', 'Multi-currency', 'Reports'],
     route: '/products/invoicing',
     dashboardRoute: '/invoicing',
   },
   {
-    id: 'payments',
-    name: 'Payment Solution',
-    tagline: 'Unified Payment Processing',
-    description: 'Accept payments anywhere with our secure, unified payment solution. Support for cards, mobile money, and more.',
-    icon: 'card-outline',
-    color: '#DC2626',
-    bgColor: '#FEE2E2',
-    features: ['Card Payments', 'Mobile Money', 'QR Code Payments', 'Payment Links', 'Recurring Billing', 'Fraud Protection'],
-    pricing: { starter: 'Free', business: '1.5% + $0.25', enterprise: 'Custom' },
-    route: '/products/payment',
-    dashboardRoute: '/payment',
-    comingSoon: true,
-  },
-  {
     id: 'bulk_sms',
-    name: 'Bulk SMS',
-    tagline: 'Mass Communication Made Easy',
-    description: 'Reach your customers instantly with our reliable bulk SMS platform. Perfect for marketing and notifications.',
+    name: 'UniTxt',
+    tagline: 'Mass Communication',
+    description: 'Reach customers instantly with reliable bulk messaging and campaign management.',
     icon: 'chatbubbles-outline',
     color: '#F59E0B',
-    bgColor: '#FEF3C7',
-    features: ['Bulk Messaging', 'Contact Groups', 'Scheduled Messages', 'Delivery Reports', 'Personalization', 'API Access'],
-    pricing: { starter: '$0.02/SMS', business: '$0.015/SMS', enterprise: 'Custom' },
+    features: ['Bulk SMS', 'Contact Groups', 'Scheduling', 'Analytics'],
     route: '/products/bulk-sms',
-    comingSoon: true,
+    dashboardRoute: '/unitxt',
+  },
+  {
+    id: 'loyalty',
+    name: 'Loyalty',
+    tagline: 'Customer Rewards',
+    description: 'Build lasting customer relationships with points, rewards, and loyalty programs.',
+    icon: 'heart-outline',
+    color: '#EC4899',
+    features: ['Points System', 'Reward Tiers', 'Referrals', 'Analytics'],
+    route: '/products/loyalty',
+    dashboardRoute: '/loyalty',
+  },
+];
+
+// Coming Soon Apps
+const COMING_SOON_APPS = [
+  {
+    id: 'kwikpay',
+    name: 'KwikPay',
+    tagline: 'Unified Payments',
+    description: 'Accept payments anywhere with cards, mobile money, and bank transfers.',
+    icon: 'card-outline',
+    color: '#00D4FF',
+    features: ['Card Payments', 'Mobile Money', 'Payouts', 'API'],
+    route: '/products/kwikpay',
   },
   {
     id: 'accounting',
     name: 'Accounting',
-    tagline: 'Simplified Business Accounting',
-    description: 'Manage your finances with ease. Track expenses, generate reports, and stay tax-ready all year round.',
+    tagline: 'Business Accounting',
+    description: 'Manage finances, track expenses, and stay tax-ready all year round.',
     icon: 'calculator-outline',
-    color: '#0891B2',
-    bgColor: '#CFFAFE',
-    features: ['Expense Tracking', 'Bank Reconciliation', 'Financial Reports', 'Tax Calculations', 'Multi-currency', 'Budgeting'],
-    pricing: { starter: 'Free', business: '$25/mo', enterprise: '$79/mo' },
+    color: '#06B6D4',
+    features: ['Expense Tracking', 'Bank Sync', 'Tax Reports', 'Budgeting'],
     route: '/products/accounting',
-    comingSoon: true,
+  },
+  {
+    id: 'crm',
+    name: 'CRM',
+    tagline: 'Customer Management',
+    description: 'Track leads, manage pipelines, and grow your customer relationships.',
+    icon: 'people-outline',
+    color: '#6366F1',
+    features: ['Lead Management', 'Sales Pipeline', 'Automation', 'Analytics'],
+    route: '/products/crm',
+  },
+  {
+    id: 'expenses',
+    name: 'Expenses',
+    tagline: 'Expense Tracking',
+    description: 'Track and manage all business expenses with receipt scanning and approvals.',
+    icon: 'wallet-outline',
+    color: '#EF4444',
+    features: ['Receipt Scan', 'Categories', 'Approvals', 'Reports'],
+    route: '/products/expenses',
   },
 ];
 
-// Stats
+// Stats with animation
 const STATS = [
-  { value: '50K+', label: 'Active Businesses' },
-  { value: '100M+', label: 'Transactions Processed' },
-  { value: '99.9%', label: 'Uptime' },
-  { value: '24/7', label: 'Support' },
+  { value: '50K+', label: 'Active Businesses', icon: 'business-outline' },
+  { value: '$2B+', label: 'Transactions Processed', icon: 'trending-up-outline' },
+  { value: '99.9%', label: 'Uptime Guarantee', icon: 'shield-checkmark-outline' },
+  { value: '24/7', label: 'Expert Support', icon: 'headset-outline' },
+];
+
+// Enterprise Features
+const FEATURES = [
+  {
+    icon: 'planet-outline',
+    title: 'Unified Platform',
+    description: 'All your business tools in one powerful ecosystem. Seamless data flow across applications.',
+  },
+  {
+    icon: 'lock-closed-outline',
+    title: 'Enterprise Security',
+    description: 'Bank-grade encryption, SOC 2 compliance, and advanced threat protection.',
+  },
+  {
+    icon: 'analytics-outline',
+    title: 'Real-time Analytics',
+    description: 'Deep insights and predictive analytics to drive data-informed decisions.',
+  },
+  {
+    icon: 'cloud-outline',
+    title: 'Cloud Native',
+    description: 'Built for scale with 99.9% uptime SLA and automatic backups.',
+  },
+  {
+    icon: 'code-slash-outline',
+    title: 'Developer APIs',
+    description: 'RESTful APIs, webhooks, and SDKs for seamless integrations.',
+  },
+  {
+    icon: 'globe-outline',
+    title: 'Global Ready',
+    description: 'Multi-currency, multi-language support for international operations.',
+  },
 ];
 
 // Testimonials
 const TESTIMONIALS = [
   {
-    text: "Software Galaxy transformed our business operations. We now manage everything from one platform!",
+    quote: "Software Galaxy transformed how we operate. Managing 15 stores from one platform saved us countless hours.",
     author: "James Mwangi",
     role: "CEO, Retail Chain",
-    avatar: "JM",
+    company: "MegaMart Kenya",
   },
   {
-    text: "The inventory system saved us hours every week. Low stock alerts are a game changer.",
+    quote: "The inventory system alone paid for itself in the first month. Low stock alerts are a game changer.",
     author: "Sarah Akinyi",
-    role: "Operations Manager",
-    avatar: "SA",
+    role: "Operations Director",
+    company: "TechSupply Co.",
   },
   {
-    text: "Professional invoicing made easy. Our clients love the clean invoices and we get paid faster.",
+    quote: "Professional invoicing with automated reminders. Our collection rate improved by 40% in 3 months.",
     author: "David Okonkwo",
-    role: "Freelance Consultant",
-    avatar: "DO",
+    role: "Finance Manager",
+    company: "ConsultPro",
   },
 ];
 
@@ -151,28 +214,51 @@ export default function LandingPage() {
   const router = useRouter();
   const { width } = useWindowDimensions();
   const isMobile = width < 768;
-  const { isAuthenticated, user, logout } = useAuthStore();
+  const isTablet = width >= 768 && width < 1024;
+  const { isAuthenticated, user } = useAuthStore();
   
-  // User subscriptions state
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  
+  // State
   const [userAccess, setUserAccess] = useState<{app_id: string; subscribed: boolean}[]>([]);
-  const [loadingAccess, setLoadingAccess] = useState(false);
-  
-  // Free Trial Modal state
   const [showTrialModal, setShowTrialModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<ProductInfo | null>(null);
-  
-  // Waitlist Modal state
   const [showWaitlistModal, setShowWaitlistModal] = useState(false);
   const [waitlistProduct, setWaitlistProduct] = useState<WaitlistProductInfo | null>(null);
+  const [showGeneralTrialModal, setShowGeneralTrialModal] = useState(false);
+  const [showVideoModal, setShowVideoModal] = useState(false);
+  const [showInteractiveDemo, setShowInteractiveDemo] = useState(false);
+  const [activeTestimonial, setActiveTestimonial] = useState(0);
 
-  // Redirect mobile users to login
   useEffect(() => {
     if (!isWeb) {
       router.replace('/(auth)/login');
     }
+    
+    // Entrance animation
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+    ]).start();
+    
+    // Testimonial rotation
+    const interval = setInterval(() => {
+      setActiveTestimonial(prev => (prev + 1) % TESTIMONIALS.length);
+    }, 5000);
+    
+    return () => clearInterval(interval);
   }, []);
 
-  // Fetch user subscriptions when authenticated
   useEffect(() => {
     if (isAuthenticated) {
       fetchUserAccess();
@@ -180,10 +266,8 @@ export default function LandingPage() {
   }, [isAuthenticated]);
 
   const fetchUserAccess = async () => {
-    setLoadingAccess(true);
     try {
       const response = await api.get('/galaxy/user/access');
-      // Map the API response to our expected format
       const appAccess = response.data.app_access || [];
       const mappedAccess = appAccess.map((item: any) => ({
         app_id: item.app?.app_id || item.app_id,
@@ -192,13 +276,10 @@ export default function LandingPage() {
       setUserAccess(mappedAccess);
     } catch (error) {
       console.error('Failed to fetch user access:', error);
-    } finally {
-      setLoadingAccess(false);
     }
   };
 
   const isSubscribed = (appId: string) => {
-    // Handle both hyphen and underscore formats
     const normalizedId = appId.replace(/-/g, '_');
     return userAccess.some(access => {
       const accessId = access.app_id?.replace(/-/g, '_');
@@ -206,56 +287,6 @@ export default function LandingPage() {
     });
   };
 
-  const handleStartTrial = (product: typeof PRODUCTS[0]) => {
-    // Get the current auth state at the time of click (not from closure)
-    const currentAuthState = useAuthStore.getState();
-    
-    // Check token from localStorage as fallback
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    
-    // If we have a token in localStorage, we should proceed even if state is stale
-    if (!currentAuthState.isAuthenticated && !token) {
-      router.push('/(auth)/login');
-      return;
-    }
-    
-    // Show the beautiful trial modal instead of directly subscribing
-    const productInfo: ProductInfo = {
-      id: product.id,
-      name: product.name,
-      tagline: product.tagline,
-      description: product.description,
-      icon: product.icon,
-      color: product.color,
-      bgColor: product.bgColor,
-      gradientColors: [product.color, shadeColor(product.color, -20)] as [string, string],
-      features: product.features.slice(0, 4), // Show first 4 features
-      dashboardRoute: product.dashboardRoute,
-    };
-    
-    setSelectedProduct(productInfo);
-    setShowTrialModal(true);
-  };
-  
-  const handleJoinWaitlist = (product: typeof PRODUCTS[0]) => {
-    // Show the waitlist modal for coming soon products
-    const productInfo: WaitlistProductInfo = {
-      id: product.id,
-      name: product.name,
-      tagline: product.tagline,
-      description: product.description,
-      icon: product.icon,
-      color: product.color,
-      bgColor: product.bgColor,
-      gradientColors: [product.color, shadeColor(product.color, -20)] as [string, string],
-      features: product.features.slice(0, 4), // Show first 4 features
-    };
-    
-    setWaitlistProduct(productInfo);
-    setShowWaitlistModal(true);
-  };
-  
-  // Helper to darken a color for gradient
   const shadeColor = (color: string, percent: number): string => {
     const num = parseInt(color.replace('#', ''), 16);
     const amt = Math.round(2.55 * percent);
@@ -267,9 +298,47 @@ export default function LandingPage() {
       (B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
   };
 
-  const handleLogout = () => {
-    logout();
-    setUserAccess([]);
+  const handleStartTrial = (product: typeof AVAILABLE_APPS[0]) => {
+    const currentAuthState = useAuthStore.getState();
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    
+    if (!currentAuthState.isAuthenticated && !token) {
+      router.push('/(auth)/login');
+      return;
+    }
+    
+    const productInfo: ProductInfo = {
+      id: product.id,
+      name: product.name,
+      tagline: product.tagline,
+      description: product.description,
+      icon: product.icon,
+      color: product.color,
+      bgColor: shadeColor(product.color, 80),
+      gradientColors: [product.color, shadeColor(product.color, -20)] as [string, string],
+      features: product.features,
+      dashboardRoute: product.dashboardRoute,
+    };
+    
+    setSelectedProduct(productInfo);
+    setShowTrialModal(true);
+  };
+  
+  const handleJoinWaitlist = (product: typeof COMING_SOON_APPS[0]) => {
+    const productInfo: WaitlistProductInfo = {
+      id: product.id,
+      name: product.name,
+      tagline: product.tagline,
+      description: product.description,
+      icon: product.icon,
+      color: product.color,
+      bgColor: shadeColor(product.color, 80),
+      gradientColors: [product.color, shadeColor(product.color, -20)] as [string, string],
+      features: product.features,
+    };
+    
+    setWaitlistProduct(productInfo);
+    setShowWaitlistModal(true);
   };
 
   const scrollToSection = (sectionId: string) => {
@@ -279,503 +348,438 @@ export default function LandingPage() {
     }
   };
 
-  const navigateToProduct = (product: typeof PRODUCTS[0]) => {
-    if (product.comingSoon) {
-      router.push(`/products/${product.id}` as any);
-    } else {
-      router.push(`/products/${product.id}` as any);
+  // CSS for web animations
+  const webStyles = isWeb ? `
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-20px); }
     }
-  };
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 1; }
+    }
+    @keyframes gradient {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .float-animation { animation: float 6s ease-in-out infinite; }
+    .pulse-animation { animation: pulse 3s ease-in-out infinite; }
+    .card-hover:hover { transform: translateY(-8px); transition: all 0.3s ease; }
+    .glow-border { box-shadow: 0 0 30px rgba(0, 212, 255, 0.3); }
+  ` : '';
 
   return (
     <SafeAreaView style={styles.container}>
+      {isWeb && <style dangerouslySetInnerHTML={{ __html: webStyles }} />}
+      
+      {/* New Marketing Navigation with Search & Mega Dropdown */}
+      <MarketingNav />
+      
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Navigation Header */}
-        <View style={[styles.header, isMobile && styles.headerMobile]}>
-          <TouchableOpacity style={styles.logo} onPress={() => router.push('/')}>
-            <View style={styles.logoIcon}>
-              <View style={styles.logoOrbit}>
-                <View style={styles.logoDot} />
-              </View>
-            </View>
-            <View>
-              <Text style={styles.logoTextSmall}>SOFTWARE</Text>
-              <Text style={styles.logoTextLarge}>GALAXY</Text>
-            </View>
-          </TouchableOpacity>
-          
-          {!isMobile && (
-            <View style={styles.navLinks}>
-              <TouchableOpacity onPress={() => scrollToSection('products')}>
-                <Text style={styles.navLink}>Products</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => scrollToSection('features')}>
-                <Text style={styles.navLink}>Features</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => scrollToSection('pricing')}>
-                <Text style={styles.navLink}>Pricing</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => scrollToSection('testimonials')}>
-                <Text style={styles.navLink}>Testimonials</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-          
-          {/* Auth Dependent Header Actions */}
-          {isAuthenticated ? (
-            <View style={styles.headerActions}>
-              {/* Google Apps-style Product Switcher */}
-              <ProductSwitcher currentProductId="home" />
-              <View style={styles.userInfoHeader}>
-                <View style={styles.userAvatarSmall}>
-                  <Text style={styles.userAvatarText}>
-                    {user?.name?.charAt(0).toUpperCase() || 'U'}
-                  </Text>
-                </View>
-                {!isMobile && (
-                  <Text style={styles.userNameHeader}>{user?.name || 'User'}</Text>
-                )}
-              </View>
-              <TouchableOpacity 
-                style={styles.logoutBtn}
-                onPress={handleLogout}
-              >
-                <Ionicons name="log-out-outline" size={18} color={THEME.gray} />
-                {!isMobile && <Text style={styles.logoutBtnText}>Logout</Text>}
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.headerActions}>
-              <TouchableOpacity 
-                style={styles.loginBtn}
-                onPress={() => router.push('/(auth)/login')}
-              >
-                <Text style={styles.loginBtnText}>Login</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.signUpBtn}
-                onPress={() => router.push('/(auth)/login')}
-              >
-                <Text style={styles.signUpBtnText}>Get Started Free</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-        </View>
-
-        {/* Hero Section - Always visible */}
-        <LinearGradient
-          colors={[THEME.dark, THEME.secondary]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.heroSection}
-        >
-          {/* Stars background */}
-          <View style={styles.starsContainer}>
-            {[...Array(30)].map((_, i) => (
-              <View 
-                key={i} 
-                style={[
-                  styles.star, 
-                  { 
-                    left: `${Math.random() * 100}%`, 
-                    top: `${Math.random() * 100}%`,
-                    opacity: Math.random() * 0.5 + 0.3,
-                    width: Math.random() * 3 + 1,
-                    height: Math.random() * 3 + 1,
-                  }
-                ]} 
-              />
-            ))}
-          </View>
-          
-          <View style={[styles.heroContent, isMobile && styles.heroContentMobile]}>
-            <Text style={[styles.heroTitle, isMobile && styles.heroTitleMobile]}>
-              Your Business Universe,{'\n'}
-              <Text style={styles.heroHighlight}>One Platform</Text>
-            </Text>
-            <Text style={[styles.heroSubtitle, isMobile && styles.heroSubtitleMobile]}>
-              Software Galaxy brings all your business tools together. From retail to inventory, 
-              invoicing to payments – manage everything from a single, powerful platform.
-            </Text>
-            <View style={[styles.heroCTA, isMobile && styles.heroCTAMobile]}>
-              <TouchableOpacity 
-                style={styles.ctaButton}
-                onPress={() => router.push('/(auth)/login')}
-              >
-                <Text style={styles.ctaButtonText}>Start Free Trial</Text>
-                <Ionicons name="arrow-forward" size={20} color={THEME.dark} />
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.ctaSecondary}
-                onPress={() => scrollToSection('products')}
-              >
-                <Ionicons name="apps-outline" size={24} color={THEME.white} />
-                <Text style={styles.ctaSecondaryText}>Explore Products</Text>
-              </TouchableOpacity>
+        {/* Hero Section */}
+        <Animated.View style={[styles.hero, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+          <LinearGradient
+            colors={[THEME.darker, THEME.dark, '#0F0F1A']}
+            style={styles.heroGradient}
+          >
+            {/* Animated background elements */}
+            <View style={styles.heroBackground}>
+              <View style={[styles.glowOrb, styles.glowOrb1]} />
+              <View style={[styles.glowOrb, styles.glowOrb2]} />
+              <View style={[styles.glowOrb, styles.glowOrb3]} />
             </View>
             
-            {/* Stats */}
-            <View style={[styles.heroStats, isMobile && styles.heroStatsMobile]}>
-              {STATS.map((stat, index) => (
-                <View key={index} style={styles.heroStat}>
-                  <Text style={styles.heroStatNumber}>{stat.value}</Text>
-                  <Text style={styles.heroStatLabel}>{stat.label}</Text>
-                </View>
-              ))}
+            <View style={[styles.heroContent, isMobile && styles.heroContentMobile]}>
+              <View style={styles.heroBadge}>
+                <View style={styles.badgeDot} />
+                <Text style={styles.badgeText}>Trusted by 50,000+ businesses</Text>
+              </View>
+              
+              <Text style={[styles.heroTitle, isMobile && styles.heroTitleMobile]}>
+                The Operating System{'\n'}for Modern Business
+              </Text>
+              
+              <Text style={[styles.heroSubtitle, isMobile && styles.heroSubtitleMobile]}>
+                Unify your operations with enterprise-grade tools for retail, inventory,{'\n'}
+                invoicing, payments, and customer engagement — all in one platform.
+              </Text>
+              
+              <View style={[styles.heroCTA, isMobile && styles.heroCTAMobile]}>
+                <TouchableOpacity 
+                  style={styles.primaryBtn}
+                  onPress={() => setShowGeneralTrialModal(true)}
+                  data-testid="hero-start-trial-btn"
+                >
+                  <LinearGradient
+                    colors={[THEME.primary, THEME.secondary]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={styles.primaryBtnGradient}
+                  >
+                    <Text style={styles.primaryBtnText}>Start Free Trial</Text>
+                    <Ionicons name="arrow-forward" size={20} color={THEME.dark} />
+                  </LinearGradient>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.secondaryBtn}
+                  onPress={() => setShowInteractiveDemo(true)}
+                  data-testid="landing-watch-demo-btn"
+                >
+                  <Ionicons name="play-circle" size={22} color={THEME.primary} />
+                  <Text style={styles.secondaryBtnText}>Explore Demo</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {/* Stats Row */}
+              <View style={[styles.statsRow, isMobile && styles.statsRowMobile]}>
+                {STATS.map((stat, index) => (
+                  <View key={index} style={styles.statItem}>
+                    <Ionicons name={stat.icon as any} size={20} color={THEME.primary} />
+                    <Text style={styles.statValue}>{stat.value}</Text>
+                    <Text style={styles.statLabel}>{stat.label}</Text>
+                  </View>
+                ))}
+              </View>
             </View>
-          </View>
-        </LinearGradient>
+          </LinearGradient>
+        </Animated.View>
 
-        {/* Products Section - Shows subscription status for logged in users */}
-        <View style={styles.productsSection} nativeID="products">
-          <Text style={styles.sectionTitle}>
-            {isAuthenticated ? 'Available Apps' : 'Our Product Suite'}
-          </Text>
-          <Text style={styles.sectionSubtitle}>
-            {isAuthenticated 
-              ? 'Start a free trial to explore these tools' 
-              : 'Powerful, integrated tools designed for modern businesses'}
-          </Text>
+        {/* Available Products */}
+        <View style={styles.section} nativeID="products">
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionBadge}>
+              <Text style={styles.sectionBadgeText}>AVAILABLE NOW</Text>
+            </View>
+            <Text style={styles.sectionTitle}>Power Your Business Today</Text>
+            <Text style={styles.sectionSubtitle}>
+              Production-ready applications to transform your operations
+            </Text>
+          </View>
           
           <View style={[styles.productsGrid, isMobile && styles.productsGridMobile]}>
-            {PRODUCTS.map((product) => {
-              const subscribed = isSubscribed(product.id);
-              
-              // Navigate to product landing page
-              const goToProductPage = () => {
-                router.push(product.route as any);
-              };
+            {AVAILABLE_APPS.map((app) => {
+              const subscribed = isSubscribed(app.id);
               
               return (
-                <View 
-                  key={product.id}
-                  style={[styles.productCard, isMobile && styles.productCardMobile]}
-                >
-                  {/* Clickable card content area - navigates to product page */}
-                  <TouchableOpacity 
-                    style={styles.productCardContent}
-                    onPress={goToProductPage}
-                    activeOpacity={0.7}
-                  >
-                    {/* Subscription Badge */}
-                    {subscribed && !product.comingSoon && (
-                      <View style={[styles.subscribedBadge, { backgroundColor: product.color }]}>
-                        <Ionicons name="checkmark-circle" size={14} color={THEME.white} />
-                        <Text style={styles.subscribedBadgeText}>Subscribed</Text>
+                <View key={app.id} style={[styles.productCard, isMobile && styles.productCardMobile]}>
+                  <View style={styles.productCardInner}>
+                    {subscribed && (
+                      <View style={styles.subscribedBadge}>
+                        <Ionicons name="checkmark-circle" size={14} color={THEME.success} />
+                        <Text style={styles.subscribedText}>Active</Text>
                       </View>
                     )}
                     
-                    {/* Coming Soon Badge */}
-                    {product.comingSoon && (
-                      <View style={styles.comingSoonBadge}>
-                        <Text style={styles.comingSoonText}>Coming Soon</Text>
-                      </View>
-                    )}
-                    
-                    <View style={[styles.productIconContainer, { backgroundColor: product.bgColor }]}>
-                      <Ionicons name={product.icon as any} size={32} color={product.color} />
+                    <View style={[styles.productIcon, { backgroundColor: `${app.color}20` }]}>
+                      <Ionicons name={app.icon as any} size={28} color={app.color} />
                     </View>
-                    <Text style={styles.productName}>{product.name}</Text>
-                    <Text style={styles.productTagline}>{product.tagline}</Text>
-                    <Text style={styles.productDescription}>{product.description}</Text>
+                    
+                    <Text style={styles.productName}>{app.name}</Text>
+                    <Text style={styles.productTagline}>{app.tagline}</Text>
+                    <Text style={styles.productDesc}>{app.description}</Text>
+                    
                     <View style={styles.productFeatures}>
-                      {product.features.slice(0, 3).map((feature, idx) => (
-                        <View key={idx} style={styles.featureRow}>
-                          <Ionicons name="checkmark-circle" size={16} color={product.color} />
-                          <Text style={styles.featureText}>{feature}</Text>
+                      {app.features.map((feature, idx) => (
+                        <View key={idx} style={styles.featureTag}>
+                          <Text style={styles.featureTagText}>{feature}</Text>
                         </View>
                       ))}
                     </View>
-                  </TouchableOpacity>
-                  
-                  {/* CTA Button - Different for subscribed vs non-subscribed */}
-                  {subscribed && !product.comingSoon ? (
-                    <TouchableOpacity 
-                      style={[styles.productCTA, { backgroundColor: product.color }]}
-                      onPress={() => router.push(product.dashboardRoute as any)}
-                    >
-                      <Text style={styles.productCTAText}>Open Dashboard</Text>
-                      <Ionicons name="arrow-forward" size={16} color={THEME.white} />
-                    </TouchableOpacity>
-                  ) : product.comingSoon ? (
-                    isWeb ? (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleJoinWaitlist(product);
-                        }}
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: 8,
-                          backgroundColor: product.color,
-                          paddingTop: 14,
-                          paddingBottom: 14,
-                          paddingLeft: 24,
-                          paddingRight: 24,
-                          borderRadius: 10,
-                          border: 'none',
-                          cursor: 'pointer',
-                          width: '100%',
-                          marginTop: 24,
-                        }}
-                      >
-                        <span style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '600' }}>Join Waitlist</span>
-                        <Ionicons name="notifications-outline" size={16} color={THEME.white} />
-                      </button>
-                    ) : (
-                      <TouchableOpacity 
-                        style={[styles.productCTA, { backgroundColor: product.color }]}
-                        onPress={() => handleJoinWaitlist(product)}
-                      >
-                        <Text style={styles.productCTAText}>Join Waitlist</Text>
-                        <Ionicons name="notifications-outline" size={16} color={THEME.white} />
-                      </TouchableOpacity>
-                    )
-                  ) : isAuthenticated ? (
-                    isWeb ? (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleStartTrial(product);
-                        }}
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: 8,
-                          backgroundColor: product.color,
-                          paddingTop: 14,
-                          paddingBottom: 14,
-                          paddingLeft: 24,
-                          paddingRight: 24,
-                          borderRadius: 10,
-                          border: 'none',
-                          cursor: 'pointer',
-                          width: '100%',
-                          marginTop: 24,
-                        }}
-                      >
-                        <span style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '600' }}>Start Free Trial</span>
-                        <Ionicons name="arrow-forward" size={16} color={THEME.white} />
-                      </button>
-                    ) : (
-                      <TouchableOpacity 
-                        style={[styles.productCTA, { backgroundColor: product.color }]}
-                        onPress={() => handleStartTrial(product)}
-                      >
-                        <Text style={styles.productCTAText}>Start Free Trial</Text>
-                        <Ionicons name="arrow-forward" size={16} color={THEME.white} />
-                      </TouchableOpacity>
-                    )
-                  ) : (
-                    <TouchableOpacity 
-                      style={[styles.productCTA, { backgroundColor: product.color }]}
-                      onPress={() => navigateToProduct(product)}
-                    >
-                      <Text style={styles.productCTAText}>Learn More</Text>
-                      <Ionicons name="arrow-forward" size={16} color={THEME.white} />
-                    </TouchableOpacity>
-                  )}
+                    
+                    <View style={styles.productActions}>
+                      {subscribed ? (
+                        <TouchableOpacity 
+                          style={[styles.productBtn, { backgroundColor: app.color }]}
+                          onPress={() => router.push(app.dashboardRoute as any)}
+                        >
+                          <Text style={styles.productBtnText}>Open Dashboard</Text>
+                          <Ionicons name="arrow-forward" size={16} color={THEME.text} />
+                        </TouchableOpacity>
+                      ) : (
+                        <>
+                          <TouchableOpacity 
+                            style={[styles.productBtn, { backgroundColor: app.color }]}
+                            onPress={() => handleStartTrial(app)}
+                          >
+                            <Text style={styles.productBtnText}>Start Trial</Text>
+                            <Ionicons name="arrow-forward" size={16} color={THEME.text} />
+                          </TouchableOpacity>
+                          <TouchableOpacity 
+                            style={styles.learnMoreBtn}
+                            onPress={() => router.push(app.route as any)}
+                          >
+                            <Text style={styles.learnMoreText}>Learn More</Text>
+                          </TouchableOpacity>
+                        </>
+                      )}
+                    </View>
+                  </View>
                 </View>
               );
             })}
           </View>
         </View>
 
-        {/* Features Section */}
-        <View style={styles.featuresSection} nativeID="features">
-          <LinearGradient
-            colors={[THEME.secondary, THEME.dark]}
-            style={styles.featuresGradient}
-          >
-            <Text style={[styles.sectionTitle, { color: THEME.white }]}>
-              Why Choose Software Galaxy?
+        {/* Coming Soon Products */}
+        <View style={[styles.section, styles.sectionDark]}>
+          <View style={styles.sectionHeader}>
+            <View style={[styles.sectionBadge, styles.comingSoonBadge]}>
+              <Ionicons name="rocket-outline" size={14} color={THEME.warning} />
+              <Text style={[styles.sectionBadgeText, { color: THEME.warning }]}>COMING SOON</Text>
+            </View>
+            <Text style={[styles.sectionTitle, { color: THEME.text }]}>What's Next</Text>
+            <Text style={[styles.sectionSubtitle, { color: THEME.textMuted }]}>
+              Join the waitlist for early access to upcoming products
             </Text>
-            <Text style={[styles.sectionSubtitle, { color: THEME.light }]}>
-              Everything you need to run and grow your business
-            </Text>
-            
-            <View style={[styles.featuresGrid, isMobile && styles.featuresGridMobile]}>
-              {[
-                { icon: 'planet-outline', title: 'All-in-One Platform', desc: 'Access all your business tools from a single dashboard' },
-                { icon: 'sync-outline', title: 'Seamless Integration', desc: 'All apps work together, sharing data automatically' },
-                { icon: 'shield-checkmark-outline', title: 'Enterprise Security', desc: 'Bank-grade encryption keeps your data safe' },
-                { icon: 'phone-portrait-outline', title: 'Mobile First', desc: 'Manage your business from anywhere, any device' },
-                { icon: 'flash-outline', title: 'Lightning Fast', desc: 'Optimized for speed, even with large datasets' },
-                { icon: 'headset-outline', title: '24/7 Support', desc: 'Expert help whenever you need it' },
-              ].map((feature, index) => (
-                <View key={index} style={styles.featureCard}>
-                  <View style={styles.featureIconWrapper}>
-                    <Ionicons name={feature.icon as any} size={28} color={THEME.primary} />
+          </View>
+          
+          <View style={[styles.productsGrid, isMobile && styles.productsGridMobile]}>
+            {COMING_SOON_APPS.map((app) => (
+              <View key={app.id} style={[styles.comingSoonCard, isMobile && styles.productCardMobile]}>
+                <View style={styles.productCardInner}>
+                  <View style={[styles.productIcon, { backgroundColor: `${app.color}15` }]}>
+                    <Ionicons name={app.icon as any} size={28} color={app.color} />
                   </View>
-                  <Text style={styles.featureCardTitle}>{feature.title}</Text>
-                  <Text style={styles.featureCardDesc}>{feature.desc}</Text>
+                  
+                  <Text style={[styles.productName, { color: THEME.text }]}>{app.name}</Text>
+                  <Text style={[styles.productTagline, { color: THEME.textMuted }]}>{app.tagline}</Text>
+                  <Text style={[styles.productDesc, { color: THEME.textSubtle }]}>{app.description}</Text>
+                  
+                  <View style={styles.productFeatures}>
+                    {app.features.map((feature, idx) => (
+                      <View key={idx} style={[styles.featureTag, styles.featureTagDark]}>
+                        <Text style={[styles.featureTagText, { color: THEME.textMuted }]}>{feature}</Text>
+                      </View>
+                    ))}
+                  </View>
+                  
+                  <TouchableOpacity 
+                    style={[styles.waitlistBtn, { borderColor: app.color }]}
+                    onPress={() => handleJoinWaitlist(app)}
+                  >
+                    <Ionicons name="notifications-outline" size={16} color={app.color} />
+                    <Text style={[styles.waitlistBtnText, { color: app.color }]}>Join Waitlist</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* Soko Ecosystem Section */}
+        <View style={[styles.section, styles.sectionDark]} nativeID="ecosystem">
+          <View style={styles.sectionHeader}>
+            <View style={styles.sokoLogoLarge}>
+              <LinearGradient
+                colors={[THEME.primary, THEME.secondary]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.sokoLogoGradient}
+              >
+                <Ionicons name="planet" size={40} color={THEME.dark} />
+              </LinearGradient>
+            </View>
+            <Text style={[styles.sectionTitle, { color: THEME.text, marginTop: 24 }]}>
+              The Soko Ecosystem
+            </Text>
+            <Text style={[styles.sectionSubtitle, { color: THEME.textMuted, maxWidth: 600 }]}>
+              All your business tools, unified under one platform. Data flows seamlessly,
+              users sign in once, and your entire operation works as one.
+            </Text>
+          </View>
+          
+          <View style={[styles.ecosystemGrid, isMobile && styles.ecosystemGridMobile]}>
+            <View style={styles.ecosystemCard}>
+              <View style={styles.ecosystemIconWrap}>
+                <Ionicons name="git-network-outline" size={28} color={THEME.primary} />
+              </View>
+              <Text style={styles.ecosystemCardTitle}>Connected Data</Text>
+              <Text style={styles.ecosystemCardDesc}>
+                Customer profiles, products, and transactions sync automatically across all apps
+              </Text>
+            </View>
+            <View style={styles.ecosystemCard}>
+              <View style={styles.ecosystemIconWrap}>
+                <Ionicons name="phone-portrait-outline" size={28} color={THEME.primary} />
+              </View>
+              <Text style={styles.ecosystemCardTitle}>PWA Ready</Text>
+              <Text style={styles.ecosystemCardDesc}>
+                Install on any device. Works offline with automatic sync when back online
+              </Text>
+            </View>
+            <View style={styles.ecosystemCard}>
+              <View style={styles.ecosystemIconWrap}>
+                <Ionicons name="key-outline" size={28} color={THEME.primary} />
+              </View>
+              <Text style={styles.ecosystemCardTitle}>Single Sign-On</Text>
+              <Text style={styles.ecosystemCardDesc}>
+                One login for all products. Seamless authentication across your entire suite
+              </Text>
+            </View>
+            <View style={styles.ecosystemCard}>
+              <View style={styles.ecosystemIconWrap}>
+                <Ionicons name="code-slash-outline" size={28} color={THEME.primary} />
+              </View>
+              <Text style={styles.ecosystemCardTitle}>Open APIs</Text>
+              <Text style={styles.ecosystemCardDesc}>
+                Build custom integrations with RESTful APIs and webhooks for every product
+              </Text>
+            </View>
+          </View>
+          
+          {/* Visual Ecosystem Diagram */}
+          <View style={styles.ecosystemDiagram}>
+            <View style={styles.ecosystemDiagramCenter}>
+              <LinearGradient
+                colors={[THEME.primary, THEME.secondary]}
+                style={styles.ecosystemDiagramCore}
+              >
+                <Text style={styles.ecosystemDiagramCoreText}>SOKO</Text>
+                <Text style={styles.ecosystemDiagramCoreSubtext}>Super App</Text>
+              </LinearGradient>
+            </View>
+            <View style={styles.ecosystemDiagramApps}>
+              {[
+                { name: 'RetailPro', color: '#3B82F6', icon: 'storefront-outline' },
+                { name: 'KwikPay', color: '#00D4FF', icon: 'card-outline' },
+                { name: 'Inventory', color: '#10B981', icon: 'cube-outline' },
+                { name: 'Invoicing', color: '#8B5CF6', icon: 'document-text-outline' },
+                { name: 'UniTxt', color: '#F59E0B', icon: 'chatbubbles-outline' },
+                { name: 'Loyalty', color: '#EC4899', icon: 'heart-outline' },
+              ].map((app, idx) => (
+                <View key={idx} style={[styles.ecosystemDiagramApp, { borderColor: app.color }]}>
+                  <Ionicons name={app.icon as any} size={18} color={app.color} />
+                  <Text style={[styles.ecosystemDiagramAppName, { color: app.color }]}>{app.name}</Text>
                 </View>
               ))}
             </View>
-          </LinearGradient>
+          </View>
         </View>
 
-        {/* Pricing Section */}
-        <View style={styles.pricingSection} nativeID="pricing">
-          <Text style={styles.sectionTitle}>Simple, Transparent Pricing</Text>
-          <Text style={styles.sectionSubtitle}>
-            Start free, upgrade when you're ready. No hidden fees.
-          </Text>
+        {/* Features Section */}
+        <View style={styles.section} nativeID="features">
+          <View style={styles.sectionHeader}>
+            <View style={styles.sectionBadge}>
+              <Text style={styles.sectionBadgeText}>ENTERPRISE READY</Text>
+            </View>
+            <Text style={styles.sectionTitle}>Built for Scale</Text>
+            <Text style={styles.sectionSubtitle}>
+              Enterprise-grade infrastructure powering businesses of all sizes
+            </Text>
+          </View>
           
-          <View style={[styles.pricingGrid, isMobile && styles.pricingGridMobile]}>
-            {[
-              {
-                name: 'Starter',
-                price: 'Free',
-                period: 'forever',
-                features: ['Up to 100 products', '1 user', 'Basic reports', 'Community support', 'Core features'],
-                highlighted: false,
-              },
-              {
-                name: 'Business',
-                price: '$49',
-                period: '/month',
-                features: ['Unlimited products', '10 users', 'Advanced analytics', 'Priority support', 'All apps included', 'API access'],
-                highlighted: true,
-              },
-              {
-                name: 'Enterprise',
-                price: 'Custom',
-                period: 'pricing',
-                features: ['Unlimited everything', 'Unlimited users', 'Dedicated support', 'Custom integrations', 'SLA guarantee', 'On-premise option'],
-                highlighted: false,
-              },
-            ].map((plan, index) => (
-              <View 
-                key={index}
-                style={[
-                  styles.pricingCard,
-                  plan.highlighted && styles.pricingCardHighlighted,
-                  isMobile && styles.pricingCardMobile,
-                ]}
-              >
-                {plan.highlighted && (
-                  <View style={styles.popularBadge}>
-                    <Text style={styles.popularBadgeText}>Most Popular</Text>
-                  </View>
-                )}
-                <Text style={styles.pricingName}>{plan.name}</Text>
-                <View style={styles.pricingPriceRow}>
-                  <Text style={styles.pricingPrice}>{plan.price}</Text>
-                  <Text style={styles.pricingPeriod}>{plan.period}</Text>
+          <View style={[styles.featuresGrid, isMobile && styles.featuresGridMobile]}>
+            {FEATURES.map((feature, index) => (
+              <View key={index} style={[styles.featureCard, isMobile && styles.featureCardMobile]}>
+                <View style={styles.featureIconWrap}>
+                  <LinearGradient
+                    colors={[`${THEME.primary}30`, `${THEME.secondary}30`]}
+                    style={styles.featureIconGradient}
+                  >
+                    <Ionicons name={feature.icon as any} size={24} color={THEME.primary} />
+                  </LinearGradient>
                 </View>
-                <View style={styles.pricingFeatures}>
-                  {plan.features.map((feature, idx) => (
-                    <View key={idx} style={styles.pricingFeatureRow}>
-                      <Ionicons name="checkmark-circle" size={18} color={THEME.primary} />
-                      <Text style={styles.pricingFeatureText}>{feature}</Text>
-                    </View>
-                  ))}
-                </View>
-                <TouchableOpacity 
-                  style={[
-                    styles.pricingButton,
-                    plan.highlighted && styles.pricingButtonHighlighted,
-                  ]}
-                  onPress={() => router.push('/(auth)/login')}
-                >
-                  <Text style={[
-                    styles.pricingButtonText,
-                    plan.highlighted && styles.pricingButtonTextHighlighted,
-                  ]}>
-                    {plan.price === 'Free' ? 'Start Free' : plan.price === 'Custom' ? 'Contact Sales' : 'Get Started'}
-                  </Text>
-                </TouchableOpacity>
+                <Text style={styles.featureTitle}>{feature.title}</Text>
+                <Text style={styles.featureDesc}>{feature.description}</Text>
               </View>
             ))}
           </View>
         </View>
 
         {/* Testimonials */}
-        <View style={styles.testimonialsSection} nativeID="testimonials">
-          <Text style={styles.sectionTitle}>Trusted by Businesses</Text>
-          <Text style={styles.sectionSubtitle}>
-            See what our customers have to say
-          </Text>
+        <View style={[styles.section, styles.sectionDark]}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: THEME.text }]}>Trusted by Industry Leaders</Text>
+          </View>
           
-          <View style={[styles.testimonialsGrid, isMobile && styles.testimonialsGridMobile]}>
-            {TESTIMONIALS.map((testimonial, index) => (
-              <View key={index} style={styles.testimonialCard}>
-                <Ionicons name="star" size={20} color="#F59E0B" />
-                <Ionicons name="star" size={20} color="#F59E0B" />
-                <Ionicons name="star" size={20} color="#F59E0B" />
-                <Ionicons name="star" size={20} color="#F59E0B" />
-                <Ionicons name="star" size={20} color="#F59E0B" />
-                <Text style={styles.testimonialText}>"{testimonial.text}"</Text>
-                <View style={styles.testimonialAuthor}>
-                  <View style={styles.testimonialAvatar}>
-                    <Text style={styles.testimonialInitials}>{testimonial.avatar}</Text>
-                  </View>
-                  <View>
-                    <Text style={styles.testimonialName}>{testimonial.author}</Text>
-                    <Text style={styles.testimonialRole}>{testimonial.role}</Text>
-                  </View>
+          <View style={styles.testimonialContainer}>
+            <View style={styles.testimonialCard}>
+              <View style={styles.quoteIcon}>
+                <Ionicons name="chatbubble-ellipses" size={32} color={THEME.primary} />
+              </View>
+              <Text style={styles.testimonialQuote}>
+                "{TESTIMONIALS[activeTestimonial].quote}"
+              </Text>
+              <View style={styles.testimonialAuthor}>
+                <View style={styles.authorAvatar}>
+                  <Text style={styles.authorInitial}>
+                    {TESTIMONIALS[activeTestimonial].author.charAt(0)}
+                  </Text>
+                </View>
+                <View>
+                  <Text style={styles.authorName}>{TESTIMONIALS[activeTestimonial].author}</Text>
+                  <Text style={styles.authorRole}>
+                    {TESTIMONIALS[activeTestimonial].role}, {TESTIMONIALS[activeTestimonial].company}
+                  </Text>
                 </View>
               </View>
-            ))}
+              
+              <View style={styles.testimonialDots}>
+                {TESTIMONIALS.map((_, idx) => (
+                  <TouchableOpacity 
+                    key={idx} 
+                    style={[styles.dot, idx === activeTestimonial && styles.dotActive]}
+                    onPress={() => setActiveTestimonial(idx)}
+                  />
+                ))}
+              </View>
+            </View>
           </View>
         </View>
 
-        {/* CTA Section */}
-        <LinearGradient
-          colors={[THEME.primary, THEME.accent]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          style={styles.ctaSection}
-        >
-          <Text style={styles.ctaSectionTitle}>Ready to Transform Your Business?</Text>
-          <Text style={styles.ctaSectionSubtitle}>
-            Join thousands of businesses already using Software Galaxy
-          </Text>
-          <TouchableOpacity 
-            style={styles.ctaSectionButton}
-            onPress={() => router.push('/(auth)/login')}
+        {/* Final CTA */}
+        <View style={styles.finalCTA}>
+          <LinearGradient
+            colors={[THEME.dark, THEME.darker]}
+            style={styles.finalCTAGradient}
           >
-            <Text style={styles.ctaSectionButtonText}>Start Your Free Trial</Text>
-            <Ionicons name="rocket-outline" size={20} color={THEME.primary} />
-          </TouchableOpacity>
-        </LinearGradient>
+            <View style={styles.finalCTAContent}>
+              <Text style={styles.finalCTATitle}>Ready to Transform Your Business?</Text>
+              <Text style={styles.finalCTASubtitle}>
+                Join thousands of businesses already using Software Galaxy
+              </Text>
+              <TouchableOpacity 
+                style={styles.finalCTABtn}
+                onPress={() => setShowGeneralTrialModal(true)}
+                data-testid="final-cta-start-trial-btn"
+              >
+                <LinearGradient
+                  colors={[THEME.primary, THEME.secondary]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={styles.finalCTABtnGradient}
+                >
+                  <Text style={styles.finalCTABtnText}>Start Your Free Trial</Text>
+                  <Ionicons name="rocket" size={20} color={THEME.dark} />
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </LinearGradient>
+        </View>
 
         {/* Footer */}
         <View style={styles.footer}>
           <View style={[styles.footerContent, isMobile && styles.footerContentMobile]}>
             <View style={styles.footerBrand}>
-              <View style={styles.logo}>
-                <View style={styles.logoIconSmall}>
-                  <View style={styles.logoOrbitSmall}>
-                    <View style={styles.logoDotSmall} />
-                  </View>
-                </View>
-                <View>
-                  <Text style={[styles.logoTextSmall, { color: THEME.gray }]}>SOFTWARE</Text>
-                  <Text style={[styles.logoTextLarge, { color: THEME.white, fontSize: 20 }]}>GALAXY</Text>
-                </View>
+              <View style={[styles.logo, styles.logoContainerFooter]}>
+                <Image 
+                  source={require('../assets/images/software-galaxy-logo.png')}
+                  style={{ width: 120, height: 32, resizeMode: 'contain' }}
+                />
               </View>
               <Text style={styles.footerTagline}>
-                Your complete business management universe
+                The operating system for modern business
               </Text>
             </View>
             
             <View style={[styles.footerLinks, isMobile && styles.footerLinksMobile]}>
               <View style={styles.footerColumn}>
                 <Text style={styles.footerColumnTitle}>Products</Text>
-                {PRODUCTS.map((product) => (
-                  <TouchableOpacity key={product.id} onPress={() => navigateToProduct(product)}>
-                    <Text style={styles.footerLink}>{product.name}</Text>
+                {[...AVAILABLE_APPS.slice(0, 4)].map((app) => (
+                  <TouchableOpacity key={app.id} onPress={() => router.push(app.route as any)}>
+                    <Text style={styles.footerLink}>{app.name}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -784,44 +788,41 @@ export default function LandingPage() {
                 <Text style={styles.footerLink}>About Us</Text>
                 <Text style={styles.footerLink}>Careers</Text>
                 <Text style={styles.footerLink}>Blog</Text>
-                <Text style={styles.footerLink}>Contact</Text>
+                <Text style={styles.footerLink}>Press</Text>
               </View>
               <View style={styles.footerColumn}>
-                <Text style={styles.footerColumnTitle}>Support</Text>
-                <Text style={styles.footerLink}>Help Center</Text>
+                <Text style={styles.footerColumnTitle}>Resources</Text>
                 <Text style={styles.footerLink}>Documentation</Text>
                 <Text style={styles.footerLink}>API Reference</Text>
                 <Text style={styles.footerLink}>Status</Text>
+                <Text style={styles.footerLink}>Help Center</Text>
               </View>
               <View style={styles.footerColumn}>
                 <Text style={styles.footerColumnTitle}>Legal</Text>
                 <Text style={styles.footerLink}>Privacy Policy</Text>
                 <Text style={styles.footerLink}>Terms of Service</Text>
-                <Text style={styles.footerLink}>Cookie Policy</Text>
+                <Text style={styles.footerLink}>Security</Text>
               </View>
             </View>
           </View>
           
           <View style={styles.footerBottom}>
-            <Text style={styles.footerCopyright}>
-              © 2025 Software Galaxy. All rights reserved.
-            </Text>
+            <Text style={styles.copyright}>© 2025 Software Galaxy. All rights reserved.</Text>
             <View style={styles.socialLinks}>
               <TouchableOpacity style={styles.socialIcon}>
-                <Ionicons name="logo-twitter" size={20} color={THEME.gray} />
+                <Ionicons name="logo-twitter" size={18} color={THEME.textMuted} />
               </TouchableOpacity>
               <TouchableOpacity style={styles.socialIcon}>
-                <Ionicons name="logo-linkedin" size={20} color={THEME.gray} />
+                <Ionicons name="logo-linkedin" size={18} color={THEME.textMuted} />
               </TouchableOpacity>
               <TouchableOpacity style={styles.socialIcon}>
-                <Ionicons name="logo-facebook" size={20} color={THEME.gray} />
+                <Ionicons name="logo-github" size={18} color={THEME.textMuted} />
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </ScrollView>
       
-      {/* Free Trial Modal */}
       <FreeTrialModal
         visible={showTrialModal}
         product={selectedProduct}
@@ -832,7 +833,6 @@ export default function LandingPage() {
         onSuccess={fetchUserAccess}
       />
       
-      {/* Waitlist Modal */}
       <WaitlistModal
         visible={showWaitlistModal}
         product={waitlistProduct}
@@ -841,6 +841,26 @@ export default function LandingPage() {
           setWaitlistProduct(null);
         }}
       />
+      
+      <GeneralTrialModal
+        visible={showGeneralTrialModal}
+        onClose={() => setShowGeneralTrialModal(false)}
+      />
+      
+      <VideoModal
+        visible={showVideoModal}
+        onClose={() => setShowVideoModal(false)}
+        videoId="dQw4w9WgXcQ"
+        title="Software Galaxy Overview"
+        subtitle="See how our platform transforms your business"
+        productColor={THEME.primary}
+      />
+      
+      <InteractiveDemo
+        visible={showInteractiveDemo}
+        onClose={() => setShowInteractiveDemo(false)}
+        onStartTrial={() => setShowGeneralTrialModal(true)}
+      />
     </SafeAreaView>
   );
 }
@@ -848,102 +868,94 @@ export default function LandingPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: THEME.white,
+    backgroundColor: THEME.text,
   },
-  header: {
+  // Navigation
+  nav: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 40,
+    paddingHorizontal: 48,
     paddingVertical: 16,
-    backgroundColor: THEME.white,
+    backgroundColor: THEME.text,
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
-  headerMobile: {
-    paddingHorizontal: 16,
+  navMobile: {
+    paddingHorizontal: 20,
   },
   logo: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
   },
-  logoIcon: {
-    width: 40,
-    height: 40,
+  logoContainerFooter: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  logoMark: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  logoGradient: {
+    width: '100%',
+    height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  logoOrbit: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 3,
-    borderColor: THEME.primary,
-    borderStyle: 'dashed',
+  logoGradientSmall: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  logoDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: THEME.primary,
-    position: 'absolute',
-    top: -4,
-    right: 4,
-  },
-  logoTextSmall: {
-    fontSize: 8,
+  logoLabel: {
+    fontSize: 9,
     fontWeight: '600',
-    color: THEME.gray,
+    color: THEME.textMuted,
     letterSpacing: 2,
   },
-  logoTextLarge: {
-    fontSize: 16,
+  logoName: {
+    fontSize: 18,
     fontWeight: '800',
     color: THEME.dark,
     marginTop: -2,
   },
   navLinks: {
     flexDirection: 'row',
-    gap: 32,
+    gap: 36,
   },
   navLink: {
     fontSize: 14,
-    color: THEME.gray,
     fontWeight: '500',
+    color: THEME.textSubtle,
   },
-  headerActions: {
+  navActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 16,
   },
-  loginBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-  },
-  loginBtnText: {
+  loginLink: {
     fontSize: 14,
-    color: THEME.primary,
     fontWeight: '600',
+    color: THEME.dark,
   },
-  signUpBtn: {
-    backgroundColor: THEME.primary,
+  ctaBtn: {
+    backgroundColor: THEME.dark,
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
   },
-  signUpBtnText: {
+  ctaBtnText: {
     fontSize: 14,
-    color: THEME.white,
     fontWeight: '600',
+    color: THEME.text,
   },
-  // Logged-in user header styles
-  userInfoHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  userAvatarSmall: {
+  userBadge: {
     width: 36,
     height: 36,
     borderRadius: 18,
@@ -951,109 +963,105 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  userAvatarText: {
+  userInitial: {
     fontSize: 14,
     fontWeight: '600',
-    color: THEME.white,
-  },
-  userNameHeader: {
-    fontSize: 14,
-    fontWeight: '500',
     color: THEME.dark,
   },
-  logoutBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    backgroundColor: THEME.lightGray,
-  },
-  logoutBtnText: {
-    fontSize: 13,
-    color: THEME.gray,
-    fontWeight: '500',
-  },
-  // Welcome Section for logged-in users
-  welcomeSection: {
-    paddingHorizontal: 40,
-    paddingVertical: 40,
-  },
-  welcomeContent: {
-    maxWidth: 600,
-  },
-  welcomeTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: THEME.white,
-    marginBottom: 8,
-  },
-  welcomeSubtitle: {
-    fontSize: 16,
-    color: THEME.light,
-  },
-  // Subscription Badge
-  subscribedBadge: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  subscribedBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: THEME.white,
-  },
-  heroSection: {
-    paddingHorizontal: 40,
-    paddingVertical: 100,
-    position: 'relative',
+  // Hero
+  hero: {
     overflow: 'hidden',
   },
-  starsContainer: {
+  heroGradient: {
+    paddingTop: 80,
+    paddingBottom: 100,
+    position: 'relative',
+  },
+  heroBackground: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
+    overflow: 'hidden',
   },
-  star: {
+  glowOrb: {
     position: 'absolute',
-    borderRadius: 10,
-    backgroundColor: THEME.white,
+    borderRadius: 999,
+    opacity: 0.5,
+  },
+  glowOrb1: {
+    width: 600,
+    height: 600,
+    backgroundColor: THEME.primary,
+    top: -200,
+    left: -200,
+    opacity: 0.1,
+  },
+  glowOrb2: {
+    width: 400,
+    height: 400,
+    backgroundColor: THEME.secondary,
+    top: 100,
+    right: -100,
+    opacity: 0.1,
+  },
+  glowOrb3: {
+    width: 300,
+    height: 300,
+    backgroundColor: THEME.accent,
+    bottom: -100,
+    left: '40%',
+    opacity: 0.08,
   },
   heroContent: {
-    maxWidth: 900,
+    maxWidth: 1000,
     alignSelf: 'center',
     alignItems: 'center',
+    paddingHorizontal: 48,
     zIndex: 1,
   },
   heroContentMobile: {
-    paddingHorizontal: 0,
+    paddingHorizontal: 20,
+  },
+  heroBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(0, 212, 255, 0.1)',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 212, 255, 0.2)',
+    marginBottom: 32,
+  },
+  badgeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: THEME.success,
+  },
+  badgeText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: THEME.textMuted,
   },
   heroTitle: {
-    fontSize: 56,
+    fontSize: 64,
     fontWeight: '800',
-    color: THEME.white,
+    color: THEME.text,
     textAlign: 'center',
-    lineHeight: 68,
+    lineHeight: 72,
+    letterSpacing: -1,
   },
   heroTitleMobile: {
     fontSize: 36,
     lineHeight: 44,
   },
-  heroHighlight: {
-    color: THEME.primary,
-  },
   heroSubtitle: {
     fontSize: 20,
-    color: THEME.light,
+    color: THEME.textMuted,
     textAlign: 'center',
     marginTop: 24,
     lineHeight: 32,
@@ -1066,69 +1074,103 @@ const styles = StyleSheet.create({
   heroCTA: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 20,
+    gap: 16,
     marginTop: 48,
   },
   heroCTAMobile: {
     flexDirection: 'column',
-    gap: 12,
+    width: '100%',
   },
-  ctaButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: THEME.primary,
-    paddingHorizontal: 32,
-    paddingVertical: 18,
+  primaryBtn: {
     borderRadius: 12,
-    gap: 10,
+    overflow: 'hidden',
   },
-  ctaButtonText: {
-    fontSize: 18,
-    color: THEME.dark,
-    fontWeight: '700',
-  },
-  ctaSecondary: {
+  primaryBtnGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    paddingHorizontal: 24,
+    paddingHorizontal: 28,
     paddingVertical: 16,
-    borderWidth: 2,
-    borderColor: THEME.light,
+  },
+  primaryBtnText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: THEME.dark,
+  },
+  secondaryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: THEME.border,
     borderRadius: 12,
   },
-  ctaSecondaryText: {
-    fontSize: 16,
-    color: THEME.white,
-    fontWeight: '600',
+  secondaryBtnText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: THEME.textMuted,
   },
-  heroStats: {
+  // Stats
+  statsRow: {
     flexDirection: 'row',
-    gap: 60,
-    marginTop: 80,
-  },
-  heroStatsMobile: {
-    gap: 24,
-    flexWrap: 'wrap',
     justifyContent: 'center',
+    gap: 48,
+    marginTop: 80,
+    paddingTop: 40,
+    borderTopWidth: 1,
+    borderTopColor: THEME.border,
   },
-  heroStat: {
+  statsRowMobile: {
+    flexWrap: 'wrap',
+    gap: 24,
+  },
+  statItem: {
     alignItems: 'center',
   },
-  heroStatNumber: {
-    fontSize: 36,
+  statValue: {
+    fontSize: 28,
     fontWeight: '700',
-    color: THEME.primary,
+    color: THEME.text,
+    marginTop: 8,
   },
-  heroStatLabel: {
-    fontSize: 14,
-    color: THEME.light,
+  statLabel: {
+    fontSize: 13,
+    color: THEME.textMuted,
     marginTop: 4,
   },
-  productsSection: {
-    paddingHorizontal: 40,
+  // Sections
+  section: {
+    paddingHorizontal: 48,
     paddingVertical: 100,
-    backgroundColor: THEME.lightGray,
+    backgroundColor: THEME.text,
+  },
+  sectionDark: {
+    backgroundColor: THEME.dark,
+  },
+  sectionHeader: {
+    alignItems: 'center',
+    marginBottom: 60,
+  },
+  sectionBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: `${THEME.primary}15`,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginBottom: 20,
+  },
+  comingSoonBadge: {
+    backgroundColor: `${THEME.warning}15`,
+  },
+  sectionBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: THEME.primary,
+    letterSpacing: 1,
   },
   sectionTitle: {
     fontSize: 40,
@@ -1138,214 +1180,324 @@ const styles = StyleSheet.create({
   },
   sectionSubtitle: {
     fontSize: 18,
-    color: THEME.gray,
+    color: THEME.textMuted,
     textAlign: 'center',
-    marginTop: 16,
+    marginTop: 12,
     maxWidth: 600,
-    alignSelf: 'center',
   },
+  // Products Grid
   productsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
     gap: 24,
-    marginTop: 60,
   },
   productsGridMobile: {
     flexDirection: 'column',
   },
   productCard: {
-    width: 360,
-    backgroundColor: THEME.white,
+    width: 340,
+    backgroundColor: THEME.text,
     borderRadius: 20,
-    padding: 28,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    position: 'relative',
+    overflow: 'hidden',
   },
   productCardMobile: {
     width: '100%',
   },
-  productCardContent: {
-    flex: 1,
+  productCardInner: {
+    padding: 28,
   },
-  comingSoonBadge: {
+  subscribedBadge: {
     position: 'absolute',
     top: 16,
     right: 16,
-    backgroundColor: '#F59E0B',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: `${THEME.success}15`,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 12,
   },
-  comingSoonText: {
+  subscribedText: {
     fontSize: 11,
     fontWeight: '600',
-    color: THEME.white,
+    color: THEME.success,
   },
-  productIconContainer: {
-    width: 64,
-    height: 64,
+  productIcon: {
+    width: 56,
+    height: 56,
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
   },
   productName: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '700',
     color: THEME.dark,
   },
   productTagline: {
     fontSize: 14,
-    color: THEME.gray,
+    color: THEME.textMuted,
     marginTop: 4,
   },
-  productDescription: {
+  productDesc: {
     fontSize: 14,
-    color: '#4B5563',
+    color: THEME.textSubtle,
     lineHeight: 22,
-    marginTop: 16,
+    marginTop: 12,
   },
   productFeatures: {
-    marginTop: 20,
-    gap: 10,
-  },
-  featureRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    flexWrap: 'wrap',
     gap: 8,
+    marginTop: 20,
   },
-  featureText: {
-    fontSize: 13,
-    color: '#374151',
+  featureTag: {
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
-  productCTA: {
+  featureTagDark: {
+    backgroundColor: THEME.card,
+  },
+  featureTagText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: THEME.textSubtle,
+  },
+  productActions: {
+    marginTop: 24,
+    gap: 12,
+  },
+  productBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 8,
     paddingVertical: 14,
     borderRadius: 10,
-    marginTop: 24,
-    gap: 8,
   },
-  productCTAText: {
-    fontSize: 15,
+  productBtnText: {
+    fontSize: 14,
     fontWeight: '600',
-    color: THEME.white,
+    color: THEME.text,
   },
-  featuresSection: {
+  learnMoreBtn: {
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  learnMoreText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: THEME.textMuted,
+  },
+  // Coming Soon Cards
+  comingSoonCard: {
+    width: 280,
+    backgroundColor: THEME.card,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: THEME.border,
     overflow: 'hidden',
   },
-  featuresGradient: {
-    paddingHorizontal: 40,
-    paddingVertical: 100,
+  waitlistBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginTop: 24,
   },
+  waitlistBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  // Features
   featuresGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
     gap: 24,
-    marginTop: 60,
   },
   featuresGridMobile: {
     flexDirection: 'column',
   },
   featureCard: {
-    width: 320,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    width: 340,
+    backgroundColor: THEME.text,
     borderRadius: 16,
     padding: 28,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: '#E5E7EB',
   },
-  featureIconWrapper: {
-    width: 56,
-    height: 56,
-    borderRadius: 14,
-    backgroundColor: 'rgba(0,180,216,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
+  featureCardMobile: {
+    width: '100%',
+  },
+  featureIconWrap: {
     marginBottom: 20,
   },
-  featureCardTitle: {
+  featureIconGradient: {
+    width: 52,
+    height: 52,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  featureTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: THEME.white,
+    color: THEME.dark,
     marginBottom: 8,
   },
-  featureCardDesc: {
+  featureDesc: {
     fontSize: 14,
-    color: THEME.light,
+    color: THEME.textMuted,
     lineHeight: 22,
   },
-  pricingSection: {
-    paddingHorizontal: 40,
-    paddingVertical: 100,
-    backgroundColor: THEME.white,
+  // Testimonials
+  testimonialContainer: {
+    alignItems: 'center',
   },
+  testimonialCard: {
+    maxWidth: 700,
+    backgroundColor: THEME.card,
+    borderRadius: 24,
+    padding: 40,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: THEME.border,
+  },
+  quoteIcon: {
+    marginBottom: 24,
+  },
+  testimonialQuote: {
+    fontSize: 20,
+    color: THEME.text,
+    textAlign: 'center',
+    lineHeight: 32,
+    fontStyle: 'italic',
+  },
+  testimonialAuthor: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginTop: 32,
+  },
+  authorAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: THEME.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  authorInitial: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: THEME.dark,
+  },
+  authorName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: THEME.text,
+  },
+  authorRole: {
+    fontSize: 14,
+    color: THEME.textMuted,
+    marginTop: 2,
+  },
+  testimonialDots: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 32,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: THEME.border,
+  },
+  dotActive: {
+    backgroundColor: THEME.primary,
+    width: 24,
+  },
+  // Pricing
   pricingGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
     gap: 24,
-    marginTop: 60,
+    alignItems: 'stretch',
   },
   pricingGridMobile: {
     flexDirection: 'column',
   },
   pricingCard: {
     width: 320,
-    backgroundColor: THEME.white,
+    backgroundColor: THEME.text,
     borderRadius: 20,
     padding: 32,
     borderWidth: 1,
     borderColor: '#E5E7EB',
-    position: 'relative',
   },
   pricingCardMobile: {
     width: '100%',
   },
-  pricingCardHighlighted: {
+  pricingCardPro: {
+    backgroundColor: THEME.dark,
     borderColor: THEME.primary,
     borderWidth: 2,
-    transform: [{ scale: 1.02 }],
+    position: 'relative',
   },
-  popularBadge: {
+  popularTag: {
     position: 'absolute',
-    top: -14,
+    top: -12,
     alignSelf: 'center',
     backgroundColor: THEME.primary,
     paddingHorizontal: 16,
     paddingVertical: 6,
-    borderRadius: 20,
+    borderRadius: 12,
   },
-  popularBadgeText: {
-    fontSize: 12,
-    color: THEME.white,
-    fontWeight: '600',
+  popularTagText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: THEME.dark,
+    letterSpacing: 0.5,
   },
   pricingName: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: '600',
     color: THEME.dark,
     textAlign: 'center',
   },
-  pricingPriceRow: {
+  pricingPrice: {
     flexDirection: 'row',
     alignItems: 'baseline',
     justifyContent: 'center',
     marginTop: 16,
   },
-  pricingPrice: {
+  pricingAmount: {
     fontSize: 48,
     fontWeight: '700',
     color: THEME.dark,
   },
   pricingPeriod: {
     fontSize: 16,
-    color: THEME.gray,
+    color: THEME.textMuted,
     marginLeft: 4,
+  },
+  pricingDesc: {
+    fontSize: 14,
+    color: THEME.textMuted,
+    textAlign: 'center',
+    marginTop: 8,
   },
   pricingFeatures: {
     marginTop: 32,
@@ -1354,151 +1506,107 @@ const styles = StyleSheet.create({
   pricingFeatureRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 12,
   },
   pricingFeatureText: {
     fontSize: 14,
-    color: '#374151',
+    color: THEME.textSubtle,
   },
-  pricingButton: {
+  pricingBtn: {
     marginTop: 32,
-    paddingVertical: 16,
+    paddingVertical: 14,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: THEME.primary,
+    borderColor: THEME.dark,
     alignItems: 'center',
   },
-  pricingButtonHighlighted: {
-    backgroundColor: THEME.primary,
-    borderColor: THEME.primary,
-  },
-  pricingButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: THEME.primary,
-  },
-  pricingButtonTextHighlighted: {
-    color: THEME.white,
-  },
-  testimonialsSection: {
-    paddingHorizontal: 40,
-    paddingVertical: 100,
-    backgroundColor: THEME.lightGray,
-  },
-  testimonialsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 24,
-    marginTop: 60,
-  },
-  testimonialsGridMobile: {
-    flexDirection: 'column',
-  },
-  testimonialCard: {
-    width: 360,
-    backgroundColor: THEME.white,
-    borderRadius: 20,
-    padding: 28,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  testimonialText: {
-    fontSize: 16,
-    color: '#374151',
-    lineHeight: 28,
-    marginTop: 16,
-    fontStyle: 'italic',
-  },
-  testimonialAuthor: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 24,
-    gap: 14,
-  },
-  testimonialAvatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: THEME.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  testimonialInitials: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: THEME.white,
-  },
-  testimonialName: {
+  pricingBtnText: {
     fontSize: 15,
     fontWeight: '600',
     color: THEME.dark,
   },
-  testimonialRole: {
-    fontSize: 13,
-    color: THEME.gray,
+  pricingBtnPro: {
+    marginTop: 32,
+    borderRadius: 10,
+    overflow: 'hidden',
   },
-  ctaSection: {
-    paddingVertical: 80,
-    paddingHorizontal: 40,
+  pricingBtnGradient: {
+    paddingVertical: 14,
     alignItems: 'center',
   },
-  ctaSectionTitle: {
-    fontSize: 36,
+  pricingBtnTextPro: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: THEME.dark,
+  },
+  // Final CTA
+  finalCTA: {
+    overflow: 'hidden',
+  },
+  finalCTAGradient: {
+    paddingVertical: 100,
+    paddingHorizontal: 48,
+  },
+  finalCTAContent: {
+    alignItems: 'center',
+  },
+  finalCTATitle: {
+    fontSize: 40,
     fontWeight: '700',
-    color: THEME.white,
+    color: THEME.text,
     textAlign: 'center',
   },
-  ctaSectionSubtitle: {
+  finalCTASubtitle: {
     fontSize: 18,
-    color: 'rgba(255,255,255,0.9)',
+    color: THEME.textMuted,
     textAlign: 'center',
     marginTop: 16,
   },
-  ctaSectionButton: {
+  finalCTABtn: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginTop: 40,
+  },
+  finalCTABtnGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: THEME.white,
+    gap: 10,
     paddingHorizontal: 32,
     paddingVertical: 18,
-    borderRadius: 12,
-    marginTop: 40,
-    gap: 10,
   },
-  ctaSectionButtonText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: THEME.primary,
+  finalCTABtnText: {
+    fontSize: 17,
+    fontWeight: '600',
+    color: THEME.dark,
   },
+  // Footer
   footer: {
-    backgroundColor: THEME.dark,
-    paddingHorizontal: 40,
+    backgroundColor: THEME.darker,
+    paddingHorizontal: 48,
     paddingTop: 80,
     paddingBottom: 32,
   },
   footerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    maxWidth: 1200,
-    alignSelf: 'center',
-    width: '100%',
+    marginBottom: 60,
   },
   footerContentMobile: {
     flexDirection: 'column',
     gap: 48,
   },
   footerBrand: {
-    maxWidth: 300,
+    maxWidth: 280,
   },
   footerTagline: {
     fontSize: 14,
-    color: THEME.gray,
+    color: THEME.textSubtle,
     marginTop: 16,
     lineHeight: 22,
   },
   footerLinks: {
     flexDirection: 'row',
-    gap: 80,
+    gap: 64,
   },
   footerLinksMobile: {
     flexDirection: 'column',
@@ -1508,61 +1616,140 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   footerColumnTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    color: THEME.white,
+    color: THEME.textMuted,
     marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   footerLink: {
     fontSize: 14,
-    color: THEME.gray,
+    color: THEME.textSubtle,
   },
   footerBottom: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginTop: 60,
-    paddingTop: 24,
+    paddingTop: 32,
     borderTopWidth: 1,
-    borderTopColor: '#374151',
+    borderTopColor: THEME.border,
   },
-  footerCopyright: {
-    fontSize: 14,
-    color: THEME.gray,
+  copyright: {
+    fontSize: 13,
+    color: THEME.textSubtle,
   },
   socialLinks: {
     flexDirection: 'row',
-    gap: 16,
+    gap: 12,
   },
   socialIcon: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#374151',
+    backgroundColor: THEME.card,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  logoIconSmall: {
-    width: 32,
-    height: 32,
+  // Soko Ecosystem
+  sokoLogoLarge: {
+    marginBottom: 0,
+  },
+  sokoLogoGradient: {
+    width: 100,
+    height: 100,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  logoOrbitSmall: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+  ecosystemGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 24,
+    marginBottom: 60,
+  },
+  ecosystemGridMobile: {
+    flexDirection: 'column',
+  },
+  ecosystemCard: {
+    width: 260,
+    backgroundColor: THEME.card,
+    borderRadius: 20,
+    padding: 28,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: THEME.border,
+  },
+  ecosystemIconWrap: {
+    width: 60,
+    height: 60,
+    borderRadius: 16,
+    backgroundColor: `${THEME.primary}15`,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  ecosystemCardTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: THEME.text,
+    marginBottom: 8,
+  },
+  ecosystemCardDesc: {
+    fontSize: 14,
+    color: THEME.textMuted,
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  ecosystemDiagram: {
+    backgroundColor: THEME.card,
+    borderRadius: 24,
+    padding: 40,
+    maxWidth: 500,
+    alignSelf: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: THEME.border,
+  },
+  ecosystemDiagramCenter: {
+    marginBottom: 32,
+  },
+  ecosystemDiagramCore: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  ecosystemDiagramCoreText: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: THEME.dark,
+  },
+  ecosystemDiagramCoreSubtext: {
+    fontSize: 11,
+    color: THEME.dark,
+    opacity: 0.7,
+  },
+  ecosystemDiagramApps: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  ecosystemDiagramApp: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
     borderWidth: 2,
-    borderColor: THEME.primary,
-    borderStyle: 'dashed',
+    backgroundColor: THEME.darker,
   },
-  logoDotSmall: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: THEME.primary,
-    position: 'absolute',
-    top: -3,
-    right: 3,
+  ecosystemDiagramAppName: {
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

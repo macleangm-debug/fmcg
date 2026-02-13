@@ -1,0 +1,808 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  Modal,
+  Alert,
+  ActivityIndicator,
+  RefreshControl,
+  Platform,
+  useWindowDimensions,
+  KeyboardAvoidingView,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
+import api from '../../src/api/client';
+import { useViewSettingsStore, ViewMode } from '../../src/store/viewSettingsStore';
+import ViewToggle from '../../src/components/ViewToggle';
+import WebModal, { ModalSection, ModalActions } from '../../src/components/WebModal';
+import Input from '../../src/components/Input';
+import Button from '../../src/components/Button';
+
+const COLORS = {
+  primary: '#7C3AED',
+  primaryLight: '#EDE9FE',
+  success: '#10B981',
+  successLight: '#D1FAE5',
+  warning: '#F59E0B',
+  warningLight: '#FEF3C7',
+  danger: '#EF4444',
+  dangerLight: '#FEE2E2',
+  blue: '#2563EB',
+  blueLight: '#EBF4FF',
+  dark: '#111827',
+  gray: '#6B7280',
+  lightGray: '#F3F4F6',
+  white: '#FFFFFF',
+  border: '#E5E7EB',
+};
+
+interface Invoice {
+  id: string;
+  invoice_number: string;
+  customer_name: string;
+  customer_email: string;
+  invoice_date: string;
+  due_date: string;
+  total: number;
+  balance_due: number;
+  status: string;
+  currency: string;
+}
+
+interface Client {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  address: string;
+}
+
+interface LineItem {
+  description: string;
+  quantity: number;
+  unit_price: number;
+  tax_rate: number;
+  amount: number;
+}
+
+export default function InvoiceListPage() {
+  const router = useRouter();
+  const { width } = useWindowDimensions();
+  const isWeb = Platform.OS === 'web' && width > 768;
+  const { invoiceViewMode, setInvoiceViewMode } = useViewSettingsStore();
+
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Form state
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [customerName, setCustomerName] = useState('');
+  const [customerEmail, setCustomerEmail] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
+  const [customerAddress, setCustomerAddress] = useState('');
+  const [dueDate, setDueDate] = useState('');
+  const [notes, setNotes] = useState('');
+  const [items, setItems] = useState<LineItem[]>([{ description: '', quantity: 1, unit_price: 0, tax_rate: 0, amount: 0 }]);
+
+  const fetchInvoices = useCallback(async () => {
+    try {
+      let url = '/invoices';
+      const params = new URLSearchParams();
+      if (statusFilter) params.append('status', statusFilter);
+      if (searchQuery) params.append('search', searchQuery);
+      if (params.toString()) url += `?${params.toString()}`;
+      
+      const response = await api.get(url);
+      setInvoices(response.data);
+    } catch (error) {
+      console.error('Failed to fetch invoices:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, [searchQuery, statusFilter]);
+
+  const fetchClients = async () => {
+    try {
+      const response = await api.get('/invoices/clients');
+      setClients(response.data);
+    } catch (error) {
+      console.error('Failed to fetch clients:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchInvoices();
+    fetchClients();
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!loading) fetchInvoices();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery, statusFilter]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchInvoices();
+  }, [fetchInvoices]);
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'paid': return COLORS.success;
+      case 'sent': return COLORS.blue;
+      case 'draft': return COLORS.gray;
+      case 'overdue': return COLORS.danger;
+      case 'partial': return COLORS.warning;
+      default: return COLORS.gray;
+    }
+  };
+
+  const getStatusBgColor = (status: string) => {
+    switch (status) {
+      case 'paid': return COLORS.successLight;
+      case 'sent': return COLORS.blueLight;
+      case 'draft': return COLORS.lightGray;
+      case 'overdue': return COLORS.dangerLight;
+      case 'partial': return COLORS.warningLight;
+      default: return COLORS.lightGray;
+    }
+  };
+
+  const formatDate = (dateStr: string) => {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+
+  const formatCurrency = (amount: number, currency: string = 'USD') => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency,
+    }).format(amount);
+  };
+
+  const resetForm = () => {
+    setSelectedClient(null);
+    setCustomerName('');
+    setCustomerEmail('');
+    setCustomerPhone('');
+    setCustomerAddress('');
+    setDueDate('');
+    setNotes('');
+    setItems([{ description: '', quantity: 1, unit_price: 0, tax_rate: 0, amount: 0 }]);
+  };
+
+  const calculateItemAmount = (item: LineItem) => {
+    const subtotal = item.quantity * item.unit_price;
+    const tax = subtotal * (item.tax_rate / 100);
+    return subtotal + tax;
+  };
+
+  const updateItem = (index: number, field: keyof LineItem, value: string | number) => {
+    const newItems = [...items];
+    newItems[index] = { ...newItems[index], [field]: value };
+    newItems[index].amount = calculateItemAmount(newItems[index]);
+    setItems(newItems);
+  };
+
+  const addItem = () => {
+    setItems([...items, { description: '', quantity: 1, unit_price: 0, tax_rate: 0, amount: 0 }]);
+  };
+
+  const removeItem = (index: number) => {
+    if (items.length > 1) {
+      setItems(items.filter((_, i) => i !== index));
+    }
+  };
+
+  const calculateTotals = () => {
+    const subtotal = items.reduce((sum, item) => sum + (item.quantity * item.unit_price), 0);
+    const tax = items.reduce((sum, item) => sum + (item.quantity * item.unit_price * (item.tax_rate / 100)), 0);
+    return { subtotal, tax, total: subtotal + tax };
+  };
+
+  const handleCreateInvoice = async () => {
+    if (!customerName.trim()) {
+      Alert.alert('Error', 'Customer name is required');
+      return;
+    }
+    if (items.length === 0 || !items[0].description.trim()) {
+      Alert.alert('Error', 'At least one item is required');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const invoiceData = {
+        customer_name: customerName,
+        customer_email: customerEmail || undefined,
+        customer_phone: customerPhone || undefined,
+        customer_address: customerAddress || undefined,
+        due_date: dueDate || undefined,
+        notes: notes || undefined,
+        items: items.filter(item => item.description.trim()),
+      };
+
+      await api.post('/invoices', invoiceData);
+      Alert.alert('Success', 'Invoice created successfully');
+      setShowCreateModal(false);
+      resetForm();
+      fetchInvoices();
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.detail || 'Failed to create invoice');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Card View
+  const renderCardView = () => (
+    <View style={styles.cardGrid}>
+      {invoices.map((invoice) => (
+        <TouchableOpacity
+          key={invoice.id}
+          style={styles.invoiceCard}
+          onPress={() => router.push(`/invoicing/${invoice.id}`)}
+        >
+          <View style={styles.cardHeader}>
+            <Text style={styles.invoiceNumber}>{invoice.invoice_number}</Text>
+            <View style={[styles.statusBadge, { backgroundColor: getStatusBgColor(invoice.status) }]}>
+              <Text style={[styles.statusText, { color: getStatusColor(invoice.status) }]}>
+                {invoice.status}
+              </Text>
+            </View>
+          </View>
+          <Text style={styles.customerName}>{invoice.customer_name}</Text>
+          <View style={styles.cardFooter}>
+            <Text style={styles.invoiceDate}>{formatDate(invoice.invoice_date)}</Text>
+            <Text style={styles.invoiceAmount}>{formatCurrency(invoice.total, invoice.currency)}</Text>
+          </View>
+          {invoice.balance_due > 0 && invoice.balance_due < invoice.total && (
+            <Text style={styles.balanceDue}>Due: {formatCurrency(invoice.balance_due, invoice.currency)}</Text>
+          )}
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+
+  // Table View
+  const renderTableView = () => (
+    <View style={styles.tableContainer}>
+      <View style={styles.tableHeader}>
+        <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Invoice #</Text>
+        <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Customer</Text>
+        <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Date</Text>
+        <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Due Date</Text>
+        <Text style={[styles.tableHeaderCell, { flex: 1, textAlign: 'right' }]}>Amount</Text>
+        <Text style={[styles.tableHeaderCell, { flex: 1, textAlign: 'center' }]}>Status</Text>
+        <Text style={[styles.tableHeaderCell, { width: 80, textAlign: 'center' }]}>Actions</Text>
+      </View>
+      {invoices.map((invoice) => (
+        <TouchableOpacity
+          key={invoice.id}
+          style={styles.tableRow}
+          onPress={() => router.push(`/invoicing/${invoice.id}`)}
+        >
+          <Text style={[styles.tableCell, { flex: 1, fontWeight: '600' }]}>{invoice.invoice_number}</Text>
+          <View style={{ flex: 2 }}>
+            <Text style={styles.tableCell}>{invoice.customer_name}</Text>
+            {invoice.customer_email && <Text style={styles.tableCellSubtext}>{invoice.customer_email}</Text>}
+          </View>
+          <Text style={[styles.tableCell, { flex: 1 }]}>{formatDate(invoice.invoice_date)}</Text>
+          <Text style={[styles.tableCell, { flex: 1 }]}>{formatDate(invoice.due_date)}</Text>
+          <Text style={[styles.tableCell, { flex: 1, textAlign: 'right', fontWeight: '600' }]}>
+            {formatCurrency(invoice.total, invoice.currency)}
+          </Text>
+          <View style={{ flex: 1, alignItems: 'center' }}>
+            <View style={[styles.statusBadge, { backgroundColor: getStatusBgColor(invoice.status) }]}>
+              <Text style={[styles.statusText, { color: getStatusColor(invoice.status) }]}>
+                {invoice.status}
+              </Text>
+            </View>
+          </View>
+          <View style={{ width: 80, alignItems: 'center' }}>
+            <TouchableOpacity style={styles.actionBtn} onPress={() => router.push(`/invoicing/${invoice.id}`)}>
+              <Ionicons name="eye-outline" size={18} color={COLORS.primary} />
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+
+  const totals = calculateTotals();
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Web Page Header */}
+      {isWeb && (
+        <View style={styles.webPageHeader}>
+          <View>
+            <Text style={styles.webPageTitle}>Invoices</Text>
+            <Text style={styles.webPageSubtitle}>{invoices.length} invoice(s) found</Text>
+          </View>
+          <View style={styles.headerActions}>
+            <ViewToggle
+              viewMode={invoiceViewMode}
+              onToggle={(mode) => setInvoiceViewMode(mode)}
+            />
+            <TouchableOpacity style={styles.createBtn} onPress={() => setShowCreateModal(true)}>
+              <Ionicons name="add" size={20} color={COLORS.white} />
+              <Text style={styles.createBtnText}>New Invoice</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Mobile Header */}
+      {!isWeb && (
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Invoices</Text>
+          <TouchableOpacity style={styles.addBtn} onPress={() => setShowCreateModal(true)}>
+            <Ionicons name="add" size={24} color={COLORS.white} />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Web Layout with White Card Container */}
+      {isWeb ? (
+        <View style={styles.webContentWrapper}>
+          <View style={styles.webWhiteCard}>
+            {/* Filter Tabs */}
+            <View style={styles.webFilterContainer}>
+              <View style={styles.webTabs}>
+                {[
+                  { key: null, label: 'All' },
+                  { key: 'draft', label: 'Draft' },
+                  { key: 'sent', label: 'Sent' },
+                  { key: 'paid', label: 'Paid' },
+                  { key: 'overdue', label: 'Overdue' },
+                ].map((tab) => (
+                  <TouchableOpacity
+                    key={tab.key || 'all'}
+                    style={[styles.webTab, statusFilter === tab.key && styles.webTabActive]}
+                    onPress={() => setStatusFilter(tab.key)}
+                  >
+                    <Text style={[styles.webTabText, statusFilter === tab.key && styles.webTabTextActive]}>
+                      {tab.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              
+              {/* Search */}
+              <View style={styles.webSearchBox}>
+                <Ionicons name="search" size={18} color={COLORS.gray} />
+                <TextInput
+                  style={styles.webSearchInput}
+                  placeholder="Search invoices..."
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  placeholderTextColor={COLORS.gray}
+                />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity onPress={() => setSearchQuery('')}>
+                    <Ionicons name="close-circle" size={18} color={COLORS.gray} />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+
+            {/* Invoice List */}
+            <ScrollView
+              style={styles.webListContainer}
+              showsVerticalScrollIndicator={false}
+              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
+            >
+              {invoices.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Ionicons name="document-text-outline" size={64} color={COLORS.gray} />
+                  <Text style={styles.emptyText}>No invoices found</Text>
+                  <TouchableOpacity style={styles.emptyBtn} onPress={() => setShowCreateModal(true)}>
+                    <Text style={styles.emptyBtnText}>Create First Invoice</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                invoiceViewMode === 'table' ? renderTableView() : renderCardView()
+              )}
+              <View style={{ height: 20 }} />
+            </ScrollView>
+          </View>
+        </View>
+      ) : (
+        /* Mobile Layout */
+        <>
+          {/* Filter Tabs */}
+          <View style={styles.filterContainer}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {[
+                { key: null, label: 'All' },
+                { key: 'draft', label: 'Draft' },
+                { key: 'sent', label: 'Sent' },
+                { key: 'paid', label: 'Paid' },
+                { key: 'overdue', label: 'Overdue' },
+              ].map((tab) => (
+                <TouchableOpacity
+                  key={tab.key || 'all'}
+                  style={[styles.filterTab, statusFilter === tab.key && styles.filterTabActive]}
+                  onPress={() => setStatusFilter(tab.key)}
+                >
+                  <Text style={[styles.filterTabText, statusFilter === tab.key && styles.filterTabTextActive]}>
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+
+          {/* Search */}
+          <View style={styles.searchContainer}>
+            <Ionicons name="search" size={20} color={COLORS.gray} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search invoices..."
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholderTextColor={COLORS.gray}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => setSearchQuery('')}>
+                <Ionicons name="close-circle" size={20} color={COLORS.gray} />
+              </TouchableOpacity>
+            )}
+          </View>
+
+          <ScrollView
+            style={styles.content}
+            showsVerticalScrollIndicator={false}
+            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
+          >
+            {invoices.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Ionicons name="document-text-outline" size={64} color={COLORS.gray} />
+                <Text style={styles.emptyText}>No invoices found</Text>
+                <TouchableOpacity style={styles.emptyBtn} onPress={() => setShowCreateModal(true)}>
+                  <Text style={styles.emptyBtnText}>Create First Invoice</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              renderCardView()
+            )}
+            <View style={{ height: 40 }} />
+          </ScrollView>
+        </>
+      )}
+
+      {/* Create Invoice Modal */}
+      <WebModal
+        visible={showCreateModal}
+        onClose={() => { setShowCreateModal(false); resetForm(); }}
+        title="New Invoice"
+        subtitle="Create a new invoice"
+        icon="document-text-outline"
+        iconColor={COLORS.primary}
+        maxWidth={600}
+      >
+        <ModalSection title="Customer Information">
+          <Input
+            label="Customer Name"
+            value={customerName}
+            onChangeText={setCustomerName}
+            placeholder="Enter customer name"
+            required
+          />
+          <Input
+            label="Email"
+            value={customerEmail}
+            onChangeText={setCustomerEmail}
+            placeholder="customer@email.com"
+            keyboardType="email-address"
+          />
+          <Input
+            label="Phone"
+            value={customerPhone}
+            onChangeText={setCustomerPhone}
+            placeholder="+1 234 567 8900"
+            keyboardType="phone-pad"
+          />
+          <Input
+            label="Address"
+            value={customerAddress}
+            onChangeText={setCustomerAddress}
+            placeholder="Billing address"
+            multiline
+          />
+        </ModalSection>
+
+        <ModalSection title="Invoice Details">
+          <Input
+            label="Due Date"
+            value={dueDate}
+            onChangeText={setDueDate}
+            placeholder="YYYY-MM-DD"
+          />
+        </ModalSection>
+
+        <ModalSection title="Line Items">
+          {items.map((item, index) => (
+            <View key={index} style={styles.lineItem}>
+              <View style={styles.lineItemHeader}>
+                <Text style={styles.lineItemTitle}>Item {index + 1}</Text>
+                {items.length > 1 && (
+                  <TouchableOpacity onPress={() => removeItem(index)}>
+                    <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
+                  </TouchableOpacity>
+                )}
+              </View>
+              <Input
+                label="Description"
+                value={item.description}
+                onChangeText={(v) => updateItem(index, 'description', v)}
+                placeholder="Item description"
+              />
+              <View style={styles.lineItemRow}>
+                <View style={{ flex: 1 }}>
+                  <Input
+                    label="Qty"
+                    value={String(item.quantity)}
+                    onChangeText={(v) => updateItem(index, 'quantity', parseFloat(v) || 0)}
+                    keyboardType="numeric"
+                  />
+                </View>
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Input
+                    label="Price"
+                    value={String(item.unit_price)}
+                    onChangeText={(v) => updateItem(index, 'unit_price', parseFloat(v) || 0)}
+                    keyboardType="numeric"
+                  />
+                </View>
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Input
+                    label="Tax %"
+                    value={String(item.tax_rate)}
+                    onChangeText={(v) => updateItem(index, 'tax_rate', parseFloat(v) || 0)}
+                    keyboardType="numeric"
+                  />
+                </View>
+              </View>
+            </View>
+          ))}
+          <TouchableOpacity style={styles.addItemBtn} onPress={addItem}>
+            <Ionicons name="add-circle-outline" size={20} color={COLORS.primary} />
+            <Text style={styles.addItemText}>Add Item</Text>
+          </TouchableOpacity>
+        </ModalSection>
+
+        <View style={styles.totalsSection}>
+          <View style={styles.totalRow}>
+            <Text style={styles.totalLabel}>Subtotal</Text>
+            <Text style={styles.totalValue}>{formatCurrency(totals.subtotal)}</Text>
+          </View>
+          <View style={styles.totalRow}>
+            <Text style={styles.totalLabel}>Tax</Text>
+            <Text style={styles.totalValue}>{formatCurrency(totals.tax)}</Text>
+          </View>
+          <View style={[styles.totalRow, styles.grandTotalRow]}>
+            <Text style={styles.grandTotalLabel}>Total</Text>
+            <Text style={styles.grandTotalValue}>{formatCurrency(totals.total)}</Text>
+          </View>
+        </View>
+
+        <ModalSection title="Notes">
+          <Input
+            value={notes}
+            onChangeText={setNotes}
+            placeholder="Additional notes for the invoice"
+            multiline
+          />
+        </ModalSection>
+
+        <ModalActions>
+          <Button
+            title="Cancel"
+            onPress={() => { setShowCreateModal(false); resetForm(); }}
+            variant="secondary"
+            style={{ flex: 1 }}
+          />
+          <Button
+            title="Create Invoice"
+            onPress={handleCreateInvoice}
+            loading={submitting}
+            style={{ flex: 1 }}
+          />
+        </ModalActions>
+      </WebModal>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#F9FAFB' },
+  loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+
+  // Web Page Header
+  webPageHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    backgroundColor: COLORS.white,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  webPageTitle: { fontSize: 24, fontWeight: '700', color: COLORS.dark },
+  webPageSubtitle: { fontSize: 14, color: COLORS.gray, marginTop: 4 },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  createBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: COLORS.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  createBtnText: { fontSize: 15, fontWeight: '600', color: COLORS.white },
+
+  // Web White Card Container
+  webContentWrapper: {
+    flex: 1,
+    padding: 24,
+  },
+  webWhiteCard: {
+    flex: 1,
+    backgroundColor: COLORS.white,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  webFilterContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  webTabs: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  webTab: {
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 24,
+    backgroundColor: '#F3F4F6',
+  },
+  webTabActive: {
+    backgroundColor: COLORS.primary,
+  },
+  webTabText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: COLORS.gray,
+  },
+  webTabTextActive: {
+    color: COLORS.white,
+  },
+  webSearchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 10,
+    minWidth: 280,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  webSearchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: COLORS.dark,
+    outlineStyle: 'none',
+  },
+  webListContainer: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 16,
+  },
+
+  // Mobile Header
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, backgroundColor: COLORS.white, borderBottomWidth: 1, borderBottomColor: COLORS.border },
+  headerTitle: { flex: 1, fontSize: 22, fontWeight: '700', color: COLORS.dark },
+  addBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: COLORS.primary, alignItems: 'center', justifyContent: 'center' },
+
+  // Filter Tabs
+  filterContainer: { paddingHorizontal: 16, paddingVertical: 12 },
+  filterTab: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: COLORS.white, borderWidth: 1, borderColor: COLORS.border, marginRight: 10 },
+  filterTabActive: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+  filterTabText: { fontSize: 14, fontWeight: '500', color: COLORS.gray },
+  filterTabTextActive: { color: COLORS.white },
+
+  // Search
+  searchContainer: { flexDirection: 'row', alignItems: 'center', marginHorizontal: 16, marginBottom: 12, backgroundColor: COLORS.white, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12, gap: 12 },
+  searchContainerWeb: { marginHorizontal: 24 },
+  searchInput: { flex: 1, fontSize: 16, color: COLORS.dark },
+
+  content: { flex: 1, paddingHorizontal: 16 },
+
+  // Empty State
+  emptyState: { alignItems: 'center', justifyContent: 'center', paddingVertical: 80 },
+  emptyText: { fontSize: 16, color: COLORS.gray, marginTop: 16 },
+  emptyBtn: { marginTop: 20, paddingHorizontal: 24, paddingVertical: 14, backgroundColor: COLORS.primary, borderRadius: 12 },
+  emptyBtnText: { fontSize: 16, fontWeight: '600', color: COLORS.white },
+
+  // Card Grid
+  cardGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16, paddingHorizontal: 8 },
+  invoiceCard: { backgroundColor: COLORS.white, borderRadius: 16, padding: 16, minWidth: 280, flex: 1, maxWidth: 400 },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  invoiceNumber: { fontSize: 16, fontWeight: '700', color: COLORS.dark },
+  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  statusText: { fontSize: 11, fontWeight: '600', textTransform: 'capitalize' },
+  customerName: { fontSize: 14, color: COLORS.gray, marginBottom: 12 },
+  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  invoiceDate: { fontSize: 13, color: COLORS.gray },
+  invoiceAmount: { fontSize: 18, fontWeight: '700', color: COLORS.dark },
+  balanceDue: { fontSize: 12, color: COLORS.danger, marginTop: 8 },
+
+  // Table View
+  tableContainer: { backgroundColor: COLORS.white, borderRadius: 12, overflow: 'hidden', marginHorizontal: 8 },
+  tableHeader: { flexDirection: 'row', backgroundColor: COLORS.lightGray, paddingVertical: 12, paddingHorizontal: 16 },
+  tableHeaderCell: { fontSize: 12, fontWeight: '600', color: COLORS.gray, textTransform: 'uppercase' },
+  tableRow: { flexDirection: 'row', paddingVertical: 14, paddingHorizontal: 16, borderBottomWidth: 1, borderBottomColor: COLORS.border, alignItems: 'center' },
+  tableCell: { fontSize: 14, color: COLORS.dark },
+  tableCellSubtext: { fontSize: 12, color: COLORS.gray, marginTop: 2 },
+  actionBtn: { width: 32, height: 32, borderRadius: 8, backgroundColor: COLORS.primaryLight, alignItems: 'center', justifyContent: 'center' },
+
+  // Line Items
+  lineItem: { backgroundColor: COLORS.lightGray, borderRadius: 12, padding: 16, marginBottom: 12 },
+  lineItemHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  lineItemTitle: { fontSize: 14, fontWeight: '600', color: COLORS.dark },
+  lineItemRow: { flexDirection: 'row' },
+  addItemBtn: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 12 },
+  addItemText: { fontSize: 14, fontWeight: '600', color: COLORS.primary },
+
+  // Totals
+  totalsSection: { backgroundColor: COLORS.lightGray, borderRadius: 12, padding: 16, marginTop: 16 },
+  totalRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8 },
+  totalLabel: { fontSize: 14, color: COLORS.gray },
+  totalValue: { fontSize: 14, fontWeight: '600', color: COLORS.dark },
+  grandTotalRow: { borderTopWidth: 1, borderTopColor: COLORS.border, marginTop: 8, paddingTop: 12 },
+  grandTotalLabel: { fontSize: 16, fontWeight: '700', color: COLORS.dark },
+  grandTotalValue: { fontSize: 20, fontWeight: '700', color: COLORS.primary },
+});

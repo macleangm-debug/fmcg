@@ -122,11 +122,10 @@ export default function Login() {
   };
 
   const handleSuccessfulAuth = (isSuperadmin) => {
-    if (isSuperadmin) {
-      router.replace('/superadmin');
-    } else if (isWeb) {
-      // Web users go back to landing page with their subscriptions shown
-      router.replace('/landing');
+    // All users go to the main dashboard - superadmins can access platform settings from there
+    if (isWeb) {
+      // Web users go to main dashboard
+      router.replace('/(tabs)/dashboard');
     } else {
       // Mobile users go to mobile home
       router.replace('/galaxy/home');

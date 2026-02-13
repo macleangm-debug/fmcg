@@ -12,6 +12,14 @@ interface ViewSettingsState {
   promotionsView: ViewMode;
   stockView: ViewMode;
   ordersView: ViewMode;
+  movementsView: ViewMode;
+  invoiceViewMode: ViewMode;
+  clientsView: ViewMode;
+  invoicingProductsView: ViewMode;
+  quotesView: ViewMode;
+  recurringView: ViewMode;
+  purchaseOrdersView: ViewMode;
+  receivingView: ViewMode;
   
   // Setters
   setProductsView: (mode: ViewMode) => void;
@@ -22,6 +30,14 @@ interface ViewSettingsState {
   setPromotionsView: (mode: ViewMode) => void;
   setStockView: (mode: ViewMode) => void;
   setOrdersView: (mode: ViewMode) => void;
+  setMovementsView: (mode: ViewMode) => void;
+  setInvoiceViewMode: (mode: ViewMode) => void;
+  setClientsView: (mode: ViewMode) => void;
+  setInvoicingProductsView: (mode: ViewMode) => void;
+  setQuotesView: (mode: ViewMode) => void;
+  setRecurringView: (mode: ViewMode) => void;
+  setPurchaseOrdersView: (mode: ViewMode) => void;
+  setReceivingView: (mode: ViewMode) => void;
 }
 
 export const useViewSettingsStore = create<ViewSettingsState>()((set) => ({
@@ -34,6 +50,14 @@ export const useViewSettingsStore = create<ViewSettingsState>()((set) => ({
   promotionsView: 'table',
   stockView: 'table',
   ordersView: 'table',
+  movementsView: 'table',
+  invoiceViewMode: 'table',
+  clientsView: 'table',
+  invoicingProductsView: 'table',
+  quotesView: 'table',
+  recurringView: 'grid',
+  purchaseOrdersView: 'grid',
+  receivingView: 'grid',
   
   setProductsView: (mode) => set({ productsView: mode }),
   setCustomersView: (mode) => set({ customersView: mode }),
@@ -43,4 +67,12 @@ export const useViewSettingsStore = create<ViewSettingsState>()((set) => ({
   setPromotionsView: (mode) => set({ promotionsView: mode }),
   setStockView: (mode) => set({ stockView: mode }),
   setOrdersView: (mode) => set({ ordersView: mode }),
+  setMovementsView: (mode) => set({ movementsView: mode }),
+  setInvoiceViewMode: (mode) => set({ invoiceViewMode: mode }),
+  setClientsView: (mode) => set({ clientsView: mode }),
+  setInvoicingProductsView: (mode) => set({ invoicingProductsView: mode }),
+  setQuotesView: (mode) => set({ quotesView: mode }),
+  setRecurringView: (mode) => set({ recurringView: mode }),
+  setPurchaseOrdersView: (mode) => set({ purchaseOrdersView: mode }),
+  setReceivingView: (mode) => set({ receivingView: mode }),
 }));

@@ -13,11 +13,12 @@ import {
   Platform,
   ScrollView,
   useWindowDimensions,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { adminUsersApi } from '../../src/api/client';
+import { adminUsersApi, locationsApi } from '../../src/api/client';
 import { useAuthStore } from '../../src/store/authStore';
 import { useViewSettingsStore } from '../../src/store/viewSettingsStore';
 import Input from '../../src/components/Input';
@@ -25,6 +26,16 @@ import Button from '../../src/components/Button';
 import EmptyState from '../../src/components/EmptyState';
 import ViewToggle from '../../src/components/ViewToggle';
 import WebModal from '../../src/components/WebModal';
+import ConfirmationModal from '../../src/components/ConfirmationModal';
+
+const COLORS = {
+  primary: '#2563EB',
+  success: '#10B981',
+  danger: '#DC2626',
+  white: '#FFFFFF',
+  dark: '#1F2937',
+  gray: '#6B7280',
+};
 
 const ROLES = [
   { value: 'admin', label: 'Admin', color: '#DC2626' },
@@ -62,12 +73,41 @@ export default function StaffManagement() {
   const [userToDeactivate, setUserToDeactivate] = useState<User | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Success modal state
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState({ title: '', subtitle: '' });
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Filter users based on search
+  const filteredUsers = users.filter(user => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      user.name.toLowerCase().includes(query) ||
+      user.email.toLowerCase().includes(query) ||
+      user.role.toLowerCase().includes(query) ||
+      (user.phone && user.phone.toLowerCase().includes(query))
+    );
+  });
+
   // Form state
   const [formName, setFormName] = useState('');
   const [formEmail, setFormEmail] = useState('');
   const [formPhone, setFormPhone] = useState('');
   const [formPassword, setFormPassword] = useState('');
   const [formRole, setFormRole] = useState('sales_staff');
+  const [formLocationId, setFormLocationId] = useState<string | null>(null);
+  const [locationSearchQuery, setLocationSearchQuery] = useState('');
+  
+  // Locations state
+  const [locations, setLocations] = useState<any[]>([]);
+  const [loadingLocations, setLoadingLocations] = useState(false);
+  
+  // Delete confirmation
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
   // Form validation state
   const [formErrors, setFormErrors] = useState<{
@@ -131,13 +171,27 @@ export default function StaffManagement() {
     }
   };
 
+  const fetchLocations = async () => {
+    setLoadingLocations(true);
+    try {
+      const response = await locationsApi.getAll();
+      setLocations(response.data);
+    } catch (error) {
+      console.log('Failed to fetch locations:', error);
+    } finally {
+      setLoadingLocations(false);
+    }
+  };
+
   useEffect(() => {
     fetchUsers();
+    fetchLocations();
   }, []);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     fetchUsers();
+    fetchLocations();
   }, []);
 
   const resetForm = () => {
@@ -146,9 +200,27 @@ export default function StaffManagement() {
     setFormPhone('');
     setFormPassword('');
     setFormRole('sales_staff');
+    setFormLocationId(null);
     setEditingUser(null);
     setFormErrors({});
     setFormTouched({});
+  };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+    
+    setDeleting(true);
+    try {
+      await adminUsersApi.delete(userToDelete.id);
+      Alert.alert('Success', 'Staff member deleted successfully');
+      setShowDeleteConfirm(false);
+      setUserToDelete(null);
+      fetchUsers();
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.detail || 'Failed to delete staff member');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const handleSaveUser = async () => {
@@ -171,8 +243,9 @@ export default function StaffManagement() {
           email: formEmail.trim().toLowerCase(),
           phone: formPhone.trim() || undefined,
           role: formRole,
+          assigned_location_id: formLocationId || undefined,
         });
-        Alert.alert('Success', `${formName} has been updated successfully`);
+        setSuccessMessage({ title: 'Staff Updated!', subtitle: `${formName} has been updated successfully.` });
       } else {
         console.log('Creating new staff member:', { name: formName, email: formEmail, role: formRole });
         await adminUsersApi.create({
@@ -181,12 +254,14 @@ export default function StaffManagement() {
           password: formPassword,
           phone: formPhone.trim() || undefined,
           role: formRole,
+          assigned_location_id: formLocationId || undefined,
         });
-        Alert.alert('Success', `${formName} has been added as ${ROLES.find(r => r.value === formRole)?.label || formRole}`);
+        setSuccessMessage({ title: 'Staff Added!', subtitle: `${formName} has been added as ${ROLES.find(r => r.value === formRole)?.label || formRole}.` });
       }
 
       resetForm();
       setShowAddModal(false);
+      setShowSuccessModal(true);
       fetchUsers();
     } catch (error: any) {
       console.error('Staff save error:', error.response?.data || error.message);
@@ -205,57 +280,37 @@ export default function StaffManagement() {
     setFormEmail(user.email);
     setFormPhone(user.phone || '');
     setFormRole(user.role);
+    setFormLocationId((user as any).assigned_location_id || null);
     setFormErrors({});
     setFormTouched({});
     setShowAddModal(true);
   };
 
   const handleDeactivateUser = (user: User) => {
-    Alert.alert(
-      'Deactivate User',
-      `Are you sure you want to deactivate ${user.name}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Deactivate',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await adminUsersApi.deactivate(user.id);
-              Alert.alert('Success', 'User deactivated');
-              fetchUsers();
-            } catch (error: any) {
-              Alert.alert('Error', error.response?.data?.detail || 'Failed to deactivate user');
-            }
-          },
-        },
-      ]
-    );
-  };
-
-  const getRoleInfo = (role: string) => {
-    return ROLES.find(r => r.value === role) || { label: role, color: '#6B7280' };
-  };
-
-  const confirmDeactivate = (user: User) => {
     setUserToDeactivate(user);
     setShowDeleteModal(true);
   };
 
-  const executeDeactivateFromModal = async () => {
+  const executeDeactivate = async () => {
     if (!userToDeactivate) return;
     
     setDeleting(true);
     try {
       await adminUsersApi.deactivate(userToDeactivate.id);
       setShowDeleteModal(false);
+      setSuccessMessage({ title: 'User Deactivated', subtitle: `${userToDeactivate.name} has been deactivated.` });
       setUserToDeactivate(null);
+      setShowSuccessModal(true);
       fetchUsers();
     } catch (error: any) {
-      console.error('Deactivate failed:', error);
+      Alert.alert('Error', error.response?.data?.detail || 'Failed to deactivate user');
     } finally {
       setDeleting(false);
     }
+  };
+
+  const getRoleInfo = (role: string) => {
+    return ROLES.find(r => r.value === role) || { label: role, color: '#6B7280' };
   };
 
   const cancelDeactivate = () => {
@@ -265,6 +320,7 @@ export default function StaffManagement() {
 
   const renderUserGrid = ({ item }: { item: User }) => {
     const roleInfo = getRoleInfo(item.role);
+    const assignedLocation = locations.find(l => l.id === (item as any).assigned_location_id);
     
     const handleEdit = () => {
       handleEditUser(item);
@@ -273,6 +329,11 @@ export default function StaffManagement() {
     const handleDeactivate = () => {
       setUserToDeactivate(item);
       setShowDeleteModal(true);
+    };
+    
+    const handleDelete = () => {
+      setUserToDelete(item);
+      setShowDeleteConfirm(true);
     };
 
     return (
@@ -292,6 +353,13 @@ export default function StaffManagement() {
             </View>
             <Text style={styles.userEmail}>{item.email}</Text>
             {item.phone && <Text style={styles.userPhone}>{item.phone}</Text>}
+            {/* Location Badge */}
+            {assignedLocation && (
+              <View style={styles.locationBadge}>
+                <Ionicons name="location-outline" size={12} color="#0EA5E9" />
+                <Text style={styles.locationBadgeText}>{assignedLocation.name}</Text>
+              </View>
+            )}
           </View>
           <View style={[styles.roleBadge, { backgroundColor: `${roleInfo.color}15` }]}>
             <Text style={[styles.roleText, { color: roleInfo.color }]}>{roleInfo.label}</Text>
@@ -306,14 +374,14 @@ export default function StaffManagement() {
             <Ionicons name="create-outline" size={18} color="#2563EB" />
             <Text style={styles.editBtnText}>Edit</Text>
           </TouchableOpacity>
-          {item.is_active && item.id !== currentUser?.id && (
+          {item.id !== currentUser?.id && (
             <TouchableOpacity
-              style={styles.deactivateBtn}
-              onPress={handleDeactivate}
+              style={styles.deleteBtn}
+              onPress={handleDelete}
               activeOpacity={0.6}
             >
-              <Ionicons name="person-remove-outline" size={18} color="#DC2626" />
-              <Text style={styles.deactivateBtnText}>Deactivate</Text>
+              <Ionicons name="trash-outline" size={18} color="#DC2626" />
+              <Text style={styles.deleteBtnText}>Delete</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -399,51 +467,127 @@ export default function StaffManagement() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#111827" />
-        </TouchableOpacity>
-        <Text style={styles.title}>Staff</Text>
-        <View style={styles.headerActions}>
-          {isWeb && (
+      {/* Web Page Header */}
+      {isWeb && (
+        <View style={styles.webPageHeader}>
+          <View>
+            <Text style={styles.webPageTitle}>Staff</Text>
+            <Text style={styles.webPageSubtitle}>{users.length} team member(s)</Text>
+          </View>
+          <View style={styles.headerActions}>
             <ViewToggle
               currentView={staffView}
               onToggle={setStaffView}
             />
-          )}
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => {
-              resetForm();
-              setShowAddModal(true);
-            }}
-          >
-            <Ionicons name="add" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.webCreateBtn}
+              onPress={() => {
+                resetForm();
+                setShowAddModal(true);
+              }}
+            >
+              <Ionicons name="add" size={20} color="#FFFFFF" />
+              <Text style={styles.webCreateBtnText}>Add Staff</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-      </View>
+      )}
 
-      {isWeb && staffView === 'table' && <TableHeader />}
-      <FlatList
-        data={users}
-        renderItem={renderUser}
-        keyExtractor={(item) => item.id}
-        key={`${isWeb}-${staffView}`}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        contentContainerStyle={isWeb && staffView === 'table' ? styles.tableList : styles.list}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <EmptyState
-            icon="people-outline"
-            title="No Staff Members"
-            message="Add your first team member"
-            actionLabel="Add Staff"
-            onAction={() => setShowAddModal(true)}
+      {/* Mobile Header */}
+      {!isWeb && (
+        <View style={styles.header}>
+          <Text style={styles.title}>Staff</Text>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => {
+                resetForm();
+                setShowAddModal(true);
+              }}
+            >
+              <Ionicons name="add" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Web Layout with White Card Container */}
+      {isWeb ? (
+        <View style={styles.webContentWrapper}>
+          <View style={styles.webWhiteCard}>
+            {/* Search Row */}
+            <View style={styles.webCardHeader}>
+              <Text style={styles.webCardTitle}>{filteredUsers.length} Staff Members</Text>
+              <View style={styles.webSearchBox}>
+                <Ionicons name="search" size={18} color="#6B7280" />
+                <TextInput
+                  style={styles.webSearchInput}
+                  placeholder="Search staff..."
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  placeholderTextColor="#6B7280"
+                />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity onPress={() => setSearchQuery('')}>
+                    <Ionicons name="close-circle" size={18} color="#6B7280" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+
+            {/* Table Header for table view */}
+            {staffView === 'table' && filteredUsers.length > 0 && <TableHeader />}
+            
+            <FlatList
+              data={filteredUsers}
+              renderItem={renderUser}
+              keyExtractor={(item) => item.id}
+              key={`web-${staffView}`}
+              refreshControl={
+                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+              }
+              contentContainerStyle={staffView === 'table' ? styles.webTableList : styles.webGridList}
+              showsVerticalScrollIndicator={false}
+              ListEmptyComponent={
+                <View style={styles.webEmptyState}>
+                  <Ionicons name="people-outline" size={64} color="#6B7280" />
+                  <Text style={styles.webEmptyText}>
+                    {searchQuery ? 'No staff match your search' : 'No Staff Members'}
+                  </Text>
+                  {!searchQuery && (
+                    <TouchableOpacity style={styles.webEmptyBtn} onPress={() => setShowAddModal(true)}>
+                      <Text style={styles.webEmptyBtnText}>Add First Staff</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              }
+            />
+          </View>
+        </View>
+      ) : (
+        /* Mobile Layout */
+        <View style={styles.mobileCardContainer}>
+          <FlatList
+            data={users}
+            renderItem={renderUser}
+            keyExtractor={(item) => item.id}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            contentContainerStyle={styles.listInsideCard}
+            showsVerticalScrollIndicator={true}
+            ListEmptyComponent={
+              <EmptyState
+                icon="people-outline"
+                title="No Staff Members"
+                message="Add your first team member"
+                actionLabel="Add Staff"
+                onAction={() => setShowAddModal(true)}
+              />
+            }
           />
-        }
-      />
+        </View>
+      )}
 
       <WebModal
         visible={showAddModal}
@@ -563,6 +707,84 @@ export default function StaffManagement() {
           ))}
         </View>
 
+        {/* Location Assignment */}
+        {locations.length > 0 && (
+          <View style={styles.locationSection}>
+            <Text style={styles.roleLabel}>Assigned Location</Text>
+            
+            {/* Search box for locations if there are many */}
+            {locations.length > 5 && (
+              <View style={styles.locationSearchBox}>
+                <Ionicons name="search-outline" size={18} color="#9CA3AF" />
+                <TextInput
+                  style={styles.locationSearchInput}
+                  placeholder="Search locations..."
+                  placeholderTextColor="#9CA3AF"
+                  value={locationSearchQuery}
+                  onChangeText={setLocationSearchQuery}
+                />
+                {locationSearchQuery ? (
+                  <TouchableOpacity onPress={() => setLocationSearchQuery('')}>
+                    <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            )}
+            
+            <ScrollView style={styles.locationOptionsScroll} nestedScrollEnabled showsVerticalScrollIndicator>
+              <View style={styles.locationOptions}>
+                {/* All Locations option */}
+                <TouchableOpacity
+                  style={[
+                    styles.locationOption,
+                    !formLocationId && styles.locationOptionSelected,
+                  ]}
+                  onPress={() => setFormLocationId(null)}
+                >
+                  <Ionicons name="globe-outline" size={18} color={!formLocationId ? "#2563EB" : "#6B7280"} />
+                  <Text style={[styles.locationOptionText, !formLocationId && styles.locationOptionTextSelected]}>
+                    All Locations
+                  </Text>
+                </TouchableOpacity>
+                
+                {/* Filtered locations */}
+                {locations
+                  .filter(loc => 
+                    !locationSearchQuery || 
+                    loc.name.toLowerCase().includes(locationSearchQuery.toLowerCase()) ||
+                    (loc.address && loc.address.toLowerCase().includes(locationSearchQuery.toLowerCase()))
+                  )
+                  .map((loc) => (
+                    <TouchableOpacity
+                      key={loc.id}
+                      style={[
+                        styles.locationOption,
+                        formLocationId === loc.id && styles.locationOptionSelected,
+                      ]}
+                      onPress={() => setFormLocationId(loc.id)}
+                    >
+                      <Ionicons name="storefront-outline" size={20} color={formLocationId === loc.id ? "#2563EB" : "#6B7280"} />
+                      <Text style={[styles.locationOptionText, formLocationId === loc.id && styles.locationOptionTextSelected]}>
+                        {loc.name}
+                      </Text>
+                      <View style={[styles.locationOptionCheck, formLocationId === loc.id && styles.locationOptionCheckSelected]}>
+                        {formLocationId === loc.id && <Ionicons name="checkmark" size={14} color="#FFFFFF" />}
+                      </View>
+                    </TouchableOpacity>
+                  ))
+                }
+              </View>
+            </ScrollView>
+            
+            {/* Show count when filtered */}
+            {locationSearchQuery && (
+              <Text style={styles.locationFilterCount}>
+                Showing {locations.filter(loc => loc.name.toLowerCase().includes(locationSearchQuery.toLowerCase())).length} of {locations.length} locations
+              </Text>
+            )}
+          </View>
+        )}
+
         <Button
           title={editingUser ? 'Update Staff' : 'Add Staff'}
           onPress={handleSaveUser}
@@ -584,46 +806,48 @@ export default function StaffManagement() {
         )}
       </WebModal>
 
-      {/* Deactivate Confirmation Modal */}
-      <Modal
-        visible={showDeleteModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={cancelDeactivate}
-      >
-        <View style={styles.deleteModalOverlay}>
-          <View style={styles.deleteModalContent}>
-            <View style={styles.deleteModalIcon}>
-              <Ionicons name="warning" size={48} color="#DC2626" />
+      {/* Success Modal */}
+      <Modal visible={showSuccessModal} transparent animationType="fade">
+        <Pressable style={styles.successOverlay} onPress={() => setShowSuccessModal(false)}>
+          <View style={styles.successModal}>
+            <View style={styles.successIconContainer}>
+              <Ionicons name="checkmark-circle" size={64} color={COLORS.success} />
             </View>
-            <Text style={styles.deleteModalTitle}>Deactivate Staff</Text>
-            <Text style={styles.deleteModalMessage}>
-              Are you sure you want to deactivate "{userToDeactivate?.name}"?{'\n\n'}
-              They will no longer be able to log in.
-            </Text>
-            <View style={styles.deleteModalButtons}>
-              <TouchableOpacity
-                style={styles.deleteModalCancelBtn}
-                onPress={cancelDeactivate}
-                disabled={deleting}
-              >
-                <Text style={styles.deleteModalCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.deleteModalConfirmBtn}
-                onPress={executeDeactivateFromModal}
-                disabled={deleting}
-              >
-                {deleting ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.deleteModalConfirmText}>Deactivate</Text>
-                )}
-              </TouchableOpacity>
-            </View>
+            <Text style={styles.successTitle}>{successMessage.title}</Text>
+            <Text style={styles.successSubtitle}>{successMessage.subtitle}</Text>
+            <TouchableOpacity style={styles.successBtn} onPress={() => setShowSuccessModal(false)}>
+              <Text style={styles.successBtnText}>OK</Text>
+            </TouchableOpacity>
           </View>
-        </View>
+        </Pressable>
       </Modal>
+
+      {/* Deactivate Confirmation Modal */}
+      <ConfirmationModal
+        visible={showDeleteModal}
+        title="Deactivate Staff"
+        message={userToDeactivate ? `Are you sure you want to deactivate "${userToDeactivate.name}"? They will no longer be able to log in.` : ''}
+        confirmLabel="Deactivate"
+        cancelLabel="Cancel"
+        onConfirm={executeDeactivate}
+        onCancel={cancelDeactivate}
+        variant="danger"
+        loading={deleting}
+      />
+      
+      {/* Delete Permanently Modal */}
+      <ConfirmationModal
+        visible={showDeleteConfirm}
+        title="Delete Staff Member"
+        message={`Are you sure you want to permanently delete "${userToDelete?.name}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={handleDeleteUser}
+        onCancel={() => { setShowDeleteConfirm(false); setUserToDelete(null); }}
+        variant="danger"
+        loading={deleting}
+        icon="trash-outline"
+      />
     </SafeAreaView>
   );
 }
@@ -672,11 +896,15 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   userCard: {
+    width: 350,
+    flexGrow: 1,
+    flexShrink: 0,
+    maxWidth: 450,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    marginBottom: 12,
+    marginBottom: 0,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -767,6 +995,109 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#DC2626',
+  },
+  deleteBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    gap: 6,
+    minHeight: 48,
+  },
+  deleteBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#DC2626',
+  },
+  locationBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E0F2FE',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    marginTop: 6,
+    alignSelf: 'flex-start',
+    gap: 4,
+  },
+  locationBadgeText: {
+    fontSize: 11,
+    color: '#0369A1',
+    fontWeight: '500',
+  },
+  locationSection: {
+    marginTop: 16,
+    marginBottom: 12,
+  },
+  locationSearchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginTop: 8,
+    marginBottom: 8,
+    gap: 8,
+  },
+  locationSearchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#1F2937',
+    paddingVertical: 4,
+  },
+  locationOptionsScroll: {
+    maxHeight: 200,
+  },
+  locationOptions: {
+    flexDirection: 'column',
+    gap: 8,
+    marginTop: 8,
+  },
+  locationFilterCount: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  locationOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    gap: 12,
+  },
+  locationOptionSelected: {
+    borderColor: '#2563EB',
+    backgroundColor: '#EFF6FF',
+  },
+  locationOptionText: {
+    fontSize: 15,
+    color: '#6B7280',
+    fontWeight: '500',
+    flex: 1,
+  },
+  locationOptionTextSelected: {
+    color: '#2563EB',
+    fontWeight: '600',
+  },
+  locationOptionCheck: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: '#D1D5DB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  locationOptionCheckSelected: {
+    backgroundColor: '#2563EB',
+    borderColor: '#2563EB',
   },
   editBtn: {
     flex: 1,
@@ -1048,5 +1379,154 @@ const styles = StyleSheet.create({
   },
   tableActionButton: {
     padding: 4,
+  },
+  // Mobile Card Container
+  mobileCardContainer: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 16,
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  listInsideCard: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  // Success Modal
+  successOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: 20 },
+  successModal: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 24, width: '100%', maxWidth: 340, alignItems: 'center' },
+  successIconContainer: { marginBottom: 16 },
+  successTitle: { fontSize: 20, fontWeight: '700', color: '#1F2937', textAlign: 'center' },
+  successSubtitle: { fontSize: 14, color: '#6B7280', textAlign: 'center', marginTop: 8, lineHeight: 20 },
+  successBtn: { marginTop: 24, backgroundColor: '#2563EB', paddingHorizontal: 32, paddingVertical: 14, borderRadius: 12, width: '100%', alignItems: 'center' },
+  successBtnText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
+
+  // Web Page Header & Layout
+  webPageHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  webPageTitle: { fontSize: 24, fontWeight: '700', color: '#111827' },
+  webPageSubtitle: { fontSize: 14, color: '#6B7280', marginTop: 4 },
+  webCreateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  webCreateBtnText: { fontSize: 15, fontWeight: '600', color: '#FFFFFF' },
+  webContentWrapper: {
+    flex: 1,
+    padding: 24,
+  },
+  webWhiteCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  webTableList: {
+    paddingHorizontal: 24,
+    paddingTop: 8,
+  },
+  webGridList: {
+    padding: 24,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+  },
+  webEmptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 80,
+  },
+  webEmptyText: { fontSize: 16, color: '#6B7280', marginTop: 16 },
+  webEmptyBtn: {
+    marginTop: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    backgroundColor: '#2563EB',
+    borderRadius: 12,
+  },
+  webEmptyBtnText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
+  webCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    gap: 12,
+  },
+  webCardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  webSearchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    minWidth: 200,
+    gap: 8,
+  },
+  webSearchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#111827',
+  },
+  // Location search styles
+  locationSearchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 12,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  locationSearchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#111827',
+  },
+  locationOptionsScroll: {
+    maxHeight: 200,
+    marginBottom: 8,
+  },
+  locationFilterCount: {
+    fontSize: 12,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginTop: 8,
+    fontStyle: 'italic',
   },
 });

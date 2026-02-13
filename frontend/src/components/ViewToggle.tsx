@@ -10,11 +10,13 @@ interface ViewToggleProps {
 
 export default function ViewToggle({ currentView, onToggle }: ViewToggleProps) {
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID="view-toggle-container">
       <TouchableOpacity
         style={[styles.button, currentView === 'grid' && styles.buttonActive]}
         onPress={() => onToggle('grid')}
         activeOpacity={0.7}
+        testID="view-toggle-grid"
+        accessibilityLabel="Grid view"
       >
         <Ionicons
           name="grid-outline"
@@ -26,6 +28,8 @@ export default function ViewToggle({ currentView, onToggle }: ViewToggleProps) {
         style={[styles.button, currentView === 'table' && styles.buttonActive]}
         onPress={() => onToggle('table')}
         activeOpacity={0.7}
+        testID="view-toggle-table"
+        accessibilityLabel="Table view"
       >
         <Ionicons
           name="list-outline"

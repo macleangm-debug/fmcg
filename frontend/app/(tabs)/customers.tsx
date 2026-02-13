@@ -34,6 +34,11 @@ interface Customer {
   phone: string;
   address?: string;
   birthday?: string;
+  customer_type?: string;
+  company_name?: string;
+  company_id?: string;
+  tax_id?: string;
+  payment_terms?: string;
   credit_balance: number;
   total_purchases: number;
   total_orders: number;
@@ -74,6 +79,12 @@ export default function Customers() {
   const [formEmail, setFormEmail] = useState('');
   const [formAddress, setFormAddress] = useState('');
   const [formBirthday, setFormBirthday] = useState('');
+  // B2B fields
+  const [formCustomerType, setFormCustomerType] = useState<'individual' | 'business'>('individual');
+  const [formCompanyName, setFormCompanyName] = useState('');
+  const [formCompanyId, setFormCompanyId] = useState('');
+  const [formTaxId, setFormTaxId] = useState('');
+  const [formPaymentTerms, setFormPaymentTerms] = useState('');
 
   // Form validation state
   const [formErrors, setFormErrors] = useState<{
@@ -165,6 +176,11 @@ export default function Customers() {
     setFormEmail('');
     setFormAddress('');
     setFormBirthday('');
+    setFormCustomerType('individual');
+    setFormCompanyName('');
+    setFormCompanyId('');
+    setFormTaxId('');
+    setFormPaymentTerms('');
     setEditingCustomer(null);
     setFormError('');
     setFormErrors({});
@@ -183,6 +199,11 @@ export default function Customers() {
     setFormEmail(customer.email || '');
     setFormAddress(customer.address || '');
     setFormBirthday(customer.birthday || '');
+    setFormCustomerType((customer.customer_type as 'individual' | 'business') || 'individual');
+    setFormCompanyName(customer.company_name || '');
+    setFormCompanyId(customer.company_id || '');
+    setFormTaxId(customer.tax_id || '');
+    setFormPaymentTerms(customer.payment_terms || '');
     setFormErrors({});
     setFormTouched({});
     setShowModal(true);
@@ -214,6 +235,11 @@ export default function Customers() {
         email: formEmail.trim() || undefined,
         address: formAddress.trim() || undefined,
         birthday: formBirthday || undefined,
+        customer_type: formCustomerType,
+        company_name: formCustomerType === 'business' ? formCompanyName.trim() || undefined : undefined,
+        company_id: formCustomerType === 'business' ? formCompanyId.trim() || undefined : undefined,
+        tax_id: formCustomerType === 'business' ? formTaxId.trim() || undefined : undefined,
+        payment_terms: formCustomerType === 'business' ? formPaymentTerms.trim() || undefined : undefined,
       };
 
       if (editingCustomer) {
@@ -447,71 +473,145 @@ export default function Customers() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Customers</Text>
-        <View style={styles.headerActions}>
-          {isWeb && (
+      {/* Web Page Header */}
+      {isWeb && (
+        <View style={styles.webPageHeader}>
+          <View>
+            <Text style={styles.webPageTitle}>Customers</Text>
+            <Text style={styles.webPageSubtitle}>{customers.length} customer(s) found</Text>
+          </View>
+          <View style={styles.headerActions}>
             <ViewToggle
               currentView={customersView}
               onToggle={setCustomersView}
             />
-          )}
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={handleOpenAddModal}
-          >
+            <TouchableOpacity style={styles.webCreateBtn} onPress={handleOpenAddModal}>
+              <Ionicons name="add" size={20} color="#FFFFFF" />
+              <Text style={styles.webCreateBtnText}>Add Customer</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Mobile Header */}
+      {!isWeb && (
+        <View style={styles.header}>
+          <Text style={styles.title}>Clients</Text>
+          <TouchableOpacity style={styles.addButton} onPress={handleOpenAddModal}>
             <Ionicons name="add" size={24} color="#FFFFFF" />
           </TouchableOpacity>
         </View>
-      </View>
+      )}
 
-      <View style={styles.searchContainer}>
-        <Ionicons name="search-outline" size={20} color="#6B7280" />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search by name or phone..."
-          value={search}
-          onChangeText={setSearch}
-          placeholderTextColor="#9CA3AF"
-        />
-        {search.length > 0 && (
-          <TouchableOpacity onPress={() => setSearch('')}>
-            <Ionicons name="close-circle" size={20} color="#6B7280" />
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {isWeb && customersView === 'table' && <TableHeader />}
-      <FlatList
-        data={customers}
-        renderItem={renderCustomerItem}
-        keyExtractor={(item) => item.id}
-        key={`${isWeb}-${customersView}`}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        contentContainerStyle={isWeb && customersView === 'table' ? styles.tableList : styles.list}
-        showsVerticalScrollIndicator={false}
-        onEndReached={loadMore}
-        onEndReachedThreshold={0.5}
-        ListFooterComponent={
-          loadingMore ? (
-            <View style={styles.loadingMore}>
-              <ActivityIndicator size="small" color="#2563EB" />
-              <Text style={styles.loadingMoreText}>Loading more...</Text>
+      {/* Web Layout with White Card Container */}
+      {isWeb ? (
+        <View style={styles.webContentWrapper}>
+          <View style={styles.webWhiteCard}>
+            {/* Search Bar */}
+            <View style={styles.webFilterContainer}>
+              <View style={styles.webSearchBox}>
+                <Ionicons name="search" size={18} color="#6B7280" />
+                <TextInput
+                  style={styles.webSearchInput}
+                  placeholder="Search customers..."
+                  value={search}
+                  onChangeText={setSearch}
+                  placeholderTextColor="#6B7280"
+                />
+                {search.length > 0 && (
+                  <TouchableOpacity onPress={() => setSearch('')}>
+                    <Ionicons name="close-circle" size={18} color="#6B7280" />
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
-          ) : null
-        }
-        ListEmptyComponent={
-          <EmptyState
-            icon="people-outline"
-            title="No Customers Found"
-            message={search ? 'Try a different search term' : 'Add your first customer'}
-            actionLabel="Add Customer"
-            onAction={handleOpenAddModal}
+
+            {/* Table/Grid Header for Table View */}
+            {customersView === 'table' && <TableHeader />}
+
+            {/* Customer List */}
+            <FlatList
+              data={customers}
+              renderItem={renderCustomerItem}
+              keyExtractor={(item) => item.id}
+              key={`web-${customersView}`}
+              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+              contentContainerStyle={customersView === 'table' ? styles.webTableList : styles.webGridList}
+              showsVerticalScrollIndicator={false}
+              onEndReached={loadMore}
+              onEndReachedThreshold={0.5}
+              ListFooterComponent={
+                loadingMore ? (
+                  <View style={styles.loadingMore}>
+                    <ActivityIndicator size="small" color="#2563EB" />
+                    <Text style={styles.loadingMoreText}>Loading more...</Text>
+                  </View>
+                ) : null
+              }
+              ListEmptyComponent={
+                <View style={styles.webEmptyState}>
+                  <Ionicons name="people-outline" size={64} color="#6B7280" />
+                  <Text style={styles.webEmptyText}>No customers found</Text>
+                  <TouchableOpacity style={styles.webEmptyBtn} onPress={handleOpenAddModal}>
+                    <Text style={styles.webEmptyBtnText}>Add First Customer</Text>
+                  </TouchableOpacity>
+                </View>
+              }
+            />
+          </View>
+        </View>
+      ) : (
+        /* Mobile Layout */
+        <View style={styles.mobileCardContainer}>
+          {/* Search inside card */}
+          <View style={styles.searchInsideCard}>
+            <Ionicons name="search-outline" size={20} color="#6B7280" />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search by name or phone..."
+              value={search}
+              onChangeText={setSearch}
+              placeholderTextColor="#9CA3AF"
+            />
+            {search.length > 0 && (
+              <TouchableOpacity onPress={() => setSearch('')}>
+                <Ionicons name="close-circle" size={20} color="#6B7280" />
+              </TouchableOpacity>
+            )}
+          </View>
+          
+          {/* Customer List inside card */}
+          <FlatList
+            data={customers}
+            renderItem={renderCustomerItem}
+            keyExtractor={(item) => item.id}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            contentContainerStyle={styles.listInsideCard}
+            showsVerticalScrollIndicator={true}
+            onEndReached={loadMore}
+            onEndReachedThreshold={0.5}
+            ListFooterComponent={
+              loadingMore ? (
+                <View style={styles.loadingMore}>
+                  <ActivityIndicator size="small" color="#2563EB" />
+                  <Text style={styles.loadingMoreText}>Loading more...</Text>
+                </View>
+              ) : null
+            }
+            ListEmptyComponent={
+              <EmptyState
+                icon="people-outline"
+                title="No Clients Found"
+                message={search ? 'Try a different search term' : 'Add your first customer'}
+                actionLabel="Add Customer"
+                onAction={handleOpenAddModal}
+              />
+            }
           />
-        }
-      />
+        </View>
+      )}
 
       <WebModal
         visible={showModal}
@@ -604,6 +704,82 @@ export default function Customers() {
           onChangeText={setFormAddress}
           leftIcon={<Ionicons name="location-outline" size={20} color="#6B7280" />}
         />
+
+        {/* Customer Type Toggle */}
+        <View style={styles.customerTypeContainer}>
+          <Text style={styles.customerTypeLabel}>Customer Type</Text>
+          <View style={styles.customerTypeButtons}>
+            <TouchableOpacity
+              style={[
+                styles.customerTypeButton,
+                formCustomerType === 'individual' && styles.customerTypeButtonActive,
+              ]}
+              onPress={() => setFormCustomerType('individual')}
+            >
+              <Ionicons 
+                name="person-outline" 
+                size={18} 
+                color={formCustomerType === 'individual' ? '#2563EB' : '#6B7280'} 
+              />
+              <Text style={[
+                styles.customerTypeButtonText,
+                formCustomerType === 'individual' && styles.customerTypeButtonTextActive,
+              ]}>Individual</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.customerTypeButton,
+                formCustomerType === 'business' && styles.customerTypeButtonActive,
+              ]}
+              onPress={() => setFormCustomerType('business')}
+            >
+              <Ionicons 
+                name="business-outline" 
+                size={18} 
+                color={formCustomerType === 'business' ? '#2563EB' : '#6B7280'} 
+              />
+              <Text style={[
+                styles.customerTypeButtonText,
+                formCustomerType === 'business' && styles.customerTypeButtonTextActive,
+              ]}>Business</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* B2B Fields - Only shown when business type is selected */}
+        {formCustomerType === 'business' && (
+          <View style={styles.b2bFieldsContainer}>
+            <Text style={styles.b2bFieldsTitle}>Business Details</Text>
+            <Input
+              label="Company Name"
+              placeholder="Enter company name"
+              value={formCompanyName}
+              onChangeText={setFormCompanyName}
+              leftIcon={<Ionicons name="business-outline" size={20} color="#6B7280" />}
+            />
+            <Input
+              label="Company Registration No."
+              placeholder="Enter company ID (optional)"
+              value={formCompanyId}
+              onChangeText={setFormCompanyId}
+              leftIcon={<Ionicons name="document-text-outline" size={20} color="#6B7280" />}
+            />
+            <Input
+              label="Tax/VAT ID"
+              placeholder="Enter tax ID (optional)"
+              value={formTaxId}
+              onChangeText={setFormTaxId}
+              leftIcon={<Ionicons name="receipt-outline" size={20} color="#6B7280" />}
+            />
+            <Input
+              label="Payment Terms"
+              placeholder="e.g., Net 30, Due on Receipt"
+              value={formPaymentTerms}
+              onChangeText={setFormPaymentTerms}
+              leftIcon={<Ionicons name="calendar-outline" size={20} color="#6B7280" />}
+            />
+          </View>
+        )}
 
         <View style={styles.datePickerContainer}>
           <Text style={styles.datePickerLabel}>Birthday (Month & Day)</Text>
@@ -932,9 +1108,13 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   customerCard: {
+    width: 350,
+    flexGrow: 1,
+    flexShrink: 0,
+    maxWidth: 450,
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    marginBottom: 12,
+    marginBottom: 0,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -1194,6 +1374,60 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#FFFFFF',
   },
+  // Customer Type Styles
+  customerTypeContainer: {
+    marginBottom: 16,
+  },
+  customerTypeLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  customerTypeButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  customerTypeButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    paddingVertical: 12,
+  },
+  customerTypeButtonActive: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#2563EB',
+  },
+  customerTypeButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6B7280',
+  },
+  customerTypeButtonTextActive: {
+    color: '#2563EB',
+    fontWeight: '600',
+  },
+  // B2B Fields Styles
+  b2bFieldsContainer: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  b2bFieldsTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 12,
+  },
   // Date Picker Styles
   datePickerContainer: {
     marginBottom: 16,
@@ -1294,4 +1528,126 @@ const styles = StyleSheet.create({
     color: '#2563EB',
     fontWeight: '600',
   },
+  
+  // Mobile Card Container
+  mobileCardContainer: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 16,
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  searchInsideCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    gap: 12,
+  },
+  listInsideCard: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
+
+  // Web Page Header & Layout
+  webPageHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  webPageTitle: { fontSize: 24, fontWeight: '700', color: '#111827' },
+  webPageSubtitle: { fontSize: 14, color: '#6B7280', marginTop: 4 },
+  webCreateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  webCreateBtnText: { fontSize: 15, fontWeight: '600', color: '#FFFFFF' },
+  webContentWrapper: {
+    flex: 1,
+    padding: 24,
+  },
+  webWhiteCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  webFilterContainer: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  webSearchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 10,
+    minWidth: 280,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  webSearchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#111827',
+    outlineStyle: 'none',
+  },
+  webTableList: {
+    paddingHorizontal: 24,
+    paddingTop: 8,
+  },
+  webGridList: {
+    padding: 24,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+  },
+  webEmptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 80,
+  },
+  webEmptyText: { fontSize: 16, color: '#6B7280', marginTop: 16 },
+  webEmptyBtn: {
+    marginTop: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    backgroundColor: '#2563EB',
+    borderRadius: 12,
+  },
+  webEmptyBtnText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
 });

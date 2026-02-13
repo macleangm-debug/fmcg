@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -25,6 +25,8 @@ import Animated, {
   FadeInDown,
   FadeInUp,
 } from 'react-native-reanimated';
+import axios from 'axios';
+import Constants from 'expo-constants';
 import Input from '../../src/components/Input';
 import { useAuthStore } from '../../src/store/authStore';
 
@@ -32,6 +34,10 @@ WebBrowser.maybeCompleteAuthSession();
 
 const AnimatedView = Animated.createAnimatedComponent(View);
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+
+const API_URL = Constants.expoConfig?.extra?.apiUrl || 
+              process.env.EXPO_PUBLIC_BACKEND_URL || 
+              '/api';
 
 export default function Register() {
   const router = useRouter();
@@ -49,6 +55,16 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  
+  // Referral/Promo code
+  const [referralCode, setReferralCode] = useState('');
+  const [codeValidation, setCodeValidation] = useState<{
+    valid?: boolean;
+    code_type?: string;
+    message?: string;
+    benefit?: { type: string; amount?: number; description: string };
+  } | null>(null);
+  const [validatingCode, setValidatingCode] = useState(false);
 
   // Form validation state
   const [fieldErrors, setFieldErrors] = useState<{
@@ -67,6 +83,45 @@ export default function Register() {
   // Animation values
   const buttonScale = useSharedValue(1);
   const googleButtonScale = useSharedValue(1);
+
+  // Validate referral/promo code
+  const validateCode = useCallback(async (code: string) => {
+    if (!code.trim()) {
+      setCodeValidation(null);
+      return;
+    }
+    
+    setValidatingCode(true);
+    try {
+      const response = await axios.get(`${API_URL}/api/referrals/validate-code/${code.trim()}`);
+      setCodeValidation(response.data);
+    } catch (error) {
+      setCodeValidation({ valid: false, message: 'Could not validate code' });
+    } finally {
+      setValidatingCode(false);
+    }
+  }, []);
+
+  // Check for referral code in URL params
+  useEffect(() => {
+    const urlCode = params.ref as string || params.code as string || params.promo as string;
+    if (urlCode) {
+      setReferralCode(urlCode.toUpperCase());
+      validateCode(urlCode);
+    }
+  }, [params, validateCode]);
+
+  // Debounced code validation on input change
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (referralCode.length >= 4) {
+        validateCode(referralCode);
+      } else if (!referralCode) {
+        setCodeValidation(null);
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [referralCode, validateCode]);
 
   // Validation functions
   const validateName = (value: string) => {
@@ -193,7 +248,9 @@ export default function Register() {
       return;
     }
     
-    const success = await register(name, email, password);
+    // Pass referral code if it's valid
+    const validCode = codeValidation?.valid ? referralCode : undefined;
+    const success = await register(name, email, password, 'sales_staff', validCode);
     if (success) {
       handleSuccessfulAuth();
     }
@@ -393,6 +450,52 @@ export default function Register() {
             <View style={styles.fieldError}>
               <Ionicons name="alert-circle" size={14} color="#DC2626" />
               <Text style={styles.fieldErrorText}>{fieldErrors.confirmPassword}</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Referral/Promo Code Field */}
+        <View style={styles.inputWrapper}>
+          <Input
+            label="Referral or Promo Code (Optional)"
+            placeholder="Enter code"
+            value={referralCode}
+            onChangeText={(text) => setReferralCode(text.toUpperCase())}
+            autoCapitalize="characters"
+            leftIcon={<Ionicons name="gift-outline" size={18} color={codeValidation?.valid ? '#10B981' : codeValidation?.valid === false ? '#DC2626' : '#6B7280'} />}
+            rightIcon={
+              validatingCode ? (
+                <ActivityIndicator size="small" color="#6B7280" />
+              ) : codeValidation?.valid ? (
+                <Ionicons name="checkmark-circle" size={18} color="#10B981" />
+              ) : codeValidation?.valid === false ? (
+                <Ionicons name="close-circle" size={18} color="#DC2626" />
+              ) : null
+            }
+          />
+          {codeValidation && (
+            <View style={[
+              styles.codeValidationBox,
+              codeValidation.valid ? styles.codeValidationSuccess : styles.codeValidationError
+            ]}>
+              <Ionicons 
+                name={codeValidation.valid ? "checkmark-circle" : "alert-circle"} 
+                size={16} 
+                color={codeValidation.valid ? "#10B981" : "#DC2626"} 
+              />
+              <View style={styles.codeValidationText}>
+                <Text style={[
+                  styles.codeMessage,
+                  codeValidation.valid ? styles.codeMessageSuccess : styles.codeMessageError
+                ]}>
+                  {codeValidation.message}
+                </Text>
+                {codeValidation.valid && codeValidation.benefit && (
+                  <Text style={styles.codeBenefit}>
+                    {codeValidation.code_type === 'referral' ? '🎁' : '💰'} {codeValidation.benefit.description}
+                  </Text>
+                )}
+              </View>
             </View>
           )}
         </View>
@@ -706,5 +809,42 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#2563EB',
+  },
+  // Code validation
+  codeValidationBox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 8,
+    gap: 10,
+  },
+  codeValidationSuccess: {
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#10B981',
+  },
+  codeValidationError: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#DC2626',
+  },
+  codeValidationText: {
+    flex: 1,
+  },
+  codeMessage: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  codeMessageSuccess: {
+    color: '#059669',
+  },
+  codeMessageError: {
+    color: '#DC2626',
+  },
+  codeBenefit: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 4,
   },
 });

@@ -1,0 +1,185 @@
+# KwikPay Production Docker Compose
+# For 100K+ transactions per minute throughput
+
+version: '3.8'
+
+services:
+  # Redis - Message Broker & Cache
+  redis:
+    image: redis:7-alpine
+    container_name: kwikpay-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # MongoDB - Primary Database
+  mongodb:
+    image: mongo:7
+    container_name: kwikpay-mongodb
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: retail_db
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/retail_db --quiet
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # FastAPI Backend
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: kwikpay-backend
+    ports:
+      - "8001:8001"
+    environment:
+      - MONGO_URL=mongodb://mongodb:27017
+      - DB_NAME=retail_db
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Celery Worker - Critical Queue (Payments)
+  celery-critical:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: kwikpay-celery-critical
+    command: celery -A core.celery_config worker -Q critical,payments -c 8 -l INFO --hostname=critical@%h
+    environment:
+      - MONGO_URL=mongodb://mongodb:27017
+      - DB_NAME=retail_db
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+
+  # Celery Worker - Webhooks & Default Queue
+  celery-webhooks:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: kwikpay-celery-webhooks
+    command: celery -A core.celery_config worker -Q webhooks,default -c 4 -l INFO --hostname=webhooks@%h
+    environment:
+      - MONGO_URL=mongodb://mongodb:27017
+      - DB_NAME=retail_db
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+
+  # Celery Worker - Batch & Low Priority
+  celery-batch:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: kwikpay-celery-batch
+    command: celery -A core.celery_config worker -Q batch,low -c 2 -l INFO --hostname=batch@%h
+    environment:
+      - MONGO_URL=mongodb://mongodb:27017
+      - DB_NAME=retail_db
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+      mongodb:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  # Celery Beat - Periodic Tasks Scheduler
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: kwikpay-celery-beat
+    command: celery -A core.celery_config beat -l INFO
+    environment:
+      - MONGO_URL=mongodb://mongodb:27017
+      - DB_NAME=retail_db
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+      celery-critical:
+        condition: service_started
+    restart: unless-stopped
+
+  # Flower - Celery Monitoring Dashboard
+  flower:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: kwikpay-flower
+    command: celery -A core.celery_config flower --port=5555
+    ports:
+      - "5555:5555"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+  mongo_data:
+
+networks:
+  default:
+    name: kwikpay-network

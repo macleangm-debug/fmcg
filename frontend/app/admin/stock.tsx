@@ -140,6 +140,14 @@ export default function StockManagement() {
   
   // Filter
   const [filterStatus, setFilterStatus] = useState<'all' | 'low_stock' | 'out_of_stock'>('all');
+  
+  // Search state for main list
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Pagination state for product list in modals
+  const ITEMS_PER_PAGE = 10;
+  const [modalProductPage, setModalProductPage] = useState(1);
+  const [loadingMoreProducts, setLoadingMoreProducts] = useState(false);
 
   // Form validation state - Add Stock Modal
   const [stockFormErrors, setStockFormErrors] = useState<{
@@ -244,18 +252,6 @@ export default function StockManagement() {
   const onRefresh = () => {
     setRefreshing(true);
     loadData();
-  };
-
-  const openAddStockModal = () => {
-    setSelectedProduct(null);
-    setSelectedVariantIndex(null);
-    setProductSearchQuery('');
-    setAdjustmentType('in');
-    setAdjustmentQty('');
-    setAdjustmentReason('');
-    setUnitCost('');
-    setSupplier('');
-    setShowAddStockModal(true);
   };
 
   const selectProduct = (product: Product) => {
@@ -458,6 +454,49 @@ export default function StockManagement() {
     setShowConfirmModal(true);
   };
 
+  // Load more products for infinite scroll (mobile)
+  const loadMoreProducts = () => {
+    if (loadingMoreProducts) return;
+    
+    // Check if there are more items to load
+    const currentlyShowing = modalProductPage * ITEMS_PER_PAGE;
+    if (currentlyShowing >= filteredProductsForSelection.length) return; // No more items
+    
+    setLoadingMoreProducts(true);
+    setTimeout(() => {
+      setModalProductPage(prev => prev + 1);
+      setLoadingMoreProducts(false);
+    }, 300);
+  };
+
+  // Handle scroll end for infinite scroll - with debounce
+  const handleProductListScroll = (event: any) => {
+    if (isWeb || loadingMoreProducts) return; // Only for mobile, and not while loading
+    
+    const { layoutMeasurement, contentOffset, contentSize } = event.nativeEvent;
+    const isCloseToBottom = layoutMeasurement.height + contentOffset.y >= contentSize.height - 80;
+    
+    // Check if there are more items before triggering load
+    const currentlyShowing = modalProductPage * ITEMS_PER_PAGE;
+    
+    if (isCloseToBottom && currentlyShowing < filteredProductsForSelection.length) {
+      loadMoreProducts();
+    }
+  };
+
+  // Reset pagination when modal opens
+  const openAddStockModal = () => {
+    setModalProductPage(1);
+    setSelectedProduct(null);
+    setProductSearchQuery('');
+    setAdjustmentType('in');
+    setAdjustmentQty('');
+    setAdjustmentReason('');
+    setUnitCost('');
+    setSupplier('');
+    setShowAddStockModal(true);
+  };
+
   const submitAdjustment = async () => {
     if (!selectedProduct || !adjustmentQty) return;
 
@@ -530,15 +569,27 @@ export default function StockManagement() {
   };
 
   const filteredProducts = summary?.products.filter(p => {
-    if (filterStatus === 'all') return true;
-    return p.status === filterStatus;
+    // Filter by status
+    if (filterStatus !== 'all' && p.status !== filterStatus) return false;
+    // Filter by search query
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      return (
+        p.name.toLowerCase().includes(query) ||
+        p.sku.toLowerCase().includes(query) ||
+        p.category_name.toLowerCase().includes(query)
+      );
+    }
+    return true;
   }) || [];
 
-  // Filter products for selection modal
-  const filteredProductsForSelection = allProducts.filter(p => 
-    p.name.toLowerCase().includes(productSearchQuery.toLowerCase()) ||
-    p.sku.toLowerCase().includes(productSearchQuery.toLowerCase())
-  );
+  // Filter products for selection modal - sorted alphabetically
+  const filteredProductsForSelection = allProducts
+    .filter(p => 
+      p.name.toLowerCase().includes(productSearchQuery.toLowerCase()) ||
+      p.sku.toLowerCase().includes(productSearchQuery.toLowerCase())
+    )
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   if (loading) {
     return (
@@ -643,179 +694,352 @@ export default function StockManagement() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={[styles.header, isWeb && styles.headerWeb]}>
-        <Pressable 
-          onPress={handleBack} 
-          style={styles.backButton}
-        >
-          <Ionicons name="arrow-back" size={24} color="#111827" />
-        </Pressable>
-        <Text style={styles.headerTitle}>Stock Management</Text>
-        <View style={styles.headerActions}>
-          {isWeb && (
+      {/* Web Page Header */}
+      {isWeb && (
+        <View style={styles.webPageHeader}>
+          <View>
+            <Text style={styles.webPageTitle}>Stock Management</Text>
+            <Text style={styles.webPageSubtitle}>{summary?.total_products || 0} products • {formatCurrency(summary?.total_stock_value || 0)} total value</Text>
+          </View>
+          <View style={styles.headerActions}>
             <ViewToggle
               currentView={stockView}
               onToggle={setStockView}
             />
-          )}
-          <Pressable 
-            onPress={openAddStockModal} 
-            style={styles.addButton}
-            accessibilityRole="button"
-            accessibilityLabel="Add Stock"
-          >
-            <Ionicons name="add" size={24} color="#FFFFFF" />
-          </Pressable>
-        </View>
-      </View>
-
-      {/* Summary Cards */}
-      <View style={[styles.summaryCards, isWeb && styles.summaryCardsWeb]}>
-        <View style={styles.summaryCard}>
-          <Ionicons name="cube-outline" size={24} color="#2563EB" />
-          <Text style={styles.summaryValue}>{summary?.total_products || 0}</Text>
-          <Text style={styles.summaryLabel}>Products</Text>
-        </View>
-        <View style={styles.summaryCard}>
-          <Ionicons name="cash-outline" size={24} color="#10B981" />
-          <Text style={styles.summaryValue}>{formatCurrency(summary?.total_stock_value || 0)}</Text>
-          <Text style={styles.summaryLabel}>Stock Value</Text>
-        </View>
-        <View style={[styles.summaryCard, { backgroundColor: '#FEF3C7' }]}>
-          <Ionicons name="warning-outline" size={24} color="#F59E0B" />
-          <Text style={styles.summaryValue}>{summary?.low_stock_count || 0}</Text>
-          <Text style={styles.summaryLabel}>Low Stock</Text>
-        </View>
-        <View style={[styles.summaryCard, { backgroundColor: '#FEE2E2' }]}>
-          <Ionicons name="close-circle-outline" size={24} color="#DC2626" />
-          <Text style={styles.summaryValue}>{summary?.out_of_stock_count || 0}</Text>
-          <Text style={styles.summaryLabel}>Out of Stock</Text>
-        </View>
-      </View>
-
-      {/* Tabs */}
-      <View style={styles.tabs}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'summary' && styles.activeTab]}
-          onPress={() => setActiveTab('summary')}
-        >
-          <Text style={[styles.tabText, activeTab === 'summary' && styles.activeTabText]}>
-            Stock Levels
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'movements' && styles.activeTab]}
-          onPress={() => setActiveTab('movements')}
-        >
-          <Text style={[styles.tabText, activeTab === 'movements' && styles.activeTabText]}>
-            History
-          </Text>
-        </TouchableOpacity>
-      </View>
-
-      {activeTab === 'summary' && (
-        <>
-          {/* Filter */}
-          <View style={styles.filterRow}>
-            <TouchableOpacity
-              style={[styles.filterChip, filterStatus === 'all' && styles.filterChipActive]}
-              onPress={() => setFilterStatus('all')}
+            <Pressable 
+              onPress={openAddStockModal} 
+              style={styles.webCreateBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Add Stock"
             >
-              <Text style={[styles.filterChipText, filterStatus === 'all' && styles.filterChipTextActive]}>
-                All
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.filterChip, filterStatus === 'low_stock' && styles.filterChipActive]}
-              onPress={() => setFilterStatus('low_stock')}
-            >
-              <Text style={[styles.filterChipText, filterStatus === 'low_stock' && styles.filterChipTextActive]}>
-                Low Stock
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.filterChip, filterStatus === 'out_of_stock' && styles.filterChipActive]}
-              onPress={() => setFilterStatus('out_of_stock')}
-            >
-              <Text style={[styles.filterChipText, filterStatus === 'out_of_stock' && styles.filterChipTextActive]}>
-                Out of Stock
-              </Text>
-            </TouchableOpacity>
+              <Ionicons name="add" size={20} color="#FFFFFF" />
+              <Text style={styles.webCreateBtnText}>Add Stock</Text>
+            </Pressable>
           </View>
-
-          <View style={[styles.content, isWeb && styles.contentWeb]}>
-            {isWeb && stockView === 'table' && <StockTableHeader />}
-            <ScrollView
-              showsVerticalScrollIndicator={false}
-              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-              contentContainerStyle={isWeb && stockView === 'table' ? styles.tableList : undefined}
-            >
-              {filteredProducts.length === 0 ? (
-                <View style={styles.emptyState}>
-                  <Ionicons name="cube-outline" size={48} color="#9CA3AF" />
-                  <Text style={styles.emptyStateTitle}>No Products</Text>
-                  <Text style={styles.emptyStateText}>
-                    Add products to track your stock levels
-                  </Text>
-                  <TouchableOpacity style={styles.emptyStateButton} onPress={openAddStockModal}>
-                    <Text style={styles.emptyStateButtonText}>Add Stock</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                filteredProducts.map((product) => 
-                  isWeb && stockView === 'table' 
-                    ? renderProductTable(product) 
-                    : renderProductGrid(product)
-                )
-              )}
-            </ScrollView>
-          </View>
-        </>
+        </View>
       )}
 
-      {activeTab === 'movements' && (
-        <ScrollView
-          style={styles.movementsList}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-        >
-          {movements.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Ionicons name="swap-horizontal-outline" size={48} color="#9CA3AF" />
-              <Text style={styles.emptyStateTitle}>No Stock Movements</Text>
-              <Text style={styles.emptyStateText}>
-                Stock movements will appear here when you add or adjust stock
-              </Text>
-            </View>
-          ) : (
-            movements.map((movement) => {
-              const iconInfo = getMovementIcon(movement.movement_type);
-              return (
-                <View key={movement.id} style={styles.movementCard}>
-                  <View style={[styles.movementIcon, { backgroundColor: iconInfo.color + '20' }]}>
-                    <Ionicons name={iconInfo.name as any} size={24} color={iconInfo.color} />
+      {/* Mobile Header */}
+      {!isWeb && (
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Stock Management</Text>
+          <View style={styles.headerActions}>
+            <Pressable 
+              onPress={openAddStockModal} 
+              style={styles.addButton}
+              accessibilityRole="button"
+              accessibilityLabel="Add Stock"
+            >
+              <Ionicons name="add" size={24} color="#FFFFFF" />
+            </Pressable>
+          </View>
+        </View>
+      )}
+
+      {/* Web Layout with White Card Container */}
+      {isWeb ? (
+        <View style={styles.webContentWrapper}>
+          <View style={styles.webWhiteCard}>
+            {/* Filter and Search Row */}
+            <View style={styles.webCardHeader}>
+              <View style={styles.webTabs}>
+                <TouchableOpacity
+                  style={[styles.webTab, activeTab === 'summary' && styles.webTabActive]}
+                  onPress={() => setActiveTab('summary')}
+                >
+                  <Text style={[styles.webTabText, activeTab === 'summary' && styles.webTabTextActive]}>
+                    Stock Levels
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.webTab, activeTab === 'movements' && styles.webTabActive]}
+                  onPress={() => setActiveTab('movements')}
+                >
+                  <Text style={[styles.webTabText, activeTab === 'movements' && styles.webTabTextActive]}>
+                    History
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              
+              {activeTab === 'summary' && (
+                <View style={styles.webFilterGroup}>
+                  <View style={styles.webStatusTabs}>
+                    <TouchableOpacity
+                      style={[styles.webStatusTab, filterStatus === 'all' && styles.webStatusTabActive]}
+                      onPress={() => setFilterStatus('all')}
+                    >
+                      <Text style={[styles.webStatusTabText, filterStatus === 'all' && styles.webStatusTabTextActive]}>All</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.webStatusTab, filterStatus === 'low_stock' && styles.webStatusTabActive]}
+                      onPress={() => setFilterStatus('low_stock')}
+                    >
+                      <Text style={[styles.webStatusTabText, filterStatus === 'low_stock' && styles.webStatusTabTextActive]}>Low Stock</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.webStatusTab, filterStatus === 'out_of_stock' && styles.webStatusTabActive]}
+                      onPress={() => setFilterStatus('out_of_stock')}
+                    >
+                      <Text style={[styles.webStatusTabText, filterStatus === 'out_of_stock' && styles.webStatusTabTextActive]}>Out</Text>
+                    </TouchableOpacity>
                   </View>
-                  <View style={styles.movementInfo}>
-                    <Text style={styles.movementProduct}>{movement.product_name}</Text>
-                    <Text style={styles.movementDetails}>
-                      {movement.movement_type === 'in' ? '+' : movement.movement_type === 'out' ? '-' : ''}
-                      {Math.abs(movement.quantity)} units • {movement.reason || 'No reason'}
-                    </Text>
-                    <Text style={styles.movementMeta}>
-                      {new Date(movement.created_at).toLocaleDateString()} • {movement.created_by_name}
-                    </Text>
-                  </View>
-                  <View style={styles.movementStockChange}>
-                    <Text style={styles.stockChangeLabel}>Stock</Text>
-                    <Text style={styles.stockChangeValue}>
-                      {movement.previous_stock} → {movement.new_stock}
-                    </Text>
+                  
+                  <View style={styles.webSearchBox}>
+                    <Ionicons name="search" size={18} color="#6B7280" />
+                    <TextInput
+                      style={styles.webSearchInput}
+                      placeholder="Search products..."
+                      value={searchQuery}
+                      onChangeText={setSearchQuery}
+                      placeholderTextColor="#6B7280"
+                    />
+                    {searchQuery.length > 0 && (
+                      <TouchableOpacity onPress={() => setSearchQuery('')}>
+                        <Ionicons name="close-circle" size={18} color="#6B7280" />
+                      </TouchableOpacity>
+                    )}
                   </View>
                 </View>
-              );
-            })
+              )}
+            </View>
+
+            {/* Stats Summary Row */}
+            <View style={styles.webStatsRow}>
+              <View style={styles.webStatItem}>
+                <Text style={styles.webStatValue}>{summary?.total_products || 0}</Text>
+                <Text style={styles.webStatLabel}>Products</Text>
+              </View>
+              <View style={styles.webStatItem}>
+                <Text style={[styles.webStatValue, { color: '#10B981' }]}>{formatCurrency(summary?.total_stock_value || 0)}</Text>
+                <Text style={styles.webStatLabel}>Stock Value</Text>
+              </View>
+              <View style={styles.webStatItem}>
+                <Text style={[styles.webStatValue, { color: '#F59E0B' }]}>{summary?.low_stock_count || 0}</Text>
+                <Text style={styles.webStatLabel}>Low Stock</Text>
+              </View>
+              <View style={styles.webStatItem}>
+                <Text style={[styles.webStatValue, { color: '#DC2626' }]}>{summary?.out_of_stock_count || 0}</Text>
+                <Text style={styles.webStatLabel}>Out of Stock</Text>
+              </View>
+            </View>
+
+            {/* Content */}
+            <ScrollView
+              style={styles.webListContainer}
+              showsVerticalScrollIndicator={false}
+              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+            >
+              {activeTab === 'summary' ? (
+                <>
+                  {stockView === 'table' && <StockTableHeader />}
+                  {filteredProducts.length === 0 ? (
+                    <View style={styles.webEmptyState}>
+                      <Ionicons name="cube-outline" size={64} color="#6B7280" />
+                      <Text style={styles.webEmptyText}>No products found</Text>
+                    </View>
+                  ) : stockView === 'table' ? (
+                    filteredProducts.map((item) => renderProductTable(item))
+                  ) : (
+                    <View style={styles.webGridList}>
+                      {filteredProducts.map((item) => renderProductGrid(item))}
+                    </View>
+                  )}
+                </>
+              ) : (
+                <>
+                  {movements.length === 0 ? (
+                    <View style={styles.webEmptyState}>
+                      <Ionicons name="swap-horizontal-outline" size={64} color="#6B7280" />
+                      <Text style={styles.webEmptyText}>No stock movements yet</Text>
+                    </View>
+                  ) : (
+                    movements.map((movement) => {
+                      const iconInfo = getMovementIcon(movement.movement_type);
+                      return (
+                        <View key={movement.id} style={styles.movementCard}>
+                          <View style={[styles.movementIcon, { backgroundColor: iconInfo.color + '20' }]}>
+                            <Ionicons name={iconInfo.name as any} size={24} color={iconInfo.color} />
+                          </View>
+                          <View style={styles.movementInfo}>
+                            <Text style={styles.movementProduct}>{movement.product_name}</Text>
+                            <Text style={styles.movementDetails}>
+                              {movement.movement_type === 'in' ? '+' : movement.movement_type === 'out' ? '-' : ''}
+                              {Math.abs(movement.quantity)} units • {movement.reason || 'No reason'}
+                            </Text>
+                            <Text style={styles.movementMeta}>
+                              {new Date(movement.created_at).toLocaleDateString()} • {movement.created_by_name}
+                            </Text>
+                          </View>
+                          <View style={styles.movementStockChange}>
+                            <Text style={styles.stockChangeLabel}>Stock</Text>
+                            <Text style={styles.stockChangeValue}>
+                              {movement.previous_stock} → {movement.new_stock}
+                            </Text>
+                          </View>
+                        </View>
+                      );
+                    })
+                  )}
+                </>
+              )}
+              <View style={{ height: 40 }} />
+            </ScrollView>
+          </View>
+        </View>
+      ) : (
+        /* Mobile Layout */
+        <>
+          {/* Summary Cards */}
+          <View style={styles.summaryCards}>
+            <View style={styles.summaryCard}>
+              <Ionicons name="cube-outline" size={24} color="#2563EB" />
+              <Text style={styles.summaryValue}>{summary?.total_products || 0}</Text>
+              <Text style={styles.summaryLabel}>Products</Text>
+            </View>
+            <View style={styles.summaryCard}>
+              <Ionicons name="cash-outline" size={24} color="#10B981" />
+              <Text style={styles.summaryValue}>{formatCurrency(summary?.total_stock_value || 0)}</Text>
+              <Text style={styles.summaryLabel}>Stock Value</Text>
+            </View>
+            <View style={[styles.summaryCard, { backgroundColor: '#FEF3C7' }]}>
+              <Ionicons name="warning-outline" size={24} color="#F59E0B" />
+              <Text style={styles.summaryValue}>{summary?.low_stock_count || 0}</Text>
+              <Text style={styles.summaryLabel}>Low Stock</Text>
+            </View>
+            <View style={[styles.summaryCard, { backgroundColor: '#FEE2E2' }]}>
+              <Ionicons name="close-circle-outline" size={24} color="#DC2626" />
+              <Text style={styles.summaryValue}>{summary?.out_of_stock_count || 0}</Text>
+              <Text style={styles.summaryLabel}>Out of Stock</Text>
+            </View>
+          </View>
+
+          {/* Tabs */}
+          <View style={styles.tabs}>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'summary' && styles.activeTab]}
+              onPress={() => setActiveTab('summary')}
+            >
+              <Text style={[styles.tabText, activeTab === 'summary' && styles.activeTabText]}>
+                Stock Levels
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.tab, activeTab === 'movements' && styles.activeTab]}
+              onPress={() => setActiveTab('movements')}
+            >
+              <Text style={[styles.tabText, activeTab === 'movements' && styles.activeTabText]}>
+                History
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Main Content Card Container */}
+          <View style={styles.mainContentCard}>
+            {activeTab === 'summary' && (
+              <>
+                {/* Filter inside card */}
+                <View style={styles.filterRowCard}>
+                  <TouchableOpacity
+                    style={[styles.filterChip, filterStatus === 'all' && styles.filterChipActive]}
+                    onPress={() => setFilterStatus('all')}
+                  >
+                    <Text style={[styles.filterChipText, filterStatus === 'all' && styles.filterChipTextActive]}>
+                      All
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.filterChip, filterStatus === 'low_stock' && styles.filterChipActive]}
+                    onPress={() => setFilterStatus('low_stock')}
+                  >
+                    <Text style={[styles.filterChipText, filterStatus === 'low_stock' && styles.filterChipTextActive]}>
+                      Low Stock
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.filterChip, filterStatus === 'out_of_stock' && styles.filterChipActive]}
+                    onPress={() => setFilterStatus('out_of_stock')}
+                  >
+                    <Text style={[styles.filterChipText, filterStatus === 'out_of_stock' && styles.filterChipTextActive]}>
+                      Out of Stock
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+              {/* Product List inside card */}
+              <ScrollView
+                style={styles.cardListScroll}
+                showsVerticalScrollIndicator={true}
+                nestedScrollEnabled
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+              >
+                {filteredProducts.length === 0 ? (
+                  <View style={styles.emptyStateCard}>
+                    <Ionicons name="cube-outline" size={48} color="#9CA3AF" />
+                    <Text style={styles.emptyStateTitle}>No Products</Text>
+                    <Text style={styles.emptyStateText}>
+                      Add products to track your stock levels
+                    </Text>
+                    <TouchableOpacity style={styles.emptyStateButton} onPress={openAddStockModal}>
+                      <Text style={styles.emptyStateButtonText}>Add Stock</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View style={styles.cardListContent}>
+                    {filteredProducts.map((product) => renderProductGrid(product))}
+                  </View>
+                )}
+              </ScrollView>
+            </>
           )}
-        </ScrollView>
+
+          {activeTab === 'movements' && (
+            <ScrollView
+              style={styles.cardListScroll}
+              nestedScrollEnabled
+              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+            >
+              {movements.length === 0 ? (
+                <View style={styles.emptyStateCard}>
+                  <Ionicons name="swap-horizontal-outline" size={48} color="#9CA3AF" />
+                  <Text style={styles.emptyStateTitle}>No Stock Movements</Text>
+                  <Text style={styles.emptyStateText}>
+                    Stock movements will appear here when you add or adjust stock
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.cardListContent}>
+                  {movements.map((movement) => {
+                    const iconInfo = getMovementIcon(movement.movement_type);
+                    return (
+                      <View key={movement.id} style={styles.movementCard}>
+                        <View style={[styles.movementIcon, { backgroundColor: iconInfo.color + '20' }]}>
+                          <Ionicons name={iconInfo.name as any} size={24} color={iconInfo.color} />
+                        </View>
+                        <View style={styles.movementInfo}>
+                          <Text style={styles.movementProduct}>{movement.product_name}</Text>
+                          <Text style={styles.movementDetails}>
+                            {movement.movement_type === 'in' ? '+' : movement.movement_type === 'out' ? '-' : ''}
+                            {Math.abs(movement.quantity)} units • {movement.reason || 'No reason'}
+                          </Text>
+                          <Text style={styles.movementMeta}>
+                            {new Date(movement.created_at).toLocaleDateString()} • {movement.created_by_name}
+                          </Text>
+                        </View>
+                        <View style={styles.movementStockChange}>
+                          <Text style={styles.stockChangeLabel}>Stock</Text>
+                          <Text style={styles.stockChangeValue}>
+                            {movement.previous_stock} → {movement.new_stock}
+                          </Text>
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              )}
+            </ScrollView>
+          )}
+        </View>
+        </>
       )}
 
       {/* Add Stock Modal */}
@@ -839,53 +1063,124 @@ export default function StockManagement() {
                 style={styles.searchInput}
                 placeholder="Search products..."
                 value={productSearchQuery}
-                onChangeText={setProductSearchQuery}
+                onChangeText={(text) => { setProductSearchQuery(text); setModalProductPage(1); }}
                 placeholderTextColor="#9CA3AF"
               />
             </View>
 
-            <ScrollView style={styles.productSelectionList} nestedScrollEnabled>
-              {filteredProductsForSelection.length === 0 ? (
-                <View style={styles.noProductsFound}>
-                  <Text style={styles.noProductsText}>No products found for "{productSearchQuery}"</Text>
-                  <Pressable 
-                    style={styles.createProductQuickBtn} 
-                    onPress={() => openNewProductModal(productSearchQuery)}
+            {/* Product List - Infinite scroll (mobile) or pagination (web) */}
+            {(() => {
+              const allSortedItems = filteredProductsForSelection;
+              
+              // For mobile: show items up to current page
+              // For web: show items for current page only
+              const displayItems = isWeb 
+                ? allSortedItems.slice((modalProductPage - 1) * ITEMS_PER_PAGE, modalProductPage * ITEMS_PER_PAGE)
+                : allSortedItems.slice(0, modalProductPage * ITEMS_PER_PAGE);
+              
+              const totalPages = Math.ceil(allSortedItems.length / ITEMS_PER_PAGE);
+              const hasMoreItems = modalProductPage * ITEMS_PER_PAGE < allSortedItems.length;
+              
+              return (
+                <>
+                  <ScrollView 
+                    style={styles.productSelectionList} 
+                    nestedScrollEnabled
+                    onScroll={!isWeb ? handleProductListScroll : undefined}
+                    scrollEventThrottle={16}
                   >
-                    <Ionicons name="add-circle" size={20} color="#FFFFFF" />
-                    <Text style={styles.createProductQuickBtnText}>Create "{productSearchQuery}"</Text>
-                  </Pressable>
-                </View>
-              ) : (
-                filteredProductsForSelection.slice(0, 10).map((product) => (
-                  <TouchableOpacity
-                    key={product.id}
-                    style={styles.productSelectionItem}
-                    onPress={() => {
-                      console.log('Product selection pressed:', product.name, 'has_variants:', product.has_variants);
-                      selectProduct(product);
-                    }}
-                    activeOpacity={0.6}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  >
-                    <View style={styles.productSelectionInfo}>
-                      <Text style={styles.productSelectionName}>{product.name}</Text>
-                      <Text style={styles.productSelectionSku}>SKU: {product.sku}</Text>
-                      {product.has_variants && (
-                        <View style={styles.productVariantBadge}>
-                          <Ionicons name="layers-outline" size={10} color="#8B5CF6" />
-                          <Text style={styles.productVariantBadgeText}>Variants</Text>
-                        </View>
-                      )}
+                    {displayItems.length === 0 && productSearchQuery.length > 0 ? (
+                      <View style={styles.noProductsFound}>
+                        <Text style={styles.noProductsText}>No products found for "{productSearchQuery}"</Text>
+                        <Pressable 
+                          style={styles.createProductQuickBtn} 
+                          onPress={() => openNewProductModal(productSearchQuery)}
+                        >
+                          <Ionicons name="add-circle" size={20} color="#FFFFFF" />
+                          <Text style={styles.createProductQuickBtnText}>Create "{productSearchQuery}"</Text>
+                        </Pressable>
+                      </View>
+                    ) : displayItems.length === 0 ? (
+                      <View style={styles.noProductsFound}>
+                        <Text style={styles.noProductsText}>No products available</Text>
+                      </View>
+                    ) : (
+                      <>
+                        {displayItems.map((product) => (
+                          <TouchableOpacity
+                            key={product.id}
+                            style={styles.productSelectionItem}
+                            onPress={() => {
+                              console.log('Product selection pressed:', product.name, 'has_variants:', product.has_variants);
+                              selectProduct(product);
+                            }}
+                            activeOpacity={0.6}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                          >
+                            <View style={styles.productSelectionInfo}>
+                              <Text style={styles.productSelectionName}>{product.name}</Text>
+                              <Text style={styles.productSelectionSku}>SKU: {product.sku}</Text>
+                              {product.has_variants && (
+                                <View style={styles.productVariantBadge}>
+                                  <Ionicons name="layers-outline" size={10} color="#8B5CF6" />
+                                  <Text style={styles.productVariantBadgeText}>Variants</Text>
+                                </View>
+                              )}
+                            </View>
+                            <View style={styles.productSelectionStock}>
+                              <Text style={styles.productSelectionQty}>{formatNumber(product.stock_quantity)}</Text>
+                              <Text style={styles.productSelectionQtyLabel}>in stock</Text>
+                            </View>
+                          </TouchableOpacity>
+                        ))}
+                        
+                        {/* Mobile: Loading indicator at bottom */}
+                        {!isWeb && loadingMoreProducts && (
+                          <View style={styles.loadingMoreContainer}>
+                            <ActivityIndicator size="small" color="#2563EB" />
+                            <Text style={styles.loadingMoreText}>Loading more...</Text>
+                          </View>
+                        )}
+                        
+                        {/* Mobile: "Load More" hint */}
+                        {!isWeb && hasMoreItems && !loadingMoreProducts && (
+                          <TouchableOpacity style={styles.loadMoreHint} onPress={loadMoreProducts}>
+                            <Text style={styles.loadMoreHintText}>Scroll down or tap to load more ({allSortedItems.length - displayItems.length} more)</Text>
+                          </TouchableOpacity>
+                        )}
+                      </>
+                    )}
+                  </ScrollView>
+                  
+                  {/* Web: Pagination Controls */}
+                  {isWeb && allSortedItems.length > ITEMS_PER_PAGE && (
+                    <View style={styles.paginationContainer}>
+                      <TouchableOpacity 
+                        style={[styles.paginationBtn, modalProductPage === 1 && styles.paginationBtnDisabled]}
+                        onPress={() => setModalProductPage(p => Math.max(1, p - 1))}
+                        disabled={modalProductPage === 1}
+                      >
+                        <Ionicons name="chevron-back" size={18} color={modalProductPage === 1 ? '#D1D5DB' : '#2563EB'} />
+                        <Text style={[styles.paginationBtnText, modalProductPage === 1 && styles.paginationBtnTextDisabled]}>Prev</Text>
+                      </TouchableOpacity>
+                      
+                      <Text style={styles.paginationInfo}>
+                        Page {modalProductPage} of {totalPages} ({allSortedItems.length} items)
+                      </Text>
+                      
+                      <TouchableOpacity 
+                        style={[styles.paginationBtn, modalProductPage >= totalPages && styles.paginationBtnDisabled]}
+                        onPress={() => setModalProductPage(p => Math.min(totalPages, p + 1))}
+                        disabled={modalProductPage >= totalPages}
+                      >
+                        <Text style={[styles.paginationBtnText, modalProductPage >= totalPages && styles.paginationBtnTextDisabled]}>Next</Text>
+                        <Ionicons name="chevron-forward" size={18} color={modalProductPage >= totalPages ? '#D1D5DB' : '#2563EB'} />
+                      </TouchableOpacity>
                     </View>
-                    <View style={styles.productSelectionStock}>
-                      <Text style={styles.productSelectionQty}>{formatNumber(product.stock_quantity)}</Text>
-                      <Text style={styles.productSelectionQtyLabel}>in stock</Text>
-                    </View>
-                  </TouchableOpacity>
-                ))
-              )}
-            </ScrollView>
+                  )}
+                </>
+              );
+            })()}
 
             <Pressable style={styles.addNewProductButton} onPress={() => openNewProductModal(productSearchQuery)}>
               <Ionicons name="add-circle-outline" size={20} color="#2563EB" />
@@ -1484,6 +1779,29 @@ const styles = StyleSheet.create({
   filterChipTextActive: {
     color: '#FFFFFF',
   },
+  // Main Content Card (Mobile Only)
+  mainContentCard: {
+    backgroundColor: '#EEF2FF',  // Light blue tint for Retail Pro
+    marginHorizontal: 16,
+    marginTop: 16,
+    borderRadius: 20,
+    overflow: 'hidden',
+    maxHeight: 340,
+  },
+  filterRowCard: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 8,
+  },
+  cardListScroll: {
+    flex: 1,
+    maxHeight: 220,
+  },
+  cardListContent: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+  },
   content: {
     flex: 1,
     paddingHorizontal: 16,
@@ -1510,6 +1828,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#6B7280',
     textTransform: 'uppercase',
+    paddingHorizontal: 8,
   },
   tableRow: {
     flexDirection: 'row',
@@ -1550,15 +1869,18 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#374151',
     textAlign: 'right',
+    paddingHorizontal: 8,
   },
   tableCellStatus: {
     width: 100,
     alignItems: 'center',
+    paddingHorizontal: 8,
   },
   tableCellActions: {
-    width: 60,
+    width: 80,
     flexDirection: 'row',
     justifyContent: 'flex-end',
+    paddingHorizontal: 8,
   },
   tableActionButton: {
     width: 36,
@@ -1578,12 +1900,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   productCard: {
+    width: 350,
+    flexGrow: 1,
+    flexShrink: 0,
+    maxWidth: 450,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 16,
-    marginBottom: 12,
+    marginBottom: 0,
   },
   productInfo: {
     flex: 1,
@@ -1677,6 +2003,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 60,
   },
+  emptyStateCard: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
   emptyStateTitle: {
     fontSize: 18,
     fontWeight: '600',
@@ -1741,8 +2072,73 @@ const styles = StyleSheet.create({
     color: '#111827',
   },
   productSelectionList: {
-    maxHeight: 250,
+    maxHeight: 400,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+  },
+  // Pagination styles
+  paginationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  paginationBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#2563EB',
+    gap: 4,
+  },
+  paginationBtnDisabled: {
+    borderColor: '#E5E7EB',
+    backgroundColor: '#F9FAFB',
+  },
+  paginationBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#2563EB',
+  },
+  paginationBtnTextDisabled: {
+    color: '#D1D5DB',
+  },
+  paginationInfo: {
+    fontSize: 13,
+    color: '#6B7280',
+  },
+  // Loading more styles (mobile)
+  loadingMoreContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    gap: 8,
+  },
+  loadingMoreText: {
+    fontSize: 13,
+    color: '#6B7280',
+  },
+  loadMoreHint: {
+    alignItems: 'center',
+    paddingVertical: 12,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    marginTop: 8,
+  },
+  loadMoreHintText: {
+    fontSize: 12,
+    color: '#2563EB',
+    fontWeight: '500',
   },
   productSelectionItem: {
     flexDirection: 'row',
@@ -2282,5 +2678,181 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     borderWidth: 1,
     borderColor: '#E5E7EB',
+  },
+  // Web Page Header styles
+  webPageHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  webPageTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  webPageSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 4,
+  },
+  webCreateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    gap: 8,
+  },
+  webCreateBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  // Web Content wrapper
+  webContentWrapper: {
+    flex: 1,
+    padding: 24,
+    backgroundColor: '#F3F4F6',
+  },
+  webWhiteCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    overflow: 'hidden',
+  },
+  webCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  webTabs: {
+    flexDirection: 'row',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 10,
+    padding: 4,
+  },
+  webTab: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  },
+  webTabActive: {
+    backgroundColor: '#2563EB',
+  },
+  webTabText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6B7280',
+  },
+  webTabTextActive: {
+    color: '#FFFFFF',
+  },
+  webFilterGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  webStatusTabs: {
+    flexDirection: 'row',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    padding: 2,
+  },
+  webStatusTab: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 6,
+  },
+  webStatusTabActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  webStatusTabText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#6B7280',
+  },
+  webStatusTabTextActive: {
+    color: '#111827',
+  },
+  webSearchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    minWidth: 200,
+    gap: 8,
+  },
+  webSearchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#111827',
+    outlineStyle: 'none',
+  },
+  webStatsRow: {
+    flexDirection: 'row',
+    padding: 16,
+    gap: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    backgroundColor: '#FAFAFA',
+  },
+  webStatItem: {
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  webStatValue: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  webStatLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  webListContainer: {
+    flex: 1,
+    padding: 16,
+  },
+  webEmptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 80,
+  },
+  webEmptyText: {
+    fontSize: 16,
+    color: '#6B7280',
+    marginTop: 16,
+  },
+  webGridList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
   },
 });

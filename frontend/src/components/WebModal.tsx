@@ -221,7 +221,7 @@ const styles = StyleSheet.create({
     marginLeft: 16,
   },
   webModalContent: {
-    maxHeight: 500,
+    maxHeight: 600,
   },
   webModalContentContainer: {
     padding: 24,

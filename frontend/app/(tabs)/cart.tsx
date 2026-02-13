@@ -12,6 +12,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,11 +20,18 @@ import { useRouter } from 'expo-router';
 import { useCartStore } from '../../src/store/cartStore';
 import { useBusinessStore } from '../../src/store/businessStore';
 import { useAuthStore } from '../../src/store/authStore';
+import { useOfflineStore } from '../../src/store/offlineStore';
 import { ordersApi, customersApi, promotionsApi, productsApi, categoriesApi } from '../../src/api/client';
 import CartItem from '../../src/components/CartItem';
 import Button from '../../src/components/Button';
 import Input from '../../src/components/Input';
 import EmptyState from '../../src/components/EmptyState';
+import ConfirmationModal from '../../src/components/ConfirmationModal';
+import OfflineIndicator from '../../src/components/OfflineIndicator';
+import PostPurchaseReferralPopup from '../../src/components/PostPurchaseReferralPopup';
+import { useModal } from '../../src/context/ModalContext';
+import { printerService, ReceiptData } from '../../src/services/printerService';
+import syncService from '../../src/services/syncService';
 
 const isWeb = Platform.OS === 'web';
 
@@ -56,6 +64,12 @@ const WebPressable = ({ onPress, style, children, disabled, ...props }: any) => 
 
 type PaymentMethod = 'cash' | 'card' | 'mobile_money' | 'credit';
 
+// Split payment interface
+interface SplitPayment {
+  method: PaymentMethod;
+  amount: number;
+}
+
 interface Customer {
   id: string;
   name: string;
@@ -80,6 +94,9 @@ interface PromotionResult {
 
 export default function Cart() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const isWideScreen = width >= 768; // Show side-by-side layout on tablets and desktop
+  
   const {
     items,
     customer_id,
@@ -95,15 +112,23 @@ export default function Cart() {
 
   const { formatCurrency, settings, getLastNineDigits } = useBusinessStore();
   const { user, logout } = useAuthStore();
+  const { isOnline, offlineModeEnabled, addPendingTransaction, cachedProducts, cacheProducts } = useOfflineStore();
   const isSalesRole = user?.role === 'sales_staff' || user?.role === 'front_desk';
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
+  const [splitPaymentMode, setSplitPaymentMode] = useState(false);
+  const [splitPayments, setSplitPayments] = useState<SplitPayment[]>([]);
+  const [splitPaymentAmount, setSplitPaymentAmount] = useState('');
   const [showCustomerModal, setShowCustomerModal] = useState(false);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [processing, setProcessing] = useState(false);
   
   // Confirmation modal for completing sale
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  
+  // Post-purchase referral popup
+  const [showReferralPopup, setShowReferralPopup] = useState(false);
+  const [lastOrderTotal, setLastOrderTotal] = useState(0);
   
   // Product browsing modal for sales staff
   const [showProductsModal, setShowProductsModal] = useState(false);
@@ -114,6 +139,11 @@ export default function Cart() {
   const [loadingProducts, setLoadingProducts] = useState(false);
   const [productSearch, setProductSearch] = useState('');
   
+  // Inline customer search
+  const [customerSearchQuery, setCustomerSearchQuery] = useState('');
+  const [customerSearchResults, setCustomerSearchResults] = useState<Customer[]>([]);
+  const [showNewCustomerModal, setShowNewCustomerModal] = useState(false);
+  
   // Phone search and add customer state
   const [phoneSearch, setPhoneSearch] = useState('');
   const [searching, setSearching] = useState(false);
@@ -122,6 +152,7 @@ export default function Cart() {
   
   // New customer form fields
   const [newCustomerName, setNewCustomerName] = useState('');
+  const [newCustomerPhone, setNewCustomerPhone] = useState('');
   const [newCustomerEmail, setNewCustomerEmail] = useState('');
   const [newCustomerAddress, setNewCustomerAddress] = useState('');
   const [savingCustomer, setSavingCustomer] = useState(false);
@@ -144,6 +175,59 @@ export default function Cart() {
   // Variant selection state
   const [showVariantModal, setShowVariantModal] = useState(false);
   const [selectedProductForVariant, setSelectedProductForVariant] = useState<any>(null);
+
+  // Barcode scanner state - using global modal context
+  const { openBarcodeScanner } = useModal();
+  
+  // Handle barcode scan - called from global modal
+  const handleBarcodeScan = useCallback(async (barcode: string) => {
+    console.log('Barcode scanned:', barcode);
+    
+    // First try to find in already loaded products
+    let foundProduct = products.find(
+      (p: any) => p.barcode === barcode || p.sku === barcode
+    );
+    
+    // Also check variants
+    if (!foundProduct) {
+      foundProduct = products.find((p: any) => 
+        p.variants?.some((v: any) => v.barcode === barcode || v.sku === barcode)
+      );
+    }
+    
+    // Check offline cache if not found and offline
+    if (!foundProduct && !isOnline && cachedProducts.length > 0) {
+      const offlineStore = useOfflineStore.getState();
+      foundProduct = offlineStore.getProductByBarcode(barcode) || 
+                     offlineStore.getProductBySku(barcode);
+    }
+    
+    if (!foundProduct && isOnline) {
+      // If not in loaded products, search via API
+      try {
+        const response = await productsApi.getAll({ search: barcode });
+        foundProduct = response.data.find(
+          (p: any) => p.barcode === barcode || p.sku === barcode ||
+          p.variants?.some((v: any) => v.barcode === barcode || v.sku === barcode)
+        );
+      } catch (error) {
+        console.log('Error searching for product:', error);
+      }
+    }
+    
+    if (foundProduct) {
+      handleProductPress(foundProduct);
+    } else {
+      Alert.alert(
+        'Product Not Found',
+        `No product found with barcode: ${barcode}`,
+        [
+          { text: 'Scan Again', onPress: () => openBarcodeScanner(handleBarcodeScan) },
+          { text: 'OK', style: 'cancel' },
+        ]
+      );
+    }
+  }, [products, openBarcodeScanner, isOnline, cachedProducts]);
 
   const subtotal = getSubtotal();
   const tax = getTaxTotal();
@@ -312,9 +396,25 @@ export default function Cart() {
 
   const resetNewCustomerForm = () => {
     setNewCustomerName('');
+    setNewCustomerPhone('');
     setNewCustomerEmail('');
     setNewCustomerAddress('');
     setFormError('');
+  };
+
+  // Inline customer search function
+  const searchCustomers = async (query: string) => {
+    if (query.length < 3) {
+      setCustomerSearchResults([]);
+      return;
+    }
+    try {
+      const response = await customersApi.getAll({ search: query });
+      setCustomerSearchResults(response.data.slice(0, 5));
+    } catch (error) {
+      console.log('Customer search error:', error);
+      setCustomerSearchResults([]);
+    }
   };
 
   const searchByPhone = async (phone: string) => {
@@ -442,6 +542,38 @@ export default function Cart() {
     }
   };
 
+  // Create and select customer from popup form
+  const createAndSelectCustomer = async () => {
+    if (!newCustomerName.trim() || !newCustomerPhone.trim()) {
+      Alert.alert('Error', 'Please fill in name and phone number');
+      return;
+    }
+    
+    try {
+      const last9Digits = getLastNineDigits(newCustomerPhone);
+      const fullPhone = `${settings.countryCode}${last9Digits}`;
+      
+      const customerData = {
+        name: newCustomerName.trim(),
+        phone: fullPhone,
+        email: newCustomerEmail.trim() || undefined,
+      };
+      
+      const response = await customersApi.create(customerData);
+      
+      // Set the new customer as selected
+      setCustomer(response.data.id, response.data.name);
+      setShowCustomerModal(false);
+      setShowAddCustomerForm(false);
+      resetNewCustomerForm();
+      
+      Alert.alert('Success', `Customer "${response.data.name}" created and selected!`);
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.detail || 'Failed to create customer';
+      Alert.alert('Error', errorMessage);
+    }
+  };
+
   const loadCustomers = async () => {
     try {
       const response = await customersApi.getAll();
@@ -473,6 +605,15 @@ export default function Cart() {
       return;
     }
     
+    // Validate split payments cover the total
+    if (splitPaymentMode) {
+      const splitTotal = splitPayments.reduce((sum, p) => sum + p.amount, 0);
+      if (Math.abs(splitTotal - total) > 0.01) { // Allow small rounding difference
+        Alert.alert('Payment Error', `Split payments total (${formatCurrency(splitTotal)}) must equal order total (${formatCurrency(total)})`);
+        return;
+      }
+    }
+    
     // Show confirmation modal
     setShowConfirmModal(true);
   };
@@ -481,55 +622,129 @@ export default function Cart() {
     setShowConfirmModal(false);
     setProcessing(true);
 
-    try {
-      const orderData = {
-        customer_id: customer_id,
-        items: items.map((item) => ({
-          product_id: item.product_id,
-          product_name: item.product_name,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-          discount: item.discount,
-          tax_amount: item.tax_amount,
-          subtotal: item.subtotal,
-        })),
-        payments: [
-          {
-            method: paymentMethod,
-            amount: total,
-          },
-        ],
-        discount_total: promoDiscount,
-        tax_total: tax,
-        subtotal: subtotal,
-        total: total,
-        notes: promotionResult?.applied_promotions?.length 
-          ? `Promotions applied: ${promotionResult.applied_promotions.map(p => p.name).join(', ')}`
-          : undefined,
-      };
+    // Build payments array - either split payments or single payment
+    const payments = splitPaymentMode && splitPayments.length > 0
+      ? splitPayments.map(sp => ({
+          method: sp.method,
+          amount: sp.amount,
+        }))
+      : [{
+          method: paymentMethod,
+          amount: total,
+        }];
 
-      const response = await ordersApi.create(orderData);
+    const orderData = {
+      customer_id: customer_id,
+      items: items.map((item) => ({
+        product_id: item.product_id,
+        product_name: item.product_name,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        discount: item.discount,
+        tax_amount: item.tax_amount,
+        subtotal: item.subtotal,
+      })),
+      payments,
+      discount_total: promoDiscount,
+      tax_total: tax,
+      subtotal: subtotal,
+      total: total,
+      notes: promotionResult?.applied_promotions?.length 
+        ? `Promotions applied: ${promotionResult.applied_promotions.map(p => p.name).join(', ')}`
+        : undefined,
+    };
+
+    try {
+      let orderNumber: string;
+      let isOfflineOrder = false;
+      
+      // Check if online or offline
+      if (isOnline) {
+        // Online - process normally
+        const response = await ordersApi.create(orderData);
+        orderNumber = response.data.order_number;
+      } else if (offlineModeEnabled) {
+        // Offline mode - queue for later sync
+        isOfflineOrder = true;
+        orderNumber = `OFF-${Date.now().toString(36).toUpperCase()}`;
+        
+        // Add to pending transactions
+        addPendingTransaction({
+          type: 'sale',
+          data: {
+            ...orderData,
+            offline_order_number: orderNumber,
+            created_at: new Date().toISOString(),
+          },
+        });
+      } else {
+        throw new Error('You are offline. Please check your internet connection.');
+      }
+      
+      // Print receipt if printer is configured
+      try {
+        const printerConfig = printerService.getConfig();
+        if (printerConfig?.enabled) {
+          const now = new Date();
+          const receiptData: ReceiptData = {
+            businessName: settings.businessName || 'Retail Pro',
+            businessAddress: settings.address,
+            businessPhone: settings.phone,
+            taxId: settings.taxId,
+            receiptNumber: orderNumber,
+            date: now.toLocaleDateString(),
+            time: now.toLocaleTimeString(),
+            cashier: user?.name || 'Staff',
+            items: items.map(item => ({
+              name: item.product_name,
+              quantity: item.quantity,
+              unitPrice: item.unit_price,
+              total: item.subtotal,
+              discount: item.discount,
+            })),
+            subtotal: subtotal,
+            taxTotal: tax,
+            discount: promoDiscount,
+            grandTotal: total,
+            paymentMethod: paymentMethod,
+            amountPaid: total,
+            change: 0,
+            customerName: customer_name || undefined,
+          };
+          
+          await printerService.printReceipt(receiptData, settings.currency || 'KES');
+        }
+      } catch (printError) {
+        console.log('Receipt printing failed:', printError);
+        // Don't fail the order if printing fails
+      }
       
       clearCart();
       setPromotionResult(null);
       
+      // Store the order total for the referral popup
+      setLastOrderTotal(total);
+      
       const savedAmount = promoDiscount > 0 ? `\nYou saved ${formatCurrency(promoDiscount)}!` : '';
+      const offlineNote = isOfflineOrder ? '\n\n(Saved offline - will sync when connected)' : '';
+      
       Alert.alert(
         'Order Complete',
-        `Order ${response.data.order_number} has been created successfully!${savedAmount}`,
+        `Order ${orderNumber} has been created successfully!${savedAmount}${offlineNote}`,
         [
           {
             text: 'View Orders',
             onPress: () => router.push('/(tabs)/orders'),
           },
           {
-            text: 'New Sale',
-            onPress: () => router.push('/(tabs)/products'),
+            text: 'Share & Earn',
+            onPress: () => setShowReferralPopup(true),
+            style: 'default',
           },
         ]
       );
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.detail || 'Failed to create order');
+      Alert.alert('Error', error.message || error.response?.data?.detail || 'Failed to create order');
     } finally {
       setProcessing(false);
     }
@@ -668,14 +883,42 @@ export default function Cart() {
 
     return (
       <SafeAreaView style={styles.container}>
-        {/* Header */}
+        {/* Top Proceed Bar - Shows when items in cart (Mobile Only) */}
+        {items.length > 0 && !isWideScreen && (
+          <Pressable 
+            style={({ pressed }) => [
+              styles.topProceedBar,
+              pressed && styles.topProceedBarPressed,
+              isWeb && { cursor: 'pointer' } as any
+            ]}
+            onPress={() => {
+              console.log('Checkout pressed - navigating to checkout');
+              setShowProductsModal(false); // Close products modal when going to checkout
+              setShowCheckout(true);
+            }}
+          >
+            <View style={styles.topProceedLeft}>
+              <View style={styles.topProceedBadge}>
+                <Text style={styles.topProceedBadgeText}>{items.reduce((sum, i) => sum + i.quantity, 0)}</Text>
+              </View>
+              <Text style={styles.topProceedItemText} numberOfLines={1}>
+                {items.length <= 2 
+                  ? items.map(i => `${i.product_name} x${i.quantity}`).join(', ')
+                  : `${items[0].product_name} x${items[0].quantity} +${items.length - 1} more`
+                }
+              </Text>
+            </View>
+            <Text style={styles.topProceedTotal}>{formatCurrency(subtotal)}</Text>
+            <View style={styles.topProceedButton}>
+              <Text style={styles.topProceedButtonText}>Checkout</Text>
+              <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
+            </View>
+          </Pressable>
+        )}
+
+        {/* Header with Logout */}
         <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <Text style={styles.title}>Add Sale</Text>
-            {isSalesRole && user?.name && (
-              <Text style={styles.staffName}>👤 {user.name}</Text>
-            )}
-          </View>
+          <Text style={styles.title}>New Sale</Text>
           {isSalesRole && (
             <WebPressable 
               style={styles.logoutButton}
@@ -686,7 +929,44 @@ export default function Cart() {
           )}
         </View>
 
-        {/* Search Bar */}
+        {/* Customer Selection Card - Below New Sale */}
+        <TouchableOpacity 
+          style={[
+            styles.customerCard,
+            customer_name && styles.customerCardSelected,
+          ]}
+          onPress={() => {
+            console.log('Customer card pressed - opening modal');
+            setShowCustomerModal(true);
+          }}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.customerCardIcon, customer_name && styles.customerCardIconSelected]}>
+            <Ionicons name="person" size={20} color={customer_name ? "#FFFFFF" : "#6B7280"} />
+          </View>
+          <View style={styles.customerCardInfo}>
+            <Text style={styles.customerCardLabel}>Customer</Text>
+            <Text style={[styles.customerCardValue, customer_name && styles.customerCardValueSelected]}>
+              {customer_name || 'Tap to select customer'}
+            </Text>
+          </View>
+          {customer_name ? (
+            <TouchableOpacity 
+              onPress={(e) => { 
+                e.stopPropagation(); 
+                setCustomer(null, null); 
+              }}
+              style={styles.customerCardClear}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Ionicons name="close-circle" size={22} color="#6B7280" />
+            </TouchableOpacity>
+          ) : (
+            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+          )}
+        </TouchableOpacity>
+
+        {/* Search Bar with Barcode Scanner */}
         <View style={styles.searchContainer}>
           <Ionicons name="search" size={20} color="#9CA3AF" />
           <TextInput
@@ -701,6 +981,14 @@ export default function Cart() {
               <Ionicons name="close-circle" size={20} color="#9CA3AF" />
             </TouchableOpacity>
           )}
+          <TouchableOpacity 
+            style={styles.scanButton}
+            onPress={() => openBarcodeScanner(handleBarcodeScan)}
+            activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Ionicons name="barcode-outline" size={22} color="#F59E0B" />
+          </TouchableOpacity>
         </View>
 
         {/* Category Filter */}
@@ -729,79 +1017,261 @@ export default function Cart() {
           ))}
         </ScrollView>
 
-        {/* Products Grid */}
-        {loadingProducts ? (
-          <ActivityIndicator size="large" color="#2563EB" style={{ marginTop: 40 }} />
-        ) : (
-          <ScrollView 
-            style={styles.productsGridContainer}
-            contentContainerStyle={[
-              styles.productsGrid,
-              items.length > 0 && { paddingBottom: 120 }
-            ]}
-          >
-            {filteredProducts.map(renderProductCard)}
-            {filteredProducts.length === 0 && (
-              <Text style={styles.noProductsText}>No products found</Text>
-            )}
-          </ScrollView>
-        )}
-
-        {/* Floating Cart Summary Bar */}
-        {items.length > 0 && (
-          <View style={styles.floatingCartBar}>
-            <View style={styles.cartBarLeft}>
-              <View style={styles.cartItemsPreview}>
-                {displayItems.map((item, index) => (
-                  <Text key={item.product_id || index} style={styles.cartItemLine}>
-                    {item.product_name} <Text style={styles.cartItemQty}>x{item.quantity}</Text>
-                  </Text>
-                ))}
-                {remainingCount > 0 && (
-                  <Text style={styles.cartItemMore}>+{remainingCount} more item(s)</Text>
-                )}
-              </View>
-              <Text style={styles.cartBarTotal}>{formatFullCurrency(subtotal)}</Text>
-            </View>
-            <WebPressable
-              style={styles.proceedButton}
-              onPress={handleProceedToCheckout}
+        {/* Main Content Area - Responsive Layout */}
+        <View style={[styles.mainContentArea, isWideScreen && styles.mainContentAreaWide]}>
+          {/* Products Grid */}
+          {loadingProducts ? (
+            <ActivityIndicator size="large" color="#2563EB" style={{ marginTop: 40, flex: 1 }} />
+          ) : (
+            <ScrollView 
+              style={[styles.productsGridContainer, isWideScreen && styles.productsGridContainerWide]}
+              contentContainerStyle={[
+                styles.productsGrid,
+                !isWideScreen && items.length > 0 && { paddingBottom: 20 }
+              ]}
             >
-              <Text style={styles.proceedButtonText}>Proceed</Text>
-              <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
-            </WebPressable>
-          </View>
-        )}
+              {filteredProducts.map(renderProductCard)}
+              {filteredProducts.length === 0 && (
+                <Text style={styles.noProductsText}>No products found</Text>
+              )}
+            </ScrollView>
+          )}
+
+          {/* Desktop/Tablet: Side Cart Panel */}
+          {isWideScreen && items.length > 0 && (
+            <View style={styles.sideCartPanel}>
+              <View style={styles.sideCartHeader}>
+                <Text style={styles.sideCartTitle}>Cart ({items.reduce((sum, i) => sum + i.quantity, 0)} items)</Text>
+                <TouchableOpacity onPress={handleClearCartPress}>
+                  <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                </TouchableOpacity>
+              </View>
+              
+              <ScrollView style={styles.sideCartItems} showsVerticalScrollIndicator={false}>
+                {items.map((item) => (
+                  <View key={item.product_id} style={styles.sideCartItem}>
+                    <View style={styles.sideCartItemInfo}>
+                      <Text style={styles.sideCartItemName} numberOfLines={2}>{item.product_name}</Text>
+                      <Text style={styles.sideCartItemPrice}>{formatCurrency(item.unit_price)}</Text>
+                    </View>
+                    <View style={styles.sideCartItemQty}>
+                      <TouchableOpacity 
+                        style={styles.sideCartQtyBtn}
+                        onPress={() => updateQuantity(item.product_id, item.quantity - 1)}
+                      >
+                        <Ionicons name="remove" size={14} color="#374151" />
+                      </TouchableOpacity>
+                      <Text style={styles.sideCartQtyText}>{item.quantity}</Text>
+                      <TouchableOpacity 
+                        style={styles.sideCartQtyBtn}
+                        onPress={() => updateQuantity(item.product_id, item.quantity + 1)}
+                      >
+                        <Ionicons name="add" size={14} color="#374151" />
+                      </TouchableOpacity>
+                    </View>
+                    <Text style={styles.sideCartItemTotal}>{formatCurrency(item.subtotal)}</Text>
+                  </View>
+                ))}
+              </ScrollView>
+              
+              {/* Promotions in side cart */}
+              {promotionResult && promotionResult.applied_promotions.length > 0 && (
+                <View style={styles.sideCartPromos}>
+                  {promotionResult.applied_promotions.map((promo, idx) => (
+                    <View key={idx} style={styles.sideCartPromoItem}>
+                      <Ionicons name="pricetag" size={12} color="#10B981" />
+                      <Text style={styles.sideCartPromoText}>{promo.name}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+              
+              <View style={styles.sideCartSummary}>
+                <View style={styles.sideCartRow}>
+                  <Text style={styles.sideCartLabel}>Subtotal</Text>
+                  <Text style={styles.sideCartValue}>{formatCurrency(subtotal)}</Text>
+                </View>
+                {tax > 0 && (
+                  <View style={styles.sideCartRow}>
+                    <Text style={styles.sideCartLabel}>Tax</Text>
+                    <Text style={styles.sideCartValue}>{formatCurrency(tax)}</Text>
+                  </View>
+                )}
+                {promoDiscount > 0 && (
+                  <View style={styles.sideCartRow}>
+                    <Text style={[styles.sideCartLabel, { color: '#10B981' }]}>Discount</Text>
+                    <Text style={[styles.sideCartValue, { color: '#10B981' }]}>-{formatCurrency(promoDiscount)}</Text>
+                  </View>
+                )}
+                <View style={styles.sideCartDivider} />
+                <View style={styles.sideCartRow}>
+                  <Text style={styles.sideCartTotalLabel}>Total</Text>
+                  <Text style={styles.sideCartTotalValue}>{formatCurrency(total)}</Text>
+                </View>
+              </View>
+              
+              <TouchableOpacity 
+                style={styles.sideCartCheckoutBtn}
+                onPress={() => {
+                  setShowProductsModal(false);
+                  setShowCheckout(true);
+                }}
+                activeOpacity={0.9}
+              >
+                <Ionicons name="card-outline" size={20} color="#FFFFFF" />
+                <Text style={styles.sideCartCheckoutText}>Proceed to Checkout</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
 
         {/* Logout Confirmation Modal */}
-        <Modal
+        <ConfirmationModal
           visible={showLogoutModal}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => setShowLogoutModal(false)}
-        >
-          <View style={styles.logoutModalOverlay}>
-            <View style={styles.logoutModalContent}>
-              <Ionicons name="log-out-outline" size={48} color="#DC2626" />
-              <Text style={styles.logoutModalTitle}>Logout</Text>
-              <Text style={styles.logoutModalMessage}>Are you sure you want to logout?</Text>
-              <View style={styles.logoutModalButtons}>
-                <WebPressable
-                  style={[styles.logoutModalButton, styles.logoutCancelButton]}
-                  onPress={() => setShowLogoutModal(false)}
-                >
-                  <Text style={styles.logoutCancelButtonText}>Cancel</Text>
-                </WebPressable>
-                <WebPressable
-                  style={[styles.logoutModalButton, styles.logoutConfirmButton]}
-                  onPress={confirmLogout}
-                >
-                  <Text style={styles.logoutConfirmButtonText}>Logout</Text>
-                </WebPressable>
+          title="Logout"
+          message="Are you sure you want to logout?"
+          confirmLabel="Logout"
+          cancelLabel="Cancel"
+          onConfirm={confirmLogout}
+          onCancel={() => setShowLogoutModal(false)}
+          variant="danger"
+          icon="log-out-outline"
+        />
+
+        {/* Customer Selection Modal - Popup Style (Also in product grid view) */}
+        {showCustomerModal && (
+          <View style={styles.modalOverlayAbsolute}>
+            <TouchableOpacity style={styles.popupBackdrop} onPress={() => setShowCustomerModal(false)} activeOpacity={1} />
+            <View style={styles.popupContent}>
+              <View style={styles.popupHeader}>
+                <Text style={styles.popupTitle}>
+                  {showAddCustomerForm ? 'Add Customer' : 'Select Customer'}
+                </Text>
+                <TouchableOpacity onPress={() => { setShowCustomerModal(false); setShowAddCustomerForm(false); resetNewCustomerForm(); }}>
+                  <Ionicons name="close" size={24} color="#6B7280" />
+                </TouchableOpacity>
               </View>
+              
+              {!showAddCustomerForm ? (
+                <>
+                  {/* Phone Search */}
+                  <View style={styles.popupSearchRow}>
+                    <View style={styles.popupCountryCode}>
+                      <Text style={styles.popupCountryCodeText}>{settings.countryCode}</Text>
+                    </View>
+                    <TextInput
+                      style={styles.popupSearchInput}
+                      placeholder="Enter phone number"
+                      value={phoneSearch}
+                      onChangeText={searchByPhone}
+                      keyboardType="phone-pad"
+                      autoFocus
+                      placeholderTextColor="#9CA3AF"
+                    />
+                    {searching && <ActivityIndicator size="small" color="#3B82F6" />}
+                  </View>
+                  
+                  {/* Search Result */}
+                  {searchResult && (
+                    <TouchableOpacity
+                      style={styles.popupResultItem}
+                      onPress={() => {
+                        setCustomer(searchResult.id, searchResult.name);
+                        setShowCustomerModal(false);
+                        setPhoneSearch('');
+                        setSearchResult(null);
+                      }}
+                    >
+                      <View style={styles.popupResultIcon}>
+                        <Ionicons name="person" size={20} color="#3B82F6" />
+                      </View>
+                      <View style={styles.popupResultInfo}>
+                        <Text style={styles.popupResultName}>{searchResult.name}</Text>
+                        <Text style={styles.popupResultPhone}>{searchResult.phone}</Text>
+                      </View>
+                      <View style={styles.popupSelectBtn}>
+                        <Text style={styles.popupSelectBtnText}>Select</Text>
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                  
+                  {/* No Result - Add New */}
+                  {phoneSearch.length >= 3 && !searchResult && !searching && (
+                    <View style={styles.popupNoResult}>
+                      <Text style={styles.popupNoResultText}>No customer found</Text>
+                      <TouchableOpacity
+                        style={styles.popupAddBtn}
+                        onPress={() => setShowAddCustomerForm(true)}
+                      >
+                        <Ionicons name="add" size={18} color="#FFFFFF" />
+                        <Text style={styles.popupAddBtnText}>Add New Customer</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </>
+              ) : (
+                /* Add Customer Form */
+                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+                  <ScrollView showsVerticalScrollIndicator={false}>
+                    <View style={styles.popupFormField}>
+                      <Text style={styles.popupFormLabel}>Name *</Text>
+                      <TextInput
+                        style={styles.popupFormInput}
+                        placeholder="Customer name"
+                        value={newCustomerName}
+                        onChangeText={setNewCustomerName}
+                        placeholderTextColor="#9CA3AF"
+                      />
+                    </View>
+                    <View style={styles.popupFormField}>
+                      <Text style={styles.popupFormLabel}>Phone *</Text>
+                      <View style={styles.popupSearchRow}>
+                        <View style={styles.popupCountryCode}>
+                          <Text style={styles.popupCountryCodeText}>{settings.countryCode}</Text>
+                        </View>
+                        <TextInput
+                          style={[styles.popupFormInput, { flex: 1 }]}
+                          placeholder="Phone number"
+                          value={newCustomerPhone}
+                          onChangeText={setNewCustomerPhone}
+                          keyboardType="phone-pad"
+                          placeholderTextColor="#9CA3AF"
+                        />
+                      </View>
+                    </View>
+                    <View style={styles.popupFormField}>
+                      <Text style={styles.popupFormLabel}>Email</Text>
+                      <TextInput
+                        style={styles.popupFormInput}
+                        placeholder="Email (optional)"
+                        value={newCustomerEmail}
+                        onChangeText={setNewCustomerEmail}
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                        placeholderTextColor="#9CA3AF"
+                      />
+                    </View>
+                    <View style={styles.popupFormActions}>
+                      <TouchableOpacity
+                        style={styles.popupCancelBtn}
+                        onPress={() => { setShowAddCustomerForm(false); resetNewCustomerForm(); }}
+                      >
+                        <Text style={styles.popupCancelBtnText}>Cancel</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.popupSaveBtn, (!newCustomerName || !newCustomerPhone) && styles.popupSaveBtnDisabled]}
+                        onPress={createAndSelectCustomer}
+                        disabled={!newCustomerName || !newCustomerPhone}
+                      >
+                        <Text style={styles.popupSaveBtnText}>Save & Select</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </ScrollView>
+                </KeyboardAvoidingView>
+              )}
             </View>
           </View>
-        </Modal>
+        )}
 
         {/* Variant Selection Modal - for product grid view */}
         <Modal
@@ -972,13 +1442,122 @@ export default function Cart() {
         )}
 
         <View style={styles.paymentSection}>
-          <Text style={styles.sectionTitle}>Payment Method</Text>
-          <View style={styles.paymentGrid}>
-            <PaymentMethodButton method="cash" icon="cash-outline" label="Cash" />
-            <PaymentMethodButton method="card" icon="card-outline" label="Card" />
-            <PaymentMethodButton method="mobile_money" icon="phone-portrait-outline" label="Mobile" />
-            <PaymentMethodButton method="credit" icon="time-outline" label="Credit" />
+          <View style={styles.paymentHeader}>
+            <Text style={styles.sectionTitle}>Payment Method</Text>
+            <TouchableOpacity 
+              style={styles.splitToggle}
+              onPress={() => {
+                setSplitPaymentMode(!splitPaymentMode);
+                if (!splitPaymentMode) {
+                  setSplitPayments([]);
+                  setSplitPaymentAmount('');
+                }
+              }}
+            >
+              <Ionicons 
+                name={splitPaymentMode ? "checkbox" : "square-outline"} 
+                size={20} 
+                color={splitPaymentMode ? "#2563EB" : "#6B7280"} 
+              />
+              <Text style={[styles.splitToggleText, splitPaymentMode && styles.splitToggleTextActive]}>
+                Split Payment
+              </Text>
+            </TouchableOpacity>
           </View>
+          
+          {!splitPaymentMode ? (
+            <View style={styles.paymentGrid}>
+              <PaymentMethodButton method="cash" icon="cash-outline" label="Cash" />
+              <PaymentMethodButton method="card" icon="card-outline" label="Card" />
+              <PaymentMethodButton method="mobile_money" icon="phone-portrait-outline" label="Mobile" />
+              <PaymentMethodButton method="credit" icon="time-outline" label="Credit" />
+            </View>
+          ) : (
+            <View style={styles.splitPaymentContainer}>
+              {/* Show remaining amount prominently */}
+              <View style={styles.splitRemainingBanner}>
+                <Text style={styles.splitRemainingLabel}>Remaining to pay:</Text>
+                <Text style={styles.splitRemainingAmount}>
+                  {formatCurrency(Math.max(0, total - splitPayments.reduce((sum, p) => sum + p.amount, 0)))}
+                </Text>
+              </View>
+              
+              {/* Added Payments */}
+              {splitPayments.length > 0 && (
+                <View style={styles.splitPaymentsList}>
+                  {splitPayments.map((payment, index) => (
+                    <View key={index} style={styles.splitPaymentItem}>
+                      <Ionicons 
+                        name={payment.method === 'cash' ? 'cash-outline' : 
+                              payment.method === 'card' ? 'card-outline' :
+                              payment.method === 'mobile_money' ? 'phone-portrait-outline' : 'time-outline'} 
+                        size={16} 
+                        color="#374151" 
+                      />
+                      <Text style={styles.splitPaymentMethod}>
+                        {payment.method === 'mobile_money' ? 'Mobile' : payment.method.charAt(0).toUpperCase() + payment.method.slice(1)}
+                      </Text>
+                      <Text style={styles.splitPaymentAmount}>{formatCurrency(payment.amount)}</Text>
+                      <TouchableOpacity onPress={() => setSplitPayments(splitPayments.filter((_, i) => i !== index))}>
+                        <Ionicons name="close-circle" size={18} color="#EF4444" />
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </View>
+              )}
+              
+              {/* Quick Add Buttons - One tap to add full remaining amount */}
+              <View style={styles.splitQuickActions}>
+                {(['cash', 'card', 'mobile_money'] as PaymentMethod[]).map((method) => {
+                  const remaining = total - splitPayments.reduce((sum, p) => sum + p.amount, 0);
+                  if (remaining <= 0) return null;
+                  return (
+                    <TouchableOpacity
+                      key={method}
+                      style={styles.splitQuickBtn}
+                      onPress={() => {
+                        setSplitPayments([...splitPayments, { method, amount: remaining }]);
+                      }}
+                    >
+                      <Ionicons 
+                        name={method === 'cash' ? 'cash-outline' : method === 'card' ? 'card-outline' : 'phone-portrait-outline'} 
+                        size={18} 
+                        color="#3B82F6" 
+                      />
+                      <Text style={styles.splitQuickBtnText}>
+                        {method === 'mobile_money' ? 'Mobile' : method.charAt(0).toUpperCase() + method.slice(1)}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              
+              {/* Custom Amount Input */}
+              <View style={styles.splitCustomRow}>
+                <TextInput
+                  style={styles.splitCustomInput}
+                  value={splitPaymentAmount}
+                  onChangeText={setSplitPaymentAmount}
+                  placeholder="Custom amount"
+                  placeholderTextColor="#9CA3AF"
+                  keyboardType="numeric"
+                />
+                <TouchableOpacity
+                  style={[styles.splitCustomBtn, { backgroundColor: paymentMethod === 'cash' ? '#10B981' : paymentMethod === 'card' ? '#3B82F6' : '#F59E0B' }]}
+                  onPress={() => {
+                    const amount = parseFloat(splitPaymentAmount);
+                    const remaining = total - splitPayments.reduce((sum, p) => sum + p.amount, 0);
+                    if (amount > 0 && amount <= remaining) {
+                      setSplitPayments([...splitPayments, { method: paymentMethod, amount }]);
+                      setSplitPaymentAmount('');
+                    }
+                  }}
+                >
+                  <Text style={styles.splitCustomBtnText}>Add {paymentMethod === 'mobile_money' ? 'Mobile' : paymentMethod.charAt(0).toUpperCase() + paymentMethod.slice(1)}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
         </View>
 
         <View style={styles.summarySection}>
@@ -1030,157 +1609,135 @@ export default function Cart() {
         />
       </View>
 
-      {/* Customer Selection Modal with Phone Search */}
+      {/* Customer Selection Modal - Popup Style */}
       <Modal
         visible={showCustomerModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setShowCustomerModal(false)}
       >
-        <SafeAreaView style={styles.modalContainer}>
-          <KeyboardAvoidingView 
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={{ flex: 1 }}
-          >
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>
-                {showAddCustomerForm ? 'Add New Customer' : 'Find Customer'}
+        <View style={styles.popupOverlay}>
+          <TouchableOpacity style={styles.popupBackdrop} onPress={() => setShowCustomerModal(false)} activeOpacity={1} />
+          <View style={styles.popupContent}>
+            <View style={styles.popupHeader}>
+              <Text style={styles.popupTitle}>
+                {showAddCustomerForm ? 'Add Customer' : 'Select Customer'}
               </Text>
-              <TouchableOpacity onPress={() => setShowCustomerModal(false)}>
-                <Ionicons name="close" size={24} color="#111827" />
+              <TouchableOpacity onPress={() => { setShowCustomerModal(false); setShowAddCustomerForm(false); resetNewCustomerForm(); }}>
+                <Ionicons name="close" size={24} color="#6B7280" />
               </TouchableOpacity>
             </View>
             
-            <ScrollView style={styles.modalContent} keyboardShouldPersistTaps="handled">
-              {/* Phone Number Search */}
-              <View style={styles.phoneSearchSection}>
-                <Text style={styles.phoneSearchLabel}>Enter Customer Phone Number</Text>
-                <View style={styles.phoneInputRow}>
-                  <View style={styles.countryCodeBox}>
-                    <Text style={styles.countryCodeText}>{settings.countryCode}</Text>
+            {!showAddCustomerForm ? (
+              <>
+                {/* Phone Search */}
+                <View style={styles.popupSearchRow}>
+                  <View style={styles.popupCountryCode}>
+                    <Text style={styles.popupCountryCodeText}>{settings.countryCode}</Text>
                   </View>
                   <TextInput
-                    style={styles.phoneInput}
-                    placeholder="Phone number"
+                    style={styles.popupSearchInput}
+                    placeholder="Enter phone number"
                     value={phoneSearch}
                     onChangeText={searchByPhone}
                     keyboardType="phone-pad"
                     autoFocus
+                    placeholderTextColor="#9CA3AF"
                   />
-                  {searching && (
-                    <ActivityIndicator size="small" color="#2563EB" style={styles.searchIndicator} />
-                  )}
+                  {searching && <ActivityIndicator size="small" color="#3B82F6" />}
                 </View>
-              </View>
-
-              {/* Search Result */}
-              {searchResult && !showAddCustomerForm && (
-                <View style={styles.searchResultSection}>
-                  <Text style={styles.searchResultLabel}>Customer Found</Text>
+                
+                {/* Search Result */}
+                {searchResult && (
                   <TouchableOpacity
-                    style={styles.foundCustomerCard}
+                    style={styles.popupResultItem}
                     onPress={() => {
                       setCustomer(searchResult.id, searchResult.name);
                       setShowCustomerModal(false);
+                      setPhoneSearch('');
+                      setSearchResult(null);
                     }}
                   >
-                    <Ionicons name="person-circle" size={40} color="#2563EB" />
-                    <View style={styles.foundCustomerInfo}>
-                      <Text style={styles.foundCustomerName}>{searchResult.name}</Text>
-                      <Text style={styles.foundCustomerPhone}>{searchResult.phone}</Text>
+                    <View style={styles.popupResultIcon}>
+                      <Ionicons name="person" size={20} color="#3B82F6" />
                     </View>
-                    <View style={styles.selectBadge}>
-                      <Text style={styles.selectBadgeText}>Select</Text>
+                    <View style={styles.popupResultInfo}>
+                      <Text style={styles.popupResultName}>{searchResult.name}</Text>
+                      <Text style={styles.popupResultPhone}>{searchResult.phone}</Text>
+                    </View>
+                    <View style={styles.popupSelectBtn}>
+                      <Text style={styles.popupSelectBtnText}>Select</Text>
                     </View>
                   </TouchableOpacity>
+                )}
+                
+                {/* No Result - Add New */}
+                {phoneSearch.length >= 3 && !searchResult && !searching && (
+                  <View style={styles.popupNoResult}>
+                    <Text style={styles.popupNoResultText}>No customer found</Text>
+                    <TouchableOpacity
+                      style={styles.popupAddBtn}
+                      onPress={() => setShowAddCustomerForm(true)}
+                    >
+                      <Ionicons name="add" size={18} color="#FFFFFF" />
+                      <Text style={styles.popupAddBtnText}>Add "{settings.countryCode} {phoneSearch}"</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </>
+            ) : (
+              /* Add Customer Form */
+              <View style={styles.popupForm}>
+                <View style={styles.popupFormPhone}>
+                  <Ionicons name="call" size={16} color="#3B82F6" />
+                  <Text style={styles.popupFormPhoneText}>{settings.countryCode} {phoneSearch}</Text>
                 </View>
-              )}
-
-              {/* No Result - Prompt to add */}
-              {phoneSearch.length >= 3 && !searchResult && !searching && !showAddCustomerForm && (
-                <View style={styles.noResultSection}>
-                  <Ionicons name="person-add-outline" size={48} color="#9CA3AF" />
-                  <Text style={styles.noResultText}>No customer found with this number</Text>
+                
+                {formError && (
+                  <Text style={styles.popupFormError}>{formError}</Text>
+                )}
+                
+                <TextInput
+                  style={styles.popupFormInput}
+                  placeholder="Customer name *"
+                  value={newCustomerName}
+                  onChangeText={setNewCustomerName}
+                  placeholderTextColor="#9CA3AF"
+                />
+                
+                <TextInput
+                  style={styles.popupFormInput}
+                  placeholder="Email (optional)"
+                  value={newCustomerEmail}
+                  onChangeText={setNewCustomerEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  placeholderTextColor="#9CA3AF"
+                />
+                
+                <View style={styles.popupFormActions}>
                   <TouchableOpacity
-                    style={styles.addNewButton}
-                    onPress={() => setShowAddCustomerForm(true)}
+                    style={styles.popupCancelBtn}
+                    onPress={() => { setShowAddCustomerForm(false); resetNewCustomerForm(); }}
                   >
-                    <Ionicons name="add-circle" size={20} color="#FFFFFF" />
-                    <Text style={styles.addNewButtonText}>Add New Customer</Text>
+                    <Text style={styles.popupCancelBtnText}>Cancel</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.popupSaveBtn}
+                    onPress={handleSaveNewCustomer}
+                    disabled={savingCustomer}
+                  >
+                    {savingCustomer ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <Text style={styles.popupSaveBtnText}>Save</Text>
+                    )}
                   </TouchableOpacity>
                 </View>
-              )}
-
-              {/* Add Customer Form */}
-              {showAddCustomerForm && (
-                <View style={styles.addCustomerForm}>
-                  <View style={styles.formPhoneDisplay}>
-                    <Ionicons name="call" size={20} color="#2563EB" />
-                    <Text style={styles.formPhoneText}>{settings.countryCode} {phoneSearch}</Text>
-                  </View>
-
-                  {formError ? (
-                    <View style={styles.errorBox}>
-                      <Ionicons name="alert-circle" size={18} color="#DC2626" />
-                      <Text style={styles.errorText}>{formError}</Text>
-                    </View>
-                  ) : null}
-
-                  <Input
-                    label="Customer Name *"
-                    placeholder="Enter full name"
-                    value={newCustomerName}
-                    onChangeText={setNewCustomerName}
-                    leftIcon={<Ionicons name="person-outline" size={20} color="#6B7280" />}
-                  />
-
-                  <Input
-                    label="Email (Optional)"
-                    placeholder="Enter email address"
-                    value={newCustomerEmail}
-                    onChangeText={setNewCustomerEmail}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                    leftIcon={<Ionicons name="mail-outline" size={20} color="#6B7280" />}
-                  />
-
-                  <Input
-                    label="Address (Optional)"
-                    placeholder="Enter address"
-                    value={newCustomerAddress}
-                    onChangeText={setNewCustomerAddress}
-                    leftIcon={<Ionicons name="location-outline" size={20} color="#6B7280" />}
-                  />
-
-                  <View style={styles.formButtons}>
-                    <TouchableOpacity
-                      style={styles.cancelFormButton}
-                      onPress={() => {
-                        setShowAddCustomerForm(false);
-                        resetNewCustomerForm();
-                      }}
-                    >
-                      <Text style={styles.cancelFormButtonText}>Cancel</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.saveFormButton}
-                      onPress={handleSaveNewCustomer}
-                      disabled={savingCustomer}
-                    >
-                      {savingCustomer ? (
-                        <ActivityIndicator size="small" color="#FFFFFF" />
-                      ) : (
-                        <>
-                          <Ionicons name="checkmark" size={20} color="#FFFFFF" />
-                          <Text style={styles.saveFormButtonText}>Save Customer</Text>
-                        </>
-                      )}
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              )}
-            </ScrollView>
-          </KeyboardAvoidingView>
-        </SafeAreaView>
+              </View>
+            )}
+          </View>
+        </View>
       </Modal>
 
       {/* Success Modal */}
@@ -1262,34 +1819,17 @@ export default function Cart() {
       </Modal>
 
       {/* Clear Cart Confirmation Modal */}
-      <Modal
+      <ConfirmationModal
         visible={showClearModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowClearModal(false)}
-      >
-        <View style={styles.logoutModalOverlay}>
-          <View style={styles.logoutModalContent}>
-            <Ionicons name="trash-outline" size={48} color="#DC2626" />
-            <Text style={styles.logoutModalTitle}>Clear Cart</Text>
-            <Text style={styles.logoutModalMessage}>Are you sure you want to clear all items from the cart?</Text>
-            <View style={styles.logoutModalButtons}>
-              <WebPressable
-                style={[styles.logoutModalButton, styles.logoutCancelButton]}
-                onPress={() => setShowClearModal(false)}
-              >
-                <Text style={styles.logoutCancelButtonText}>Cancel</Text>
-              </WebPressable>
-              <WebPressable
-                style={[styles.logoutModalButton, styles.logoutConfirmButton]}
-                onPress={confirmClearCart}
-              >
-                <Text style={styles.logoutConfirmButtonText}>Clear</Text>
-              </WebPressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        title="Clear Cart"
+        message="Are you sure you want to clear all items from the cart?"
+        confirmLabel="Clear"
+        cancelLabel="Cancel"
+        onConfirm={confirmClearCart}
+        onCancel={() => setShowClearModal(false)}
+        variant="danger"
+        icon="trash-outline"
+      />
 
       {/* Variant Selection Modal */}
       <Modal
@@ -1370,6 +1910,13 @@ export default function Cart() {
           </View>
         </View>
       </Modal>
+      
+      {/* Post-Purchase Referral Popup */}
+      <PostPurchaseReferralPopup
+        visible={showReferralPopup}
+        onClose={() => setShowReferralPopup(false)}
+        orderTotal={lastOrderTotal}
+      />
     </SafeAreaView>
   );
 }
@@ -1379,11 +1926,337 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F9FAFB',
   },
+  // Top Proceed Bar - Clickable bar
+  topProceedBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#10B981',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 10,
+  },
+  topProceedLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 8,
+  },
+  topProceedBadge: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 5,
+  },
+  topProceedBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#10B981',
+  },
+  topProceedItemText: {
+    fontSize: 13,
+    color: '#FFFFFF',
+    fontWeight: '500',
+    flex: 1,
+  },
+  topProceedTotal: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  topProceedButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#059669',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    gap: 4,
+  },
+  topProceedButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  topProceedBarPressed: {
+    opacity: 0.9,
+  },
+  // Customer Card - Below New Sale heading
+  customerCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    gap: 12,
+  },
+  customerCardSelected: {
+    borderColor: '#10B981',
+    backgroundColor: '#F0FDF4',
+  },
+  customerCardPressed: {
+    opacity: 0.8,
+    transform: [{ scale: 0.99 }],
+  },
+  customerCardIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  customerCardIconSelected: {
+    backgroundColor: '#10B981',
+  },
+  customerCardInfo: {
+    flex: 1,
+  },
+  customerCardLabel: {
+    fontSize: 11,
+    color: '#6B7280',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  customerCardValue: {
+    fontSize: 15,
+    color: '#9CA3AF',
+    fontWeight: '500',
+  },
+  customerCardValueSelected: {
+    color: '#059669',
+    fontWeight: '600',
+  },
+  customerCardClear: {
+    padding: 4,
+  },
+  // Customer Select Button (Old - kept for backwards compat)
+  customerSelectBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    gap: 6,
+    maxWidth: 180,
+  },
+  customerSelectText: {
+    fontSize: 13,
+    color: '#6B7280',
+    flex: 1,
+  },
+  customerSelectTextActive: {
+    color: '#10B981',
+    fontWeight: '500',
+  },
+  // Customer Popup Modal Styles
+  popupOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalOverlayAbsolute: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 9999,
+  },
+  popupBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  popupContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    width: '90%',
+    maxWidth: 400,
+    maxHeight: '80%',
+  },
+  popupHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  popupTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  popupSearchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    marginBottom: 16,
+  },
+  popupCountryCode: {
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderRightWidth: 1,
+    borderRightColor: '#E5E7EB',
+  },
+  popupCountryCodeText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+  },
+  popupSearchInput: {
+    flex: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: '#111827',
+  },
+  popupResultItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    borderRadius: 10,
+    padding: 12,
+    gap: 10,
+    marginBottom: 8,
+  },
+  popupResultIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#DBEAFE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  popupResultInfo: {
+    flex: 1,
+  },
+  popupResultName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  popupResultPhone: {
+    fontSize: 13,
+    color: '#6B7280',
+  },
+  popupSelectBtn: {
+    backgroundColor: '#10B981',
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  popupSelectBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  popupNoResult: {
+    alignItems: 'center',
+    paddingVertical: 16,
+    gap: 12,
+  },
+  popupNoResultText: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  popupAddBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#3B82F6',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 6,
+  },
+  popupAddBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  popupForm: {
+    gap: 12,
+  },
+  popupFormPhone: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EFF6FF',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  popupFormPhoneText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1E40AF',
+  },
+  popupFormError: {
+    color: '#DC2626',
+    fontSize: 13,
+    marginBottom: 4,
+  },
+  popupFormInput: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: '#111827',
+  },
+  popupFormActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 8,
+  },
+  popupCancelBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    alignItems: 'center',
+  },
+  popupCancelBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  popupSaveBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#10B981',
+    alignItems: 'center',
+  },
+  popupSaveBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 20,
+    padding: 16,
     paddingTop: 8,
   },
   headerLeft: {
@@ -1437,6 +2310,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#111827',
   },
+  scanButton: {
+    padding: 8,
+    backgroundColor: '#FFFBEB',
+    borderRadius: 8,
+    marginLeft: 4,
+  },
   categoryFilter: {
     paddingHorizontal: 16,
     marginBottom: 12,
@@ -1467,23 +2346,173 @@ const styles = StyleSheet.create({
   productsGridContainer: {
     flex: 1,
   },
+  productsGridContainerWide: {
+    flex: 0.65, // 65% width for products on wide screens
+  },
   productsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingHorizontal: 16,
-    gap: 12,
+    paddingHorizontal: 12,
+    gap: 8,
     paddingBottom: 20,
   },
-  productCard: {
-    width: '48%',
+  // Main content area for responsive layout
+  mainContentArea: {
+    flex: 1,
+  },
+  mainContentAreaWide: {
+    flexDirection: 'row',
+  },
+  // Side Cart Panel (Desktop/Tablet)
+  sideCartPanel: {
+    width: '35%',
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderLeftWidth: 1,
+    borderLeftColor: '#E5E7EB',
+    padding: 16,
+  },
+  sideCartHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  sideCartTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  sideCartItems: {
+    flex: 1,
+    marginBottom: 12,
+  },
+  sideCartItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F9FAFB',
+    gap: 10,
+  },
+  sideCartItemInfo: {
+    flex: 1,
+  },
+  sideCartItemName: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: 2,
+  },
+  sideCartItemPrice: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  sideCartItemQty: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 6,
+    paddingHorizontal: 4,
+    gap: 6,
+  },
+  sideCartQtyBtn: {
+    padding: 6,
+  },
+  sideCartQtyText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+    minWidth: 20,
+    textAlign: 'center',
+  },
+  sideCartItemTotal: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#111827',
+    minWidth: 70,
+    textAlign: 'right',
+  },
+  sideCartPromos: {
+    backgroundColor: '#ECFDF5',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 12,
+  },
+  sideCartPromoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 4,
+  },
+  sideCartPromoText: {
+    fontSize: 12,
+    color: '#059669',
+    fontWeight: '500',
+  },
+  sideCartSummary: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+  },
+  sideCartRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  sideCartLabel: {
+    fontSize: 13,
+    color: '#6B7280',
+  },
+  sideCartValue: {
+    fontSize: 13,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  sideCartDivider: {
+    height: 1,
+    backgroundColor: '#E5E7EB',
+    marginVertical: 8,
+  },
+  sideCartTotalLabel: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  sideCartTotalValue: {
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#059669',
+  },
+  sideCartCheckoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#2563EB',
+    borderRadius: 10,
+    paddingVertical: 14,
+    gap: 8,
+  },
+  sideCartCheckoutText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  productCard: {
+    width: '23%',  // 4 products per row on web
+    minWidth: 140,
+    maxWidth: 180,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
   },
   productCardDisabled: {
     opacity: 0.5,
@@ -1493,7 +2522,7 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.98 }],
   },
   productImageContainer: {
-    height: 100,
+    height: 80,
     backgroundColor: '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
@@ -1886,6 +2915,119 @@ const styles = StyleSheet.create({
   },
   paymentButtonTextActive: {
     color: '#2563EB',
+  },
+  // Split Payment Styles - Simplified
+  paymentHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  splitToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  splitToggleText: {
+    fontSize: 13,
+    color: '#6B7280',
+    fontWeight: '500',
+  },
+  splitToggleTextActive: {
+    color: '#2563EB',
+  },
+  splitPaymentContainer: {
+    gap: 12,
+  },
+  splitRemainingBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FEF3C7',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  splitRemainingLabel: {
+    fontSize: 13,
+    color: '#92400E',
+    fontWeight: '500',
+  },
+  splitRemainingAmount: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#92400E',
+  },
+  splitPaymentsList: {
+    gap: 6,
+  },
+  splitPaymentItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  splitPaymentMethod: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#374151',
+  },
+  splitPaymentAmount: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  splitQuickActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  splitQuickBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#3B82F6',
+    borderRadius: 8,
+    paddingVertical: 12,
+    gap: 6,
+  },
+  splitQuickBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#3B82F6',
+  },
+  splitCustomRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  splitCustomInput: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+    color: '#111827',
+  },
+  splitCustomBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  splitCustomBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
   summarySection: {
     marginBottom: 100,

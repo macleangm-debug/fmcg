@@ -21,6 +21,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { productsApi, categoriesApi } from '../../src/api/client';
+import api from '../../src/api/client';
 import { useAuthStore } from '../../src/store/authStore';
 import { useBusinessStore } from '../../src/store/businessStore';
 import { useViewSettingsStore, ViewMode } from '../../src/store/viewSettingsStore';
@@ -129,6 +130,10 @@ export default function ProductManagement() {
   const [formPrice, setFormPrice] = useState('');
   const [formCostPrice, setFormCostPrice] = useState('');
   const [formSku, setFormSku] = useState('');
+  const [globalSkuAutoGenerate, setGlobalSkuAutoGenerate] = useState(true); // From global settings
+  const [globalServiceCodeAutoGenerate, setGlobalServiceCodeAutoGenerate] = useState(true); // From global settings
+  const [generatingSku, setGeneratingSku] = useState(false);
+  const [generatingServiceCode, setGeneratingServiceCode] = useState(false);
   const [formBarcode, setFormBarcode] = useState('');
   const [formStockQuantity, setFormStockQuantity] = useState('');
   const [formLowStockThreshold, setFormLowStockThreshold] = useState('10');
@@ -136,8 +141,23 @@ export default function ProductManagement() {
   const [formTrackStock, setFormTrackStock] = useState(true);
   const [formUnitOfMeasure, setFormUnitOfMeasure] = useState('pcs');
   
+  // Product/Service type
+  const [formType, setFormType] = useState<'product' | 'service'>('product');
+  
+  // Time-based service fields
+  const [formPricingType, setFormPricingType] = useState<'fixed' | 'hourly' | 'daily' | 'per_session'>('fixed');
+  const [formDuration, setFormDuration] = useState(''); // Duration in minutes for per_session
+  const [formMinDuration, setFormMinDuration] = useState(''); // Minimum booking duration
+  const [formMaxDuration, setFormMaxDuration] = useState(''); // Maximum booking duration
+  
+  // Inline category creation state
+  const [showInlineCategoryForm, setShowInlineCategoryForm] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryDescription, setNewCategoryDescription] = useState('');
+  const [savingCategory, setSavingCategory] = useState(false);
+  
   // Units of measure options
-  const UNITS_OF_MEASURE = [
+  const DEFAULT_UNITS_OF_MEASURE = [
     { code: 'pcs', name: 'Pieces' },
     { code: 'units', name: 'Units' },
     { code: 'kg', name: 'Kilograms' },
@@ -157,6 +177,41 @@ export default function ProductManagement() {
     { code: 'lbs', name: 'Pounds' },
   ];
   
+  // Custom units state
+  const [customUnits, setCustomUnits] = useState<{code: string; name: string}[]>([]);
+  
+  // Combined units (default + custom)
+  const UNITS_OF_MEASURE = [...DEFAULT_UNITS_OF_MEASURE, ...customUnits];
+  
+  // Inline UOM creation state
+  const [showInlineUomForm, setShowInlineUomForm] = useState(false);
+  const [inlineUomName, setInlineUomName] = useState('');
+  const [inlineUomCode, setInlineUomCode] = useState('');
+  
+  // Handle adding new custom UOM
+  const handleAddCustomUom = () => {
+    if (!inlineUomName.trim()) {
+      Alert.alert('Error', 'Please enter a unit name');
+      return;
+    }
+    
+    // Generate code from name if not provided
+    const code = inlineUomCode.trim() || inlineUomName.toLowerCase().replace(/\s+/g, '_').substring(0, 10);
+    
+    // Check if code already exists
+    if (UNITS_OF_MEASURE.some(u => u.code === code)) {
+      Alert.alert('Error', 'A unit with this code already exists');
+      return;
+    }
+    
+    const newUnit = { code, name: inlineUomName.trim() };
+    setCustomUnits([...customUnits, newUnit]);
+    setFormUnitOfMeasure(code); // Auto-select the new unit
+    setInlineUomName('');
+    setInlineUomCode('');
+    setShowInlineUomForm(false);
+  };
+  
   // Import/Export state
   const [showImportExportModal, setShowImportExportModal] = useState(false);
   
@@ -174,6 +229,22 @@ export default function ProductManagement() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [productToDelete, setProductToDelete] = useState<Product | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Filter products based on search
+  const filteredProducts = products.filter(product => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      product.name.toLowerCase().includes(query) ||
+      product.sku.toLowerCase().includes(query) ||
+      (product.category_name && product.category_name.toLowerCase().includes(query)) ||
+      (product.description && product.description.toLowerCase().includes(query)) ||
+      (product.barcode && product.barcode.toLowerCase().includes(query))
+    );
+  });
 
   // Add a new variant type (e.g., Size, Color)
   const addVariantType = () => {
@@ -239,6 +310,46 @@ export default function ProductManagement() {
     setVariants(newVariants);
   };
 
+  // Generate a new SKU from backend based on settings
+  const generateSku = async () => {
+    setGeneratingSku(true);
+    try {
+      const categoryName = categories.find(c => c.id === formCategoryId)?.name;
+      const response = await api.get('/business/settings/generate-sku', {
+        params: { category: categoryName }
+      });
+      setFormSku(response.data.sku);
+      setSkuAutoGenerate(true);
+    } catch (error) {
+      console.log('Failed to generate SKU:', error);
+      // Fallback to simple generation
+      const timestamp = Date.now().toString().slice(-6);
+      setFormSku(`PROD-${timestamp}`);
+    } finally {
+      setGeneratingSku(false);
+    }
+  };
+
+  // Generate a new Service Code from backend based on settings
+  const generateServiceCode = async () => {
+    setGeneratingServiceCode(true);
+    try {
+      const categoryName = categories.find(c => c.id === formCategoryId)?.name;
+      const response = await api.get('/business/settings/generate-service-code', {
+        params: { category: categoryName }
+      });
+      setFormSku(response.data.service_code);
+      setServiceCodeAutoGenerate(true);
+    } catch (error) {
+      console.log('Failed to generate Service Code:', error);
+      // Fallback to simple generation
+      const timestamp = Date.now().toString().slice(-6);
+      setFormSku(`SVC-${timestamp}`);
+    } finally {
+      setGeneratingServiceCode(false);
+    }
+  };
+
   useEffect(() => {
     if (currentUser?.role !== 'admin' && currentUser?.role !== 'manager') {
       Alert.alert('Access Denied', 'Only admins and managers can manage products');
@@ -291,8 +402,8 @@ export default function ProductManagement() {
     setFormName('');
     setFormDescription('');
     setFormCategoryId('');
-    setFormPrice('0');
-    setFormCostPrice('0');
+    setFormPrice('');
+    setFormCostPrice('');
     setFormSku('');
     setFormBarcode('');
     setFormStockQuantity('0');
@@ -304,6 +415,80 @@ export default function ProductManagement() {
     setVariantInputs([]);
     setVariants([]);
     setEditingProduct(null);
+    // Reset service fields
+    setFormType('product');
+    setFormPricingType('fixed');
+    setFormDuration('');
+    setFormMinDuration('');
+    setFormMaxDuration('');
+  };
+
+  // Fetch global SKU/Service Code settings and auto-generate if enabled
+  const fetchGlobalSettingsAndGenerate = async (type: 'product' | 'service' = 'product') => {
+    try {
+      const settingsRes = await api.get('/business/settings');
+      const settings = settingsRes.data;
+      const skuAutoEnabled = settings?.sku_auto_generate !== false; // Default true
+      const serviceCodeAutoEnabled = settings?.service_code_auto_generate !== false; // Default true
+      setGlobalSkuAutoGenerate(skuAutoEnabled);
+      setGlobalServiceCodeAutoGenerate(serviceCodeAutoEnabled);
+      
+      // If auto-generation is enabled, generate automatically
+      if (type === 'product' && skuAutoEnabled) {
+        generateSku();
+      } else if (type === 'service' && serviceCodeAutoEnabled) {
+        generateServiceCode();
+      }
+    } catch (error) {
+      console.log('Failed to fetch global settings:', error);
+      // Default to auto-generate enabled
+      setGlobalSkuAutoGenerate(true);
+      setGlobalServiceCodeAutoGenerate(true);
+      if (type === 'product') {
+        generateSku();
+      } else {
+        generateServiceCode();
+      }
+    }
+  };
+
+  // Open add form with global settings check
+  const openAddForm = () => {
+    resetForm();
+    fetchGlobalSettingsAndGenerate('product');
+    setShowAddModal(true);
+  };
+
+  // Inline category creation
+  const handleSaveInlineCategory = async () => {
+    if (!newCategoryName.trim()) {
+      Alert.alert('Error', 'Category name is required');
+      return;
+    }
+    
+    setSavingCategory(true);
+    try {
+      const response = await categoriesApi.create({
+        name: newCategoryName.trim(),
+        description: newCategoryDescription.trim(),
+      });
+      
+      // Add the new category to the list and select it
+      const newCategory = response.data;
+      setCategories(prev => [...prev, newCategory]);
+      setFormCategoryId(newCategory.id);
+      
+      // Reset inline form
+      setNewCategoryName('');
+      setNewCategoryDescription('');
+      setShowInlineCategoryForm(false);
+      
+      Alert.alert('Success', `Category "${newCategory.name}" created!`);
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.detail || 'Failed to create category');
+    } finally {
+      setSavingCategory(false);
+    }
   };
 
   const handleEditProduct = (product: Product) => {
@@ -605,287 +790,685 @@ export default function ProductManagement() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={[styles.header, isWeb && styles.headerWeb]}>
-        <TouchableOpacity style={styles.backButton} onPress={handleGoBack}>
-          <Ionicons name="arrow-back" size={24} color="#111827" />
-        </TouchableOpacity>
-        <Text style={styles.title}>Products</Text>
-        <View style={styles.headerActions}>
-          {isWeb && (
+      {/* Web Page Header */}
+      {isWeb && (
+        <View style={styles.webPageHeader}>
+          <View>
+            <Text style={styles.webPageTitle}>Products</Text>
+            <Text style={styles.webPageSubtitle}>{products.length} product(s) • {categories.length} categories</Text>
+          </View>
+          <View style={styles.headerActions}>
             <ViewToggle
               currentView={productsView}
               onToggle={setProductsView}
             />
-          )}
-          {/* Import/Export Button */}
-          <TouchableOpacity 
-            style={styles.importExportButton}
-            onPress={() => setShowImportExportModal(true)}
-          >
-            <Ionicons name="swap-vertical-outline" size={20} color="#6B7280" />
-          </TouchableOpacity>
-          <Pressable
-            style={styles.addButton}
-            onPress={() => {
-              resetForm();
-              setShowAddModal(true);
-            }}
-            accessibilityRole="button"
-            accessibilityLabel="Add Product"
-          >
-            {({ pressed }) => (
-              <View style={[styles.addButtonInner, pressed && styles.addButtonPressed]}>
-                <Ionicons name="add" size={24} color="#FFFFFF" />
-              </View>
-            )}
-          </Pressable>
-        </View>
-      </View>
-
-      <View style={[styles.statsRow, isWeb && styles.statsRowWeb]}>
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>{formatNumber(products.length)}</Text>
-          <Text style={styles.statLabel}>Total</Text>
-        </View>
-        <View style={styles.statItem}>
-          <Text style={[styles.statValue, { color: '#F59E0B' }]}>
-            {formatNumber(products.filter(p => p.stock_quantity <= p.low_stock_threshold).length)}
-          </Text>
-          <Text style={styles.statLabel}>Low Stock</Text>
-        </View>
-        <View style={styles.statItem}>
-          <Text style={styles.statValue}>{formatNumber(categories.length)}</Text>
-          <Text style={styles.statLabel}>Categories</Text>
-        </View>
-      </View>
-
-      <View style={[styles.content, isWeb && styles.contentWeb]}>
-        {isWeb && productsView === 'table' && <TableHeader />}
-        <FlatList
-          data={products}
-          renderItem={isWeb && productsView === 'table' ? renderProductTable : renderProductGrid}
-          keyExtractor={(item) => item.id}
-          key={`${isWeb}-${productsView}`}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-          contentContainerStyle={isWeb && productsView === 'table' ? styles.tableList : styles.list}
-          showsVerticalScrollIndicator={false}
-          onEndReached={loadMore}
-          onEndReachedThreshold={0.5}
-          ListFooterComponent={
-            loadingMore ? (
-              <View style={styles.loadingMore}>
-                <ActivityIndicator size="small" color="#2563EB" />
-                <Text style={styles.loadingMoreText}>Loading more...</Text>
-              </View>
-            ) : null
-          }
-          ListEmptyComponent={
-            <EmptyState
-              icon="cube-outline"
-              title="No Products"
-              message="Add your first product to get started"
-              actionLabel="Add Product"
-              onAction={() => {
+            <Pressable
+              style={styles.webCreateBtn}
+              onPress={() => {
                 resetForm();
                 setShowAddModal(true);
               }}
+              accessibilityRole="button"
+              accessibilityLabel="Add Product"
+            >
+              <Ionicons name="add" size={20} color="#FFFFFF" />
+              <Text style={styles.webCreateBtnText}>Add Product</Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
+
+      {/* Mobile Header */}
+      {!isWeb && (
+        <>
+          <View style={styles.header}>
+            <Text style={styles.title}>Products</Text>
+            <View style={styles.headerActions}>
+              <Pressable
+                style={styles.addButton}
+                onPress={() => {
+                  resetForm();
+                  setShowAddModal(true);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Add Product"
+              >
+                {({ pressed }) => (
+                  <View style={[styles.addButtonInner, pressed && styles.addButtonPressed]}>
+                    <Ionicons name="add" size={24} color="#FFFFFF" />
+                  </View>
+                )}
+              </Pressable>
+            </View>
+          </View>
+          <View style={styles.statsRow}>
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{formatNumber(products.length)}</Text>
+              <Text style={styles.statLabel}>Total</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={[styles.statValue, { color: '#F59E0B' }]}>
+                {formatNumber(products.filter(p => p.stock_quantity <= p.low_stock_threshold).length)}
+              </Text>
+              <Text style={styles.statLabel}>Low Stock</Text>
+            </View>
+            <View style={styles.statItem}>
+              <Text style={styles.statValue}>{formatNumber(categories.length)}</Text>
+              <Text style={styles.statLabel}>Categories</Text>
+            </View>
+          </View>
+        </>
+      )}
+
+      {/* Web Layout with White Card Container */}
+      {isWeb ? (
+        <View style={styles.webContentWrapper}>
+          <View style={styles.webWhiteCard}>
+            {/* Search Row */}
+            <View style={styles.webCardHeader}>
+              <Text style={styles.webCardTitle}>{filteredProducts.length} Products</Text>
+              <View style={styles.webSearchBox}>
+                <Ionicons name="search" size={18} color="#6B7280" />
+                <TextInput
+                  style={styles.webSearchInput}
+                  placeholder="Search products..."
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  placeholderTextColor="#6B7280"
+                />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity onPress={() => setSearchQuery('')}>
+                    <Ionicons name="close-circle" size={18} color="#6B7280" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+
+            {/* Stats Row */}
+            <View style={styles.webStatsRow}>
+              <View style={styles.webStatItem}>
+                <Text style={styles.webStatValue}>{formatNumber(products.length)}</Text>
+                <Text style={styles.webStatLabel}>Total Products</Text>
+              </View>
+              <View style={styles.webStatItem}>
+                <Text style={[styles.webStatValue, { color: '#F59E0B' }]}>
+                  {formatNumber(products.filter(p => p.stock_quantity <= p.low_stock_threshold).length)}
+                </Text>
+                <Text style={styles.webStatLabel}>Low Stock</Text>
+              </View>
+              <View style={styles.webStatItem}>
+                <Text style={styles.webStatValue}>{formatNumber(categories.length)}</Text>
+                <Text style={styles.webStatLabel}>Categories</Text>
+              </View>
+            </View>
+
+            {/* Table Header for table view */}
+            {productsView === 'table' && filteredProducts.length > 0 && <TableHeader />}
+
+            <FlatList
+              data={filteredProducts}
+              renderItem={productsView === 'table' ? renderProductTable : renderProductGrid}
+              keyExtractor={(item) => item.id}
+              key={`web-${productsView}`}
+              refreshControl={
+                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+              }
+              contentContainerStyle={productsView === 'table' ? styles.webTableList : styles.webGridList}
+              showsVerticalScrollIndicator={false}
+              onEndReached={loadMore}
+              onEndReachedThreshold={0.5}
+              ListFooterComponent={
+                loadingMore ? (
+                  <View style={styles.loadingMore}>
+                    <ActivityIndicator size="small" color="#2563EB" />
+                    <Text style={styles.loadingMoreText}>Loading more...</Text>
+                  </View>
+                ) : null
+              }
+              ListEmptyComponent={
+                <View style={styles.webEmptyState}>
+                  <Ionicons name="cube-outline" size={64} color="#6B7280" />
+                  <Text style={styles.webEmptyText}>
+                    {searchQuery ? 'No products match your search' : 'No Products'}
+                  </Text>
+                  {!searchQuery && (
+                    <TouchableOpacity style={styles.webEmptyBtn} onPress={() => { resetForm(); setShowAddModal(true); }}>
+                      <Text style={styles.webEmptyBtnText}>Add First Product</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              }
             />
-          }
-        />
-      </View>
+          </View>
+        </View>
+      ) : (
+        /* Mobile Card Container */
+        <View style={styles.mobileCardContainer}>
+          <FlatList
+            data={products}
+            renderItem={renderProductGrid}
+            keyExtractor={(item) => item.id}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            contentContainerStyle={styles.listInsideCard}
+            showsVerticalScrollIndicator={true}
+            onEndReached={loadMore}
+            onEndReachedThreshold={0.5}
+            ListFooterComponent={
+              loadingMore ? (
+                <View style={styles.loadingMore}>
+                  <ActivityIndicator size="small" color="#2563EB" />
+                  <Text style={styles.loadingMoreText}>Loading more...</Text>
+                </View>
+              ) : null
+            }
+            ListEmptyComponent={
+              <EmptyState
+                icon="cube-outline"
+                title="No Products"
+                message="Add your first product to get started"
+                actionLabel="Add Product"
+                onAction={() => {
+                  resetForm();
+                  setShowAddModal(true);
+                }}
+              />
+            }
+          />
+        </View>
+      )}
 
       <WebModal
         visible={showAddModal}
         onClose={() => { resetForm(); setShowAddModal(false); }}
-        title={editingProduct ? 'Edit Product' : 'Add New Product'}
-        subtitle={editingProduct ? 'Update product information' : 'Add a new product to your catalog'}
-        icon={editingProduct ? 'create-outline' : 'bag-add-outline'}
+        title={editingProduct ? (formType === 'service' ? 'Edit Service' : 'Edit Product') : (formType === 'service' ? 'Add New Service' : 'Add New Product')}
+        subtitle={editingProduct ? (formType === 'service' ? 'Update service information' : 'Update product information') : (formType === 'service' ? 'Add a new service to your catalog' : 'Add a new product to your catalog')}
+        icon={formType === 'service' ? 'construct-outline' : (editingProduct ? 'create-outline' : 'bag-add-outline')}
         iconColor="#2563EB"
         maxWidth={550}
       >
+        {/* Product/Service Type Toggle */}
+        <View style={styles.typeToggleContainer}>
+          <TouchableOpacity
+            style={[styles.typeToggleBtn, formType === 'product' && styles.typeToggleBtnActive]}
+            onPress={() => {
+              setFormType('product');
+              setFormPricingType('fixed');
+            }}
+          >
+            <Ionicons 
+              name="cube-outline" 
+              size={18} 
+              color={formType === 'product' ? '#FFFFFF' : '#6B7280'} 
+            />
+            <Text style={[styles.typeToggleText, formType === 'product' && styles.typeToggleTextActive]}>
+              Product
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.typeToggleBtn, formType === 'service' && styles.typeToggleBtnActive]}
+            onPress={() => {
+              setFormType('service');
+              setFormTrackStock(false);
+            }}
+          >
+            <Ionicons 
+              name="construct-outline" 
+              size={18} 
+              color={formType === 'service' ? '#FFFFFF' : '#6B7280'} 
+            />
+            <Text style={[styles.typeToggleText, formType === 'service' && styles.typeToggleTextActive]}>
+              Service
+            </Text>
+          </TouchableOpacity>
+        </View>
+
         <Input
-          label="Product Name *"
-          placeholder="Enter product name"
+          label={formType === 'service' ? 'Service Name *' : 'Product Name *'}
+          placeholder={formType === 'service' ? 'Enter the service name' : 'Enter the product name'}
           value={formName}
           onChangeText={setFormName}
         />
 
         <Input
           label="Description"
-          placeholder="Enter description (optional)"
+          placeholder={formType === 'service' ? 'Describe the service (optional)' : 'Enter product description (optional)'}
           value={formDescription}
           onChangeText={setFormDescription}
           multiline
         />
 
         <Text style={styles.inputLabel}>Category *</Text>
-        {categories.length === 0 ? (
+        {showInlineCategoryForm ? (
+          <View style={styles.inlineCategoryForm}>
+            <View style={styles.inlineCategoryHeader}>
+              <Text style={styles.inlineCategoryTitle}>Create New Category</Text>
+              <TouchableOpacity onPress={() => setShowInlineCategoryForm(false)}>
+                <Ionicons name="close" size={20} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+            <Input
+              label="Category Name *"
+              placeholder="e.g., Electronics, Clothing"
+              value={newCategoryName}
+              onChangeText={setNewCategoryName}
+            />
+            <Input
+              label="Description"
+              placeholder="Brief description (optional)"
+              value={newCategoryDescription}
+              onChangeText={setNewCategoryDescription}
+            />
+            <View style={styles.inlineCategoryButtons}>
+              <TouchableOpacity 
+                style={styles.inlineCategoryCancelBtn} 
+                onPress={() => {
+                  setShowInlineCategoryForm(false);
+                  setNewCategoryName('');
+                  setNewCategoryDescription('');
+                }}
+              >
+                <Text style={styles.inlineCategoryCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.inlineCategorySaveBtn, savingCategory && styles.inlineCategorySaveBtnDisabled]} 
+                onPress={handleSaveInlineCategory}
+                disabled={savingCategory}
+              >
+                {savingCategory ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                    <Text style={styles.inlineCategorySaveText}>Create</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        ) : categories.length === 0 ? (
           <TouchableOpacity
             style={styles.noCategoriesBox}
-            onPress={() => {
-              Alert.alert(
-                'No Categories',
-                'You need to create a category first before adding products.',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  { 
-                    text: 'Create Category', 
-                    onPress: () => {
-                      setShowAddModal(false);
-                      router.push('/admin/categories');
-                    }
-                  }
-                ]
-              );
-            }}
+            onPress={() => setShowInlineCategoryForm(true)}
           >
-            <Ionicons name="folder-open-outline" size={24} color="#9CA3AF" />
+            <Ionicons name="add-circle-outline" size={24} color="#2563EB" />
             <Text style={styles.noCategoriesText}>No categories found. Tap to create one.</Text>
           </TouchableOpacity>
         ) : (
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            style={styles.categoryScroll}
-          >
-            {categories.map((cat) => (
-              <Pressable
-                key={cat.id}
-                style={[
-                  styles.categoryOption,
-                  formCategoryId === cat.id && styles.categoryOptionActive,
-                ]}
-                onPress={() => setFormCategoryId(cat.id)}
-              >
-                <Text
+          <View>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              style={styles.categoryScroll}
+            >
+              {categories.map((cat) => (
+                <Pressable
+                  key={cat.id}
                   style={[
-                    styles.categoryOptionText,
-                    formCategoryId === cat.id && styles.categoryOptionTextActive,
+                    styles.categoryOption,
+                    formCategoryId === cat.id && styles.categoryOptionActive,
                   ]}
+                  onPress={() => setFormCategoryId(cat.id)}
                 >
-                  {cat.name}
-                </Text>
+                  <Text
+                    style={[
+                      styles.categoryOptionText,
+                      formCategoryId === cat.id && styles.categoryOptionTextActive,
+                    ]}
+                  >
+                    {cat.name}
+                  </Text>
+                </Pressable>
+              ))}
+              {/* Add new category button */}
+              <Pressable
+                style={styles.addCategoryOption}
+                onPress={() => setShowInlineCategoryForm(true)}
+              >
+                <Ionicons name="add" size={16} color="#2563EB" />
+                <Text style={styles.addCategoryOptionText}>New</Text>
               </Pressable>
-            ))}
-          </ScrollView>
+            </ScrollView>
+          </View>
         )}
 
-        <View style={styles.row}>
-          <View style={styles.halfField}>
+        {/* Service Pricing Type - Only show for services */}
+        {formType === 'service' && (
+          <View style={styles.pricingTypeContainer}>
+            <Text style={styles.inputLabel}>Pricing Type</Text>
+            <View style={styles.pricingTypeGrid}>
+              <TouchableOpacity
+                style={[styles.pricingTypeOption, formPricingType === 'fixed' && styles.pricingTypeOptionActive]}
+                onPress={() => setFormPricingType('fixed')}
+              >
+                <Ionicons name="pricetag-outline" size={20} color={formPricingType === 'fixed' ? '#2563EB' : '#6B7280'} />
+                <Text style={[styles.pricingTypeText, formPricingType === 'fixed' && styles.pricingTypeTextActive]}>Fixed Price</Text>
+                <Text style={styles.pricingTypeDesc}>One-time fee</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.pricingTypeOption, formPricingType === 'hourly' && styles.pricingTypeOptionActive]}
+                onPress={() => setFormPricingType('hourly')}
+              >
+                <Ionicons name="time-outline" size={20} color={formPricingType === 'hourly' ? '#2563EB' : '#6B7280'} />
+                <Text style={[styles.pricingTypeText, formPricingType === 'hourly' && styles.pricingTypeTextActive]}>Per Hour</Text>
+                <Text style={styles.pricingTypeDesc}>e.g., Consulting</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.pricingTypeOption, formPricingType === 'daily' && styles.pricingTypeOptionActive]}
+                onPress={() => setFormPricingType('daily')}
+              >
+                <Ionicons name="calendar-outline" size={20} color={formPricingType === 'daily' ? '#2563EB' : '#6B7280'} />
+                <Text style={[styles.pricingTypeText, formPricingType === 'daily' && styles.pricingTypeTextActive]}>Per Day</Text>
+                <Text style={styles.pricingTypeDesc}>e.g., Car Rental</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.pricingTypeOption, formPricingType === 'per_session' && styles.pricingTypeOptionActive]}
+                onPress={() => setFormPricingType('per_session')}
+              >
+                <Ionicons name="timer-outline" size={20} color={formPricingType === 'per_session' ? '#2563EB' : '#6B7280'} />
+                <Text style={[styles.pricingTypeText, formPricingType === 'per_session' && styles.pricingTypeTextActive]}>Per Session</Text>
+                <Text style={styles.pricingTypeDesc}>e.g., Massage</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        <View style={isWeb ? styles.row : styles.mobileColumn}>
+          <View style={isWeb ? styles.halfField : styles.fullField}>
             <Input
-              label="Price *"
-              placeholder="0.00"
+              label={formType === 'service' 
+                ? (formPricingType === 'hourly' ? 'Rate per Hour *' 
+                   : formPricingType === 'daily' ? 'Rate per Day *'
+                   : formPricingType === 'per_session' ? 'Rate per Session *'
+                   : 'Selling Price *')
+                : 'Selling Price *'}
+              placeholder="Enter selling price"
               value={formPrice}
               onChangeText={setFormPrice}
               keyboardType="decimal-pad"
             />
+            <Text style={styles.fieldHelper}>Price customers pay</Text>
           </View>
-          <View style={styles.halfField}>
+          <View style={isWeb ? styles.halfField : styles.fullField}>
             <Input
               label="Cost Price"
-              placeholder="0.00"
+              placeholder="Enter cost price"
               value={formCostPrice}
               onChangeText={setFormCostPrice}
               keyboardType="decimal-pad"
             />
+            <Text style={styles.fieldHelper}>Your purchase/acquisition cost</Text>
           </View>
         </View>
 
-        <View style={styles.row}>
-          <View style={styles.halfField}>
-            <Input
-              label="SKU *"
-              placeholder="PROD-001"
-              value={formSku}
-              onChangeText={setFormSku}
-              autoCapitalize="characters"
-            />
+        {/* Duration fields for per_session services */}
+        {formType === 'service' && formPricingType === 'per_session' && (
+          <View style={styles.durationContainer}>
+            <Text style={styles.durationLabel}>Session Duration (minutes)</Text>
+            <View style={isWeb ? styles.row : styles.mobileColumn}>
+              <View style={isWeb ? styles.halfField : styles.fullField}>
+                <Input
+                  label="Duration *"
+                  placeholder="e.g., 60"
+                  value={formDuration}
+                  onChangeText={setFormDuration}
+                  keyboardType="number-pad"
+                />
+              </View>
+            </View>
           </View>
-          <View style={styles.halfField}>
-            <Input
-              label="Barcode"
-              placeholder="Optional"
-              value={formBarcode}
-              onChangeText={setFormBarcode}
-            />
+        )}
+
+        {/* Min/Max duration for hourly/daily services */}
+        {formType === 'service' && (formPricingType === 'hourly' || formPricingType === 'daily') && (
+          <View style={styles.durationContainer}>
+            <Text style={styles.durationLabel}>
+              {formPricingType === 'hourly' ? 'Booking Duration (hours)' : 'Booking Duration (days)'}
+            </Text>
+            <View style={isWeb ? styles.row : styles.mobileColumn}>
+              <View style={isWeb ? styles.halfField : styles.fullField}>
+                <Input
+                  label="Minimum"
+                  placeholder={formPricingType === 'hourly' ? 'e.g., 1' : 'e.g., 1'}
+                  value={formMinDuration}
+                  onChangeText={setFormMinDuration}
+                  keyboardType="number-pad"
+                />
+              </View>
+              <View style={isWeb ? styles.halfField : styles.fullField}>
+                <Input
+                  label="Maximum"
+                  placeholder={formPricingType === 'hourly' ? 'e.g., 8' : 'e.g., 30'}
+                  value={formMaxDuration}
+                  onChangeText={setFormMaxDuration}
+                  keyboardType="number-pad"
+                />
+              </View>
+            </View>
           </View>
-        </View>
+        )}
 
-        <Input
-          label="Tax Rate (%)"
-          placeholder="0"
-          value={formTaxRate}
-          onChangeText={setFormTaxRate}
-          keyboardType="decimal-pad"
-        />
+        {/* Only show SKU/Barcode for products */}
+        {formType === 'product' && (
+          <View style={isWeb ? styles.row : styles.mobileColumn}>
+            <View style={isWeb ? styles.halfField : styles.fullField}>
+              <Text style={styles.inputLabel}>SKU *</Text>
+              {globalSkuAutoGenerate ? (
+                <View style={styles.skuAutoContainer}>
+                  {generatingSku ? (
+                    <View style={styles.skuGenerating}>
+                      <ActivityIndicator size="small" color="#059669" />
+                      <Text style={styles.skuGeneratingText}>Generating from settings...</Text>
+                    </View>
+                  ) : formSku ? (
+                    <View style={styles.skuGenerated}>
+                      <Text style={styles.skuGeneratedValue}>{formSku}</Text>
+                      <TouchableOpacity onPress={generateSku}>
+                        <Ionicons name="refresh-outline" size={20} color="#059669" />
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <TouchableOpacity style={styles.generateSkuBtn} onPress={generateSku}>
+                      <Ionicons name="flash-outline" size={18} color="#059669" />
+                      <Text style={styles.generateSkuBtnText}>Generate SKU</Text>
+                    </TouchableOpacity>
+                  )}
+                  <Text style={styles.skuHelper}>SKU auto-generated from global settings</Text>
+                </View>
+              ) : (
+                <Input
+                  placeholder="Enter SKU"
+                  value={formSku}
+                  onChangeText={setFormSku}
+                  autoCapitalize="characters"
+                />
+              )}
+            </View>
+            <View style={isWeb ? styles.halfField : styles.fullField}>
+              <Input
+                label="Barcode"
+                placeholder="Optional"
+                value={formBarcode}
+                onChangeText={setFormBarcode}
+              />
+            </View>
+          </View>
+        )}
 
-        {/* Unit of Measure */}
+        {/* Service code for services */}
+        {formType === 'service' && (
+          <View>
+            <Text style={styles.inputLabel}>Service Code</Text>
+            {globalServiceCodeAutoGenerate ? (
+              <View style={[styles.skuAutoContainer, { borderColor: '#93C5FD' }]}>
+                {generatingServiceCode ? (
+                  <View style={styles.skuGenerating}>
+                    <ActivityIndicator size="small" color="#2563EB" />
+                    <Text style={[styles.skuGeneratingText, { color: '#1E40AF' }]}>Generating from settings...</Text>
+                  </View>
+                ) : formSku ? (
+                  <View style={styles.skuGenerated}>
+                    <Text style={[styles.skuGeneratedValue, { color: '#2563EB' }]}>{formSku}</Text>
+                    <TouchableOpacity onPress={generateServiceCode}>
+                      <Ionicons name="refresh-outline" size={20} color="#2563EB" />
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity style={[styles.generateSkuBtn, { borderColor: '#2563EB' }]} onPress={generateServiceCode}>
+                    <Ionicons name="flash-outline" size={18} color="#2563EB" />
+                    <Text style={[styles.generateSkuBtnText, { color: '#2563EB' }]}>Generate Service Code</Text>
+                  </TouchableOpacity>
+                )}
+                <Text style={[styles.skuHelper, { color: '#1E40AF' }]}>Service code auto-generated from global settings</Text>
+              </View>
+            ) : (
+              <Input
+                placeholder="Enter service code (e.g., SVC-001)"
+                value={formSku}
+                onChangeText={setFormSku}
+                autoCapitalize="characters"
+              />
+            )}
+          </View>
+        )}
+
+        {/* Unit of Measure - Only for products */}
+        {formType === 'product' && (
         <View style={styles.inputContainer}>
           <Text style={styles.inputLabel}>Unit of Measure</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.unitPickerScroll}>
-            <View style={styles.unitPicker}>
-              {UNITS_OF_MEASURE.map((unit) => (
-                <TouchableOpacity
-                  key={unit.code}
-                  style={[
-                    styles.unitChip,
-                    formUnitOfMeasure === unit.code && styles.unitChipActive
-                  ]}
-                  onPress={() => setFormUnitOfMeasure(unit.code)}
+          {showInlineUomForm ? (
+            <View style={styles.inlineUomForm}>
+              <View style={styles.inlineUomHeader}>
+                <Text style={styles.inlineUomTitle}>Add New Unit</Text>
+                <TouchableOpacity 
+                  style={styles.inlineUomCloseBtn}
+                  onPress={() => {
+                    setShowInlineUomForm(false);
+                    setInlineUomName('');
+                    setInlineUomCode('');
+                  }}
                 >
-                  <Text style={[
-                    styles.unitChipText,
-                    formUnitOfMeasure === unit.code && styles.unitChipTextActive
-                  ]}>
-                    {unit.name}
-                  </Text>
+                  <Ionicons name="close" size={20} color="#6B7280" />
                 </TouchableOpacity>
-              ))}
+              </View>
+              
+              <Text style={styles.inlineUomLabel}>Unit Name *</Text>
+              <TextInput
+                style={styles.inlineUomInput}
+                placeholder="e.g., Bottles, Cans, Rolls"
+                placeholderTextColor="#9CA3AF"
+                value={inlineUomName}
+                onChangeText={setInlineUomName}
+              />
+              
+              <Text style={styles.inlineUomLabel}>Short Code (Optional)</Text>
+              <TextInput
+                style={styles.inlineUomInput}
+                placeholder="e.g., btl, can, roll"
+                placeholderTextColor="#9CA3AF"
+                value={inlineUomCode}
+                onChangeText={setInlineUomCode}
+                maxLength={10}
+              />
+              
+              <View style={styles.inlineUomButtons}>
+                <TouchableOpacity 
+                  style={styles.inlineUomCancelBtn} 
+                  onPress={() => {
+                    setShowInlineUomForm(false);
+                    setInlineUomName('');
+                    setInlineUomCode('');
+                  }}
+                >
+                  <Text style={styles.inlineUomCancelText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.inlineUomSaveBtn} 
+                  onPress={handleAddCustomUom}
+                >
+                  <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+                  <Text style={styles.inlineUomSaveText}>Add Unit</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </ScrollView>
+          ) : (
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.unitPickerScroll}>
+              <View style={styles.unitPicker}>
+                {UNITS_OF_MEASURE.map((unit) => (
+                  <TouchableOpacity
+                    key={unit.code}
+                    style={[
+                      styles.unitChip,
+                      formUnitOfMeasure === unit.code && styles.unitChipActive
+                    ]}
+                    onPress={() => setFormUnitOfMeasure(unit.code)}
+                  >
+                    <Text style={[
+                      styles.unitChipText,
+                      formUnitOfMeasure === unit.code && styles.unitChipTextActive
+                    ]}>
+                      {unit.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+                {/* Add New UOM Button */}
+                <TouchableOpacity
+                  style={styles.addUomChip}
+                  onPress={() => setShowInlineUomForm(true)}
+                >
+                  <Ionicons name="add" size={16} color="#F59E0B" />
+                  <Text style={styles.addUomChipText}>New</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          )}
         </View>
+        )}
 
-        {/* Track Stock Toggle */}
-        <View style={styles.toggleContainer}>
-          <View style={styles.toggleInfo}>
-            <Text style={styles.toggleLabel}>Track Stock</Text>
-            <Text style={styles.toggleDescription}>
-              Enable to track inventory levels. Disable for items sold "as-is" (e.g., services)
-            </Text>
+        {/* Track Stock Toggle - Only for products */}
+        {formType === 'product' && (
+          <View style={styles.toggleContainer}>
+            <View style={styles.toggleInfo}>
+              <Text style={styles.toggleLabel}>Track Stock</Text>
+              <Text style={styles.toggleDescription}>
+                Enable to track inventory levels. Disable for items sold "as-is"
+              </Text>
+            </View>
+            <Pressable
+              style={[styles.toggleSwitch, formTrackStock && styles.toggleSwitchActive]}
+              onPress={() => setFormTrackStock(!formTrackStock)}
+            >
+              <View style={[styles.toggleKnob, formTrackStock && styles.toggleKnobActive]} />
+            </Pressable>
           </View>
-          <Pressable
-            style={[styles.toggleSwitch, formTrackStock && styles.toggleSwitchActive]}
-            onPress={() => setFormTrackStock(!formTrackStock)}
-          >
-            <View style={[styles.toggleKnob, formTrackStock && styles.toggleKnobActive]} />
-          </Pressable>
-        </View>
+        )}
 
-        {/* Has Variants Toggle */}
-        <View style={styles.toggleContainer}>
-          <View style={styles.toggleInfo}>
-            <Text style={styles.toggleLabel}>Has Variants</Text>
-            <Text style={styles.toggleDescription}>
-              Enable for products with multiple options like Size, Color, etc.
-            </Text>
+        {/* Has Variants Toggle - Only for products */}
+        {formType === 'product' && (
+          <View style={styles.toggleContainer}>
+            <View style={styles.toggleInfo}>
+              <Text style={styles.toggleLabel}>Has Variants</Text>
+              <Text style={styles.toggleDescription}>
+                Enable for products with multiple options like Size, Color, etc.
+              </Text>
+            </View>
+            <Pressable
+              style={[styles.toggleSwitch, formHasVariants && styles.toggleSwitchActive]}
+              onPress={() => {
+                setFormHasVariants(!formHasVariants);
+                if (!formHasVariants) {
+                  setFormStockQuantity('0');
+                }
+              }}
+            >
+              <View style={[styles.toggleKnob, formHasVariants && styles.toggleKnobActive]} />
+            </Pressable>
           </View>
-          <Pressable
-            style={[styles.toggleSwitch, formHasVariants && styles.toggleSwitchActive]}
-            onPress={() => {
-              setFormHasVariants(!formHasVariants);
-              if (!formHasVariants) {
-                setFormStockQuantity('0');
-              }
-            }}
-          >
-            <View style={[styles.toggleKnob, formHasVariants && styles.toggleKnobActive]} />
-          </Pressable>
-        </View>
+        )}
 
         {/* Variants Section */}
-        {formHasVariants && (
+        {formType === 'product' && formHasVariants && (
           <View style={styles.variantsSection}>
             <Text style={styles.variantsSectionTitle}>Product Variants</Text>
             <Text style={styles.variantsHelpText}>
@@ -925,7 +1508,7 @@ export default function ProductManagement() {
               style={styles.addVariantTypeBtn}
               onPress={addVariantType}
             >
-              <Ionicons name="add-circle-outline" size={20} color="#2563EB" />
+              <Ionicons name="add-circle-outline" size={20} color="#16A34A" />
               <Text style={styles.addVariantTypeBtnText}>
                 {variantInputs.length === 0 ? 'Add Variant Type (e.g., Size, Color)' : 'Add Another Variant Type'}
               </Text>
@@ -949,7 +1532,7 @@ export default function ProductManagement() {
                     <View style={styles.variantStockInput}>
                       <TextInput
                         style={styles.stockInputField}
-                        placeholder="0"
+                        placeholder="Qty"
                         value={variant.stock_quantity?.toString() || ''}
                         onChangeText={(text) => updateVariantStock(varIndex, text)}
                         keyboardType="number-pad"
@@ -970,22 +1553,22 @@ export default function ProductManagement() {
           </View>
         )}
 
-        {/* Stock Quantity - only show if not using variants */}
-        {!formHasVariants && (
-          <View style={styles.row}>
-            <View style={styles.halfField}>
+        {/* Stock Quantity - only show for products without variants */}
+        {formType === 'product' && !formHasVariants && (
+          <View style={isWeb ? styles.row : styles.mobileColumn}>
+            <View style={isWeb ? styles.halfField : styles.fullField}>
               <Input
                 label="Stock Qty"
-                placeholder="0"
+                placeholder="Enter stock quantity"
                 value={formStockQuantity}
                 onChangeText={setFormStockQuantity}
                 keyboardType="number-pad"
               />
             </View>
-            <View style={styles.halfField}>
+            <View style={isWeb ? styles.halfField : styles.fullField}>
               <Input
                 label="Low Stock Alert"
-                placeholder="10"
+                placeholder="Enter threshold"
                 value={formLowStockThreshold}
                 onChangeText={setFormLowStockThreshold}
                 keyboardType="number-pad"
@@ -995,7 +1578,9 @@ export default function ProductManagement() {
         )}
 
         <Button
-          title={editingProduct ? 'Update Product' : 'Add Product'}
+          title={editingProduct 
+            ? (formType === 'service' ? 'Update Service' : 'Update Product') 
+            : (formType === 'service' ? 'Add Service' : 'Add Product')}
           onPress={handleSaveProduct}
           loading={saving}
           style={styles.saveButton}
@@ -1079,6 +1664,86 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  // Product/Service Type Toggle
+  typeToggleContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 12,
+    padding: 4,
+    marginBottom: 20,
+  },
+  typeToggleBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  typeToggleBtnActive: {
+    backgroundColor: '#2563EB',
+  },
+  typeToggleText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  typeToggleTextActive: {
+    color: '#FFFFFF',
+  },
+  // Pricing Type Styles
+  pricingTypeContainer: {
+    marginBottom: 20,
+  },
+  pricingTypeGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  pricingTypeOption: {
+    flex: 1,
+    minWidth: 140,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 14,
+    alignItems: 'center',
+  },
+  pricingTypeOptionActive: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#2563EB',
+  },
+  pricingTypeText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+    marginTop: 6,
+  },
+  pricingTypeTextActive: {
+    color: '#2563EB',
+  },
+  pricingTypeDesc: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    marginTop: 2,
+  },
+  // Duration Container
+  durationContainer: {
+    backgroundColor: '#F0F9FF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  durationLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1E40AF',
+    marginBottom: 12,
   },
   header: {
     flexDirection: 'row',
@@ -1270,13 +1935,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   productCard: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
     padding: 12,
-    marginBottom: 10,
+    marginBottom: 0,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -1284,8 +1948,10 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   productCardWeb: {
-    marginHorizontal: 6,
-    maxWidth: '48%',
+    width: 350,
+    flexGrow: 1,
+    flexShrink: 0,
+    maxWidth: 450,
   },
   productImageContainer: {
     width: 50,
@@ -1414,9 +2080,10 @@ const styles = StyleSheet.create({
   noCategoriesBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FEF3C7',
+    backgroundColor: '#EEF2FF',
     borderWidth: 1,
-    borderColor: '#FCD34D',
+    borderColor: '#A5B4FC',
+    borderStyle: 'dashed',
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
@@ -1425,7 +2092,7 @@ const styles = StyleSheet.create({
   noCategoriesText: {
     flex: 1,
     fontSize: 14,
-    color: '#92400E',
+    color: '#3730A3',
   },
   categoryOption: {
     paddingHorizontal: 16,
@@ -1448,12 +2115,92 @@ const styles = StyleSheet.create({
   categoryOptionTextActive: {
     color: '#2563EB',
   },
+  // Add new category button in scroll
+  addCategoryOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: '#2563EB',
+    borderStyle: 'dashed',
+    backgroundColor: '#EEF2FF',
+    marginRight: 8,
+    gap: 4,
+  },
+  addCategoryOptionText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#2563EB',
+  },
+  // Inline category form styles
+  inlineCategoryForm: {
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  inlineCategoryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  inlineCategoryTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#166534',
+  },
+  inlineCategoryButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    marginTop: 12,
+  },
+  inlineCategoryCancelBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+  },
+  inlineCategoryCancelText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+  },
+  inlineCategorySaveBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: '#2563EB',
+    gap: 6,
+  },
+  inlineCategorySaveBtnDisabled: {
+    backgroundColor: '#9CA3AF',
+  },
+  inlineCategorySaveText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
   row: {
     flexDirection: 'row',
     gap: 12,
   },
+  mobileColumn: {
+    flexDirection: 'column',
+    gap: 0,
+  },
   halfField: {
     flex: 1,
+  },
+  fullField: {
+    width: '100%',
   },
   saveButton: {
     marginTop: 20,
@@ -1509,23 +2256,26 @@ const styles = StyleSheet.create({
   toggleKnobActive: {
     alignSelf: 'flex-end',
   },
-  // Variant styles - simplified
+  // Variant styles - Green theme when active
   variantsSection: {
     marginTop: 16,
     padding: 16,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#DCFCE7',
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#86EFAC',
   },
   variantsSectionTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
+    color: '#166534',
     marginBottom: 4,
   },
   variantsHelpText: {
     fontSize: 13,
-    color: '#6B7280',
+    color: '#15803D',
     marginBottom: 16,
+    lineHeight: 18,
   },
   variantInputCard: {
     backgroundColor: '#FFFFFF',
@@ -1533,7 +2283,7 @@ const styles = StyleSheet.create({
     padding: 12,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#BBF7D0',
   },
   variantInputHeader: {
     flexDirection: 'row',
@@ -1578,15 +2328,16 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 10,
     borderWidth: 1.5,
-    borderColor: '#2563EB',
+    borderColor: '#22C55E',
     borderStyle: 'dashed',
+    backgroundColor: '#F0FDF4',
     gap: 8,
     marginBottom: 8,
   },
   addVariantTypeBtnText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#2563EB',
+    color: '#16A34A',
   },
   generatedVariantsSection: {
     marginTop: 16,
@@ -1765,5 +2516,305 @@ const styles = StyleSheet.create({
   },
   unitChipTextActive: {
     color: '#FFFFFF',
+  },
+  // Inline UOM Form Styles
+  inlineUomForm: {
+    backgroundColor: '#FEF3C7',
+    padding: 20,
+    borderRadius: 16,
+    marginTop: 8,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  inlineUomHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  inlineUomTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#92400E',
+  },
+  inlineUomCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  inlineUomLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: 6,
+    marginTop: 12,
+  },
+  inlineUomInput: {
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    fontSize: 14,
+    color: '#111827',
+  },
+  inlineUomButtons: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 12,
+    marginTop: 20,
+  },
+  inlineUomCancelBtn: {
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+  },
+  inlineUomCancelText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6B7280',
+  },
+  inlineUomSaveBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: '#F59E0B',
+    gap: 6,
+  },
+  inlineUomSaveText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  addUomChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+    borderStyle: 'dashed',
+    gap: 4,
+  },
+  addUomChipText: {
+    fontSize: 13,
+    color: '#F59E0B',
+    fontWeight: '500',
+  },
+  // Mobile Card Container
+  mobileCardContainer: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 16,
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  listInsideCard: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+
+  // Web Page Header & Layout
+  webPageHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  webPageTitle: { fontSize: 24, fontWeight: '700', color: '#111827' },
+  webPageSubtitle: { fontSize: 14, color: '#6B7280', marginTop: 4 },
+  webCreateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  webCreateBtnText: { fontSize: 15, fontWeight: '600', color: '#FFFFFF' },
+  webContentWrapper: {
+    flex: 1,
+    padding: 24,
+  },
+  webWhiteCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
+    overflow: 'hidden',
+  },
+  webStatsRow: {
+    flexDirection: 'row',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    gap: 32,
+  },
+  webStatItem: {
+    alignItems: 'center',
+  },
+  webStatValue: { fontSize: 20, fontWeight: '700', color: '#111827' },
+  webStatLabel: { fontSize: 12, color: '#6B7280', marginTop: 4 },
+  webTableList: {
+    paddingHorizontal: 24,
+    paddingTop: 8,
+  },
+  webGridList: {
+    padding: 24,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    justifyContent: 'flex-start',
+  },
+  webEmptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 80,
+  },
+  webEmptyText: { fontSize: 16, color: '#6B7280', marginTop: 16 },
+  webEmptyBtn: {
+    marginTop: 20,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    backgroundColor: '#2563EB',
+    borderRadius: 12,
+  },
+  webEmptyBtnText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
+  webCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    gap: 12,
+  },
+  webCardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  webSearchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    minWidth: 250,
+    gap: 8,
+  },
+  webSearchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#111827',
+    outlineStyle: 'none',
+  },
+  // SKU Auto-generation Styles
+  fieldHelper: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 4,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  skuOptions: {
+    flexDirection: 'row',
+    gap: 16,
+    marginBottom: 12,
+  },
+  skuOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  skuOptionActive: {},
+  skuOptionText: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  skuAutoContainer: {
+    backgroundColor: '#FEF3C7',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#FCD34D',
+    borderStyle: 'dashed',
+  },
+  skuGenerating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  skuGeneratingText: {
+    fontSize: 14,
+    color: '#92400E',
+  },
+  skuGenerated: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+  },
+  skuGeneratedValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#059669',
+  },
+  generateSkuBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: '#059669',
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+  },
+  generateSkuBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#059669',
+  },
+  skuHelper: {
+    fontSize: 12,
+    color: '#92400E',
+    textAlign: 'center',
+    marginTop: 8,
   },
 });

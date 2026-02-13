@@ -12,6 +12,8 @@ import {
   Platform,
   ScrollView,
   useWindowDimensions,
+  TextInput,
+  Pressable,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -87,6 +89,21 @@ export default function Expenses() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Filter expenses based on search
+  const filteredExpenses = expenses.filter(exp => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      exp.description.toLowerCase().includes(query) ||
+      exp.category.toLowerCase().includes(query) ||
+      (exp.vendor && exp.vendor.toLowerCase().includes(query)) ||
+      (exp.notes && exp.notes.toLowerCase().includes(query))
+    );
+  });
 
   // Form state
   const [formCategory, setFormCategory] = useState('other');
@@ -365,67 +382,143 @@ export default function Expenses() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={[styles.header, isWeb && styles.headerWeb]}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.push('/(tabs)/dashboard')}>
-          <Ionicons name="arrow-back" size={24} color="#111827" />
-        </TouchableOpacity>
-        <Text style={styles.title}>Expenses</Text>
-        <View style={styles.headerActions}>
-          {isWeb && (
+      {/* Web Page Header */}
+      {isWeb && (
+        <View style={styles.webPageHeader}>
+          <View>
+            <Text style={styles.webPageTitle}>Expenses</Text>
+            <Text style={styles.webPageSubtitle}>{expenses.length} expenses • {formatCurrency(summary?.total_expenses || 0)} total</Text>
+          </View>
+          <View style={styles.headerActions}>
             <ViewToggle
               currentView={expensesView}
               onToggle={setExpensesView}
             />
-          )}
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => {
-              resetForm();
-              setShowModal(true);
-            }}
-          >
-            <Ionicons name="add" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
+            <Pressable 
+              onPress={() => { resetForm(); setShowModal(true); }} 
+              style={styles.webCreateBtn}
+            >
+              <Ionicons name="add" size={20} color="#FFFFFF" />
+              <Text style={styles.webCreateBtnText}>Add Expense</Text>
+            </Pressable>
+          </View>
         </View>
-      </View>
+      )}
 
-      <View style={[styles.content, isWeb && styles.contentWeb]}>
-        {isWeb && expensesView === 'table' && <TableHeader />}
-        <FlatList
-          data={expenses}
-          renderItem={isWeb && expensesView === 'table' ? renderExpenseTable : renderExpenseGrid}
-          keyExtractor={(item) => item.id}
-          key={`${isWeb}-${expensesView}`}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-          contentContainerStyle={isWeb && expensesView === 'table' ? styles.tableList : styles.list}
-          showsVerticalScrollIndicator={false}
-          onEndReached={loadMore}
-          onEndReachedThreshold={0.5}
-          ListHeaderComponent={!isWeb || expensesView !== 'table' ? (summary ? renderSummary : null) : null}
-          ListFooterComponent={
-            loadingMore ? (
-              <View style={styles.loadingMore}>
-                <ActivityIndicator size="small" color="#2563EB" />
-                <Text style={styles.loadingMoreText}>Loading more...</Text>
-              </View>
-            ) : null
-          }
-          ListEmptyComponent={
-            <EmptyState
-              icon="wallet-outline"
-              title="No Expenses"
-              message="Record your business expenses"
-              actionLabel="Add Expense"
-              onAction={() => {
+      {/* Mobile Header */}
+      {!isWeb && (
+        <View style={styles.header}>
+          <Text style={styles.title}>Expenses</Text>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => {
                 resetForm();
                 setShowModal(true);
               }}
-            />
-          }
-        />
-      </View>
+            >
+              <Ionicons name="add" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Web Layout with White Card Container */}
+      {isWeb ? (
+        <View style={styles.webContentWrapper}>
+          <View style={styles.webWhiteCard}>
+            {/* Search Row */}
+            <View style={styles.webCardHeader}>
+              <Text style={styles.webCardTitle}>{filteredExpenses.length} Expenses</Text>
+              <View style={styles.webSearchBox}>
+                <Ionicons name="search" size={18} color="#6B7280" />
+                <TextInput
+                  style={styles.webSearchInput}
+                  placeholder="Search expenses..."
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  placeholderTextColor="#6B7280"
+                />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity onPress={() => setSearchQuery('')}>
+                    <Ionicons name="close-circle" size={18} color="#6B7280" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+
+            {/* Table Header */}
+            {expensesView === 'table' && filteredExpenses.length > 0 && <TableHeader />}
+
+            {/* Content */}
+            <ScrollView
+              style={styles.webListContainer}
+              showsVerticalScrollIndicator={false}
+              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+            >
+              {expensesView !== 'table' && summary && renderSummary()}
+              
+              {filteredExpenses.length === 0 ? (
+                <View style={styles.webEmptyState}>
+                  <Ionicons name="wallet-outline" size={64} color="#6B7280" />
+                  <Text style={styles.webEmptyText}>
+                    {searchQuery ? 'No expenses match your search' : 'No expenses found'}
+                  </Text>
+                  {!searchQuery && (
+                    <TouchableOpacity style={styles.emptyBtn} onPress={() => { resetForm(); setShowModal(true); }}>
+                      <Text style={styles.emptyBtnText}>Add Expense</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ) : expensesView === 'table' ? (
+                filteredExpenses.map((item) => renderExpenseTable({ item }))
+              ) : (
+                <View style={styles.webGridList}>
+                  {filteredExpenses.map((item) => renderExpenseGrid({ item }))}
+                </View>
+              )}
+              <View style={{ height: 40 }} />
+            </ScrollView>
+          </View>
+        </View>
+      ) : (
+        /* Mobile Layout */
+        <View style={styles.mobileCardContainer}>
+          <FlatList
+            data={expenses}
+            renderItem={renderExpenseGrid}
+            keyExtractor={(item) => item.id}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            contentContainerStyle={styles.listInsideCard}
+            showsVerticalScrollIndicator={true}
+            onEndReached={loadMore}
+            onEndReachedThreshold={0.5}
+            ListHeaderComponent={summary ? renderSummary : null}
+            ListFooterComponent={
+              loadingMore ? (
+                <View style={styles.loadingMore}>
+                  <ActivityIndicator size="small" color="#2563EB" />
+                  <Text style={styles.loadingMoreText}>Loading more...</Text>
+                </View>
+              ) : null
+            }
+            ListEmptyComponent={
+              <EmptyState
+                icon="wallet-outline"
+                title="No Expenses"
+                message="Record your business expenses"
+                actionLabel="Add Expense"
+                onAction={() => {
+                  resetForm();
+                  setShowModal(true);
+                }}
+              />
+            }
+          />
+        </View>
+      )}
 
       <WebModal
         visible={showModal}
@@ -731,12 +824,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#DC2626',
     textAlign: 'right',
+    paddingRight: 16,
   },
   tableCellActions: {
     width: 100,
     flexDirection: 'row',
     justifyContent: 'flex-end',
     gap: 8,
+    paddingLeft: 8,
   },
   tableActionButton: {
     width: 32,
@@ -772,11 +867,15 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.7)',
   },
   expenseCard: {
+    width: 350,
+    flexGrow: 1,
+    flexShrink: 0,
+    maxWidth: 450,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    marginBottom: 10,
+    marginBottom: 0,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -961,6 +1060,139 @@ const styles = StyleSheet.create({
   },
   successModalBtnText: {
     fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  // Mobile Card Container
+  mobileCardContainer: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 16,
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  listInsideCard: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  // Web Page Header styles
+  webPageHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  webPageTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  webPageSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 4,
+  },
+  webCreateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    gap: 8,
+  },
+  webCreateBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  webContentWrapper: {
+    flex: 1,
+    padding: 24,
+    backgroundColor: '#F3F4F6',
+  },
+  webWhiteCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    overflow: 'hidden',
+  },
+  webCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    gap: 12,
+  },
+  webCardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  webSearchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    minWidth: 200,
+    gap: 8,
+  },
+  webSearchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#111827',
+    outlineStyle: 'none',
+  },
+  webListContainer: {
+    flex: 1,
+    padding: 16,
+  },
+  webEmptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 80,
+  },
+  webEmptyText: {
+    fontSize: 16,
+    color: '#6B7280',
+    marginTop: 16,
+  },
+  webGridList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+  },
+  emptyBtn: {
+    marginTop: 16,
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  emptyBtnText: {
+    fontSize: 14,
     fontWeight: '600',
     color: '#FFFFFF',
   },

@@ -30,7 +30,7 @@ interface AuthState {
   isAuthenticated: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<{ success: boolean; isSuperadmin: boolean }>;
-  register: (name: string, email: string, password: string, role?: string) => Promise<boolean>;
+  register: (name: string, email: string, password: string, role?: string, referralCode?: string) => Promise<boolean>;
   socialLogin: (provider: 'google' | 'apple', data: SocialAuthData) => Promise<{ success: boolean; isSuperadmin?: boolean }>;
   logout: () => Promise<void>;
   loadUser: () => Promise<void>;
@@ -71,7 +71,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  register: async (name: string, email: string, password: string, role: string = 'sales_staff') => {
+  register: async (name: string, email: string, password: string, role: string = 'sales_staff', referralCode?: string) => {
     try {
       set({ isLoading: true, error: null });
       const response = await axios.post(`${API_URL}/api/auth/register`, {
@@ -79,6 +79,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         email,
         password,
         role,
+        ...(referralCode && { referral_code: referralCode }),
       });
       
       const { access_token, user } = response.data;
@@ -138,21 +139,31 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   loadUser: async () => {
     try {
-      const token = await AsyncStorage.getItem('token');
-      const userStr = await AsyncStorage.getItem('user');
+      // Add timeout to prevent indefinite loading
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout')), 5000)
+      );
       
-      if (token && userStr) {
-        const user = JSON.parse(userStr);
-        set({
-          token,
-          user,
-          isAuthenticated: true,
-          isLoading: false,
-        });
-      } else {
-        set({ isLoading: false });
-      }
+      const loadPromise = async () => {
+        const token = await AsyncStorage.getItem('token');
+        const userStr = await AsyncStorage.getItem('user');
+        
+        if (token && userStr) {
+          const user = JSON.parse(userStr);
+          set({
+            token,
+            user,
+            isAuthenticated: true,
+            isLoading: false,
+          });
+        } else {
+          set({ isLoading: false });
+        }
+      };
+      
+      await Promise.race([loadPromise(), timeoutPromise]);
     } catch {
+      // On timeout or any error, just set loading to false
       set({ isLoading: false });
     }
   },

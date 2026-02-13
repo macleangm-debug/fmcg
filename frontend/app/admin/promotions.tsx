@@ -12,6 +12,8 @@ import {
   Platform,
   ScrollView,
   useWindowDimensions,
+  Pressable,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,6 +27,16 @@ import Button from '../../src/components/Button';
 import EmptyState from '../../src/components/EmptyState';
 import ViewToggle from '../../src/components/ViewToggle';
 import WebModal from '../../src/components/WebModal';
+import ConfirmationModal from '../../src/components/ConfirmationModal';
+
+const COLORS = {
+  primary: '#2563EB',
+  success: '#10B981',
+  danger: '#DC2626',
+  white: '#FFFFFF',
+  dark: '#1F2937',
+  gray: '#6B7280',
+};
 
 const PROMOTION_TYPES = [
   { value: 'percentage_discount', label: 'Percentage Discount', icon: 'pricetag-outline', description: 'X% off on products' },
@@ -78,6 +90,24 @@ export default function Promotions() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [promotionToDelete, setPromotionToDelete] = useState<Promotion | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // Success modal state
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState({ title: '', subtitle: '' });
+
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Filter promotions based on search
+  const filteredPromotions = promotions.filter(promo => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      promo.name.toLowerCase().includes(query) ||
+      (promo.description && promo.description.toLowerCase().includes(query)) ||
+      promo.promotion_type.toLowerCase().includes(query)
+    );
+  });
 
   // Form state
   const [formName, setFormName] = useState('');
@@ -322,14 +352,15 @@ export default function Promotions() {
 
       if (editingPromotion) {
         await promotionsApi.update(editingPromotion.id, promotionData);
-        Alert.alert('Success', 'Promotion updated successfully');
+        setSuccessMessage({ title: 'Promotion Updated!', subtitle: `"${formName}" has been updated successfully.` });
       } else {
         await promotionsApi.create(promotionData);
-        Alert.alert('Success', 'Promotion created successfully');
+        setSuccessMessage({ title: 'Promotion Created!', subtitle: `"${formName}" has been created.` });
       }
 
       resetForm();
       setShowModal(false);
+      setShowSuccessModal(true);
       fetchData();
     } catch (error: any) {
       Alert.alert('Error', error.response?.data?.detail || 'Failed to save promotion');
@@ -339,26 +370,8 @@ export default function Promotions() {
   };
 
   const handleDeactivate = (promo: Promotion) => {
-    Alert.alert(
-      'Deactivate Promotion',
-      `Are you sure you want to deactivate "${promo.name}"? The promotion will no longer apply to sales.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Deactivate',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await promotionsApi.deactivate(promo.id);
-              Alert.alert('Success', 'Promotion deactivated successfully');
-              fetchData();
-            } catch (error: any) {
-              Alert.alert('Error', error.response?.data?.detail || 'Failed to deactivate promotion');
-            }
-          },
-        },
-      ]
-    );
+    setPromotionToDelete(promo);
+    setShowDeleteModal(true);
   };
 
   const handleDeletePermanently = (promo: Promotion) => {
@@ -373,10 +386,12 @@ export default function Promotions() {
     try {
       await promotionsApi.delete(promotionToDelete.id);
       setShowDeleteModal(false);
+      setSuccessMessage({ title: 'Promotion Deleted', subtitle: `"${promotionToDelete.name}" has been removed.` });
       setPromotionToDelete(null);
+      setShowSuccessModal(true);
       fetchData();
     } catch (error: any) {
-      console.error('Delete failed:', error);
+      Alert.alert('Error', error.response?.data?.detail || 'Failed to delete promotion');
     } finally {
       setDeleting(false);
     }
@@ -555,56 +570,130 @@ export default function Promotions() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={[styles.header, isWeb && styles.headerWeb]}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.push('/(tabs)/dashboard')}>
-          <Ionicons name="arrow-back" size={24} color="#111827" />
-        </TouchableOpacity>
-        <Text style={styles.title}>Promotions</Text>
-        <View style={styles.headerActions}>
-          {isWeb && (
+      {/* Web Page Header */}
+      {isWeb && (
+        <View style={styles.webPageHeader}>
+          <View>
+            <Text style={styles.webPageTitle}>Promotions</Text>
+            <Text style={styles.webPageSubtitle}>{promotions.length} promotions</Text>
+          </View>
+          <View style={styles.headerActions}>
             <ViewToggle
               currentView={promotionsView}
               onToggle={setPromotionsView}
             />
-          )}
-          <TouchableOpacity
-            style={styles.addButton}
-            onPress={() => {
-              resetForm();
-              setShowModal(true);
-            }}
-          >
-            <Ionicons name="add" size={24} color="#FFFFFF" />
-          </TouchableOpacity>
+            <Pressable 
+              onPress={() => { resetForm(); setShowModal(true); }} 
+              style={styles.webCreateBtn}
+            >
+              <Ionicons name="add" size={20} color="#FFFFFF" />
+              <Text style={styles.webCreateBtnText}>Create Promotion</Text>
+            </Pressable>
+          </View>
         </View>
-      </View>
+      )}
 
-      <View style={[styles.content, isWeb && styles.contentWeb]}>
-        {isWeb && promotionsView === 'table' && <TableHeader />}
-        <FlatList
-          data={promotions}
-          renderItem={isWeb && promotionsView === 'table' ? renderPromotionTable : renderPromotionGrid}
-          keyExtractor={(item) => item.id}
-          key={`${isWeb}-${promotionsView}`}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-          }
-          contentContainerStyle={isWeb && promotionsView === 'table' ? styles.tableList : styles.list}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <EmptyState
-              icon="pricetag-outline"
-              title="No Promotions"
-              message="Create your first sales campaign"
-              actionLabel="Create Promotion"
-              onAction={() => {
+      {/* Mobile Header */}
+      {!isWeb && (
+        <View style={styles.header}>
+          <Text style={styles.title}>Promotions</Text>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => {
                 resetForm();
                 setShowModal(true);
               }}
-            />
-          }
-        />
-      </View>
+            >
+              <Ionicons name="add" size={24} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
+      {/* Web Layout with White Card Container */}
+      {isWeb ? (
+        <View style={styles.webContentWrapper}>
+          <View style={styles.webWhiteCard}>
+            {/* Search Row */}
+            <View style={styles.webCardHeader}>
+              <Text style={styles.webCardTitle}>{filteredPromotions.length} Promotions</Text>
+              <View style={styles.webSearchBox}>
+                <Ionicons name="search" size={18} color="#6B7280" />
+                <TextInput
+                  style={styles.webSearchInput}
+                  placeholder="Search promotions..."
+                  value={searchQuery}
+                  onChangeText={setSearchQuery}
+                  placeholderTextColor="#6B7280"
+                />
+                {searchQuery.length > 0 && (
+                  <TouchableOpacity onPress={() => setSearchQuery('')}>
+                    <Ionicons name="close-circle" size={18} color="#6B7280" />
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+
+            {/* Table Header */}
+            {promotionsView === 'table' && filteredPromotions.length > 0 && <TableHeader />}
+
+            {/* Content */}
+            <ScrollView
+              style={styles.webListContainer}
+              showsVerticalScrollIndicator={false}
+              refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+            >
+              {filteredPromotions.length === 0 ? (
+                <View style={styles.webEmptyState}>
+                  <Ionicons name="pricetag-outline" size={64} color="#6B7280" />
+                  <Text style={styles.webEmptyText}>
+                    {searchQuery ? 'No promotions match your search' : 'No promotions found'}
+                  </Text>
+                  {!searchQuery && (
+                    <TouchableOpacity style={styles.emptyBtn} onPress={() => { resetForm(); setShowModal(true); }}>
+                      <Text style={styles.emptyBtnText}>Create Promotion</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ) : promotionsView === 'table' ? (
+                filteredPromotions.map((item) => renderPromotionTable({ item }))
+              ) : (
+                <View style={styles.webGridList}>
+                  {filteredPromotions.map((item) => renderPromotionGrid({ item }))}
+                </View>
+              )}
+              <View style={{ height: 40 }} />
+            </ScrollView>
+          </View>
+        </View>
+      ) : (
+        /* Mobile Layout */
+        <View style={styles.mobileCardContainer}>
+          <FlatList
+            data={promotions}
+            renderItem={renderPromotionGrid}
+            keyExtractor={(item) => item.id}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            }
+            contentContainerStyle={styles.listInsideCard}
+            showsVerticalScrollIndicator={true}
+            ListEmptyComponent={
+              <EmptyState
+                icon="pricetag-outline"
+                title="No Promotions"
+                message="Create your first sales campaign"
+                actionLabel="Create Promotion"
+                onAction={() => {
+                  resetForm();
+                  setShowModal(true);
+                }}
+              />
+            }
+          />
+        </View>
+      )}
 
       <WebModal
         visible={showModal}
@@ -943,46 +1032,34 @@ export default function Promotions() {
         )}
       </WebModal>
 
-      {/* Delete Confirmation Modal */}
-      <Modal
-        visible={showDeleteModal}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={cancelDelete}
-      >
-        <View style={styles.deleteModalOverlay}>
-          <View style={styles.deleteModalContent}>
-            <View style={styles.deleteModalIcon}>
-              <Ionicons name="warning" size={48} color="#DC2626" />
+      {/* Success Modal */}
+      <Modal visible={showSuccessModal} transparent animationType="fade">
+        <Pressable style={styles.successOverlay} onPress={() => setShowSuccessModal(false)}>
+          <View style={styles.successModal}>
+            <View style={styles.successIconContainer}>
+              <Ionicons name="checkmark-circle" size={64} color={COLORS.success} />
             </View>
-            <Text style={styles.deleteModalTitle}>Delete Promotion</Text>
-            <Text style={styles.deleteModalMessage}>
-              Are you sure you want to permanently delete "{promotionToDelete?.name}"?{'\n\n'}
-              This action cannot be undone.
-            </Text>
-            <View style={styles.deleteModalButtons}>
-              <TouchableOpacity
-                style={styles.deleteModalCancelBtn}
-                onPress={cancelDelete}
-                disabled={deleting}
-              >
-                <Text style={styles.deleteModalCancelText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.deleteModalConfirmBtn}
-                onPress={executeDeleteFromModal}
-                disabled={deleting}
-              >
-                {deleting ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.deleteModalConfirmText}>Delete</Text>
-                )}
-              </TouchableOpacity>
-            </View>
+            <Text style={styles.successTitle}>{successMessage.title}</Text>
+            <Text style={styles.successSubtitle}>{successMessage.subtitle}</Text>
+            <TouchableOpacity style={styles.successBtn} onPress={() => setShowSuccessModal(false)}>
+              <Text style={styles.successBtnText}>OK</Text>
+            </TouchableOpacity>
           </View>
-        </View>
+        </Pressable>
       </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        visible={showDeleteModal}
+        title="Delete Promotion"
+        message={promotionToDelete ? `Are you sure you want to delete "${promotionToDelete.name}"? This action cannot be undone.` : ''}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={executeDeleteFromModal}
+        onCancel={cancelDelete}
+        variant="danger"
+        loading={deleting}
+      />
     </SafeAreaView>
   );
 }
@@ -1136,10 +1213,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   promoCard: {
+    width: 350,
+    flexGrow: 1,
+    flexShrink: 0,
+    maxWidth: 450,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
     padding: 16,
-    marginBottom: 12,
+    marginBottom: 0,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -1546,6 +1627,147 @@ const styles = StyleSheet.create({
   },
   deleteModalConfirmText: {
     fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  // Mobile Card Container
+  mobileCardContainer: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 16,
+    marginTop: 8,
+    marginBottom: 16,
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 4,
+  },
+  listInsideCard: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  // Success Modal
+  successOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', alignItems: 'center', justifyContent: 'center', padding: 20 },
+  successModal: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 24, width: '100%', maxWidth: 340, alignItems: 'center' },
+  successIconContainer: { marginBottom: 16 },
+  successTitle: { fontSize: 20, fontWeight: '700', color: '#1F2937', textAlign: 'center' },
+  successSubtitle: { fontSize: 14, color: '#6B7280', textAlign: 'center', marginTop: 8, lineHeight: 20 },
+  successBtn: { marginTop: 24, backgroundColor: '#2563EB', paddingHorizontal: 32, paddingVertical: 14, borderRadius: 12, width: '100%', alignItems: 'center' },
+  successBtnText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
+  // Web Page Header styles
+  webPageHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  webPageTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  webPageSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 4,
+  },
+  webCreateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+    gap: 8,
+  },
+  webCreateBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  webContentWrapper: {
+    flex: 1,
+    padding: 24,
+    backgroundColor: '#F3F4F6',
+  },
+  webWhiteCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 0,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    overflow: 'hidden',
+  },
+  webCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    gap: 12,
+  },
+  webCardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  webSearchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    minWidth: 200,
+    gap: 8,
+  },
+  webSearchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#111827',
+    outlineStyle: 'none',
+  },
+  webListContainer: {
+    flex: 1,
+    padding: 16,
+  },
+  webEmptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 80,
+  },
+  webEmptyText: {
+    fontSize: 16,
+    color: '#6B7280',
+    marginTop: 16,
+  },
+  webGridList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+  },
+  emptyBtn: {
+    marginTop: 16,
+    backgroundColor: '#2563EB',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  emptyBtnText: {
+    fontSize: 14,
     fontWeight: '600',
     color: '#FFFFFF',
   },
