@@ -131,4 +131,4 @@ python -m uvicorn server:app --host 0.0.0.0 --port 8001
 
 ## Testing Credentials
 - **API Test User**: admin@test.com / admin123
-- **Preview URL**: https://fmcg-preview-sms.preview.emergentagent.com
+- **Preview URL**: https://unitxt-bulk-sms.preview.emergentagent.com
