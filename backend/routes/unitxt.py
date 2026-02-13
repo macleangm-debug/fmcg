@@ -94,7 +94,9 @@ async def get_credits(current_user: dict = Depends(get_current_user)):
     if not business_id:
         return {"credits": 0, "used": 0, "transactions": []}
     
-    credits = await db.sms_credits.find_one({"business_id": str(business_id)})
+    credits = await db.unitxt_credits.find_one({
+        "$or": [{"user_id": current_user.get("id")}, {"business_id": str(business_id)}]
+    })
     
     if not credits:
         return {"credits": 0, "used": 0, "transactions": []}
@@ -714,7 +716,9 @@ async def send_sms(
         raise HTTPException(status_code=400, detail="No business associated")
     
     # Check credits
-    credits = await db.sms_credits.find_one({"business_id": str(business_id)})
+    credits = await db.unitxt_credits.find_one({
+        "$or": [{"user_id": current_user.get("id")}, {"business_id": str(business_id)}]
+    })
     if not credits or credits.get("balance", 0) < 1:
         raise HTTPException(status_code=402, detail="Insufficient SMS credits")
     
@@ -772,7 +776,9 @@ async def send_via_tigo(
         raise HTTPException(status_code=400, detail="No business associated")
     
     # Check credits
-    credits = await db.sms_credits.find_one({"business_id": str(business_id)})
+    credits = await db.unitxt_credits.find_one({
+        "$or": [{"user_id": current_user.get("id")}, {"business_id": str(business_id)}]
+    })
     if not credits or credits.get("balance", 0) < 1:
         raise HTTPException(status_code=402, detail="Insufficient SMS credits")
     
@@ -843,7 +849,9 @@ async def send_bulk_via_tigo(
     
     # Check credits
     total_recipients = len(request.recipients)
-    credits = await db.sms_credits.find_one({"business_id": str(business_id)})
+    credits = await db.unitxt_credits.find_one({
+        "$or": [{"user_id": current_user.get("id")}, {"business_id": str(business_id)}]
+    })
     if not credits or credits.get("balance", 0) < total_recipients:
         raise HTTPException(
             status_code=402, 
