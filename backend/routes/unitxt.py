@@ -1043,6 +1043,230 @@ async def get_tigo_service_status(
         }
 
 
+# ============== DELIVERY REPORT WEBHOOKS ==============
+
+class DeliveryReportPayload(BaseModel):
+    """Delivery report from Tigo (HTTP callback)"""
+    message_id: str
+    status: str  # DELIVRD, EXPIRED, DELETED, UNDELIV, ACCEPTD, UNKNOWN, REJECTD
+    recipient: Optional[str] = None
+    submit_date: Optional[str] = None
+    done_date: Optional[str] = None
+    error_code: Optional[str] = None
+    error_message: Optional[str] = None
+
+
+@router.post("/webhook/delivery")
+async def receive_delivery_report(payload: DeliveryReportPayload):
+    """
+    Webhook endpoint for Tigo delivery reports (HTTP callback)
+    
+    Tigo will POST delivery status updates to this endpoint.
+    Configure this URL in your Tigo account: https://yourdomain.com/api/unitxt/webhook/delivery
+    
+    Status codes from Tigo:
+    - DELIVRD: Message delivered to handset
+    - EXPIRED: Message validity period expired
+    - DELETED: Message deleted by carrier
+    - UNDELIV: Message undeliverable
+    - ACCEPTD: Message accepted by carrier (intermediate)
+    - UNKNOWN: Unknown status
+    - REJECTD: Message rejected
+    """
+    if db is None:
+        return {"status": "error", "message": "Database not initialized"}
+    
+    # Map Tigo status to our status
+    status_map = {
+        "DELIVRD": "delivered",
+        "EXPIRED": "expired", 
+        "DELETED": "failed",
+        "UNDELIV": "undelivered",
+        "ACCEPTD": "accepted",
+        "UNKNOWN": "unknown",
+        "REJECTD": "rejected"
+    }
+    
+    mapped_status = status_map.get(payload.status.upper(), "unknown")
+    
+    # Update message status in database
+    result = await db.sms_messages.update_one(
+        {"message_id": payload.message_id},
+        {
+            "$set": {
+                "delivery_status": mapped_status,
+                "delivery_timestamp": datetime.utcnow(),
+                "error_code": payload.error_code,
+                "error_message": payload.error_message,
+                "raw_status": payload.status
+            }
+        }
+    )
+    
+    # Log the delivery report
+    await db.delivery_reports.insert_one({
+        "message_id": payload.message_id,
+        "status": mapped_status,
+        "raw_status": payload.status,
+        "recipient": payload.recipient,
+        "submit_date": payload.submit_date,
+        "done_date": payload.done_date,
+        "error_code": payload.error_code,
+        "error_message": payload.error_message,
+        "received_at": datetime.utcnow()
+    })
+    
+    # Update batch statistics if this message belongs to a batch
+    message = await db.sms_messages.find_one({"message_id": payload.message_id})
+    if message and message.get("batch_id"):
+        batch_id = message["batch_id"]
+        
+        if mapped_status == "delivered":
+            await db.sms_batches.update_one(
+                {"_id": batch_id},
+                {"$inc": {"delivered_count": 1}}
+            )
+        elif mapped_status in ["failed", "rejected", "undelivered", "expired"]:
+            await db.sms_batches.update_one(
+                {"_id": batch_id},
+                {"$inc": {"failed_count": 1}}
+            )
+    
+    return {
+        "status": "ok",
+        "message_id": payload.message_id,
+        "delivery_status": mapped_status
+    }
+
+
+@router.post("/webhook/delivery/raw")
+async def receive_raw_delivery_report(request_data: Dict[str, Any]):
+    """
+    Alternative webhook for raw/unknown payload formats
+    
+    Use this if Tigo sends a different format than expected.
+    Logs everything for debugging.
+    """
+    if db is None:
+        return {"status": "error", "message": "Database not initialized"}
+    
+    # Log raw payload for debugging
+    await db.delivery_reports_raw.insert_one({
+        "payload": request_data,
+        "received_at": datetime.utcnow()
+    })
+    
+    # Try to extract common fields
+    message_id = (
+        request_data.get("message_id") or 
+        request_data.get("messageId") or 
+        request_data.get("msg_id") or
+        request_data.get("id")
+    )
+    
+    status = (
+        request_data.get("status") or 
+        request_data.get("dlr_status") or
+        request_data.get("delivery_status")
+    )
+    
+    if message_id and status:
+        await db.sms_messages.update_one(
+            {"message_id": message_id},
+            {
+                "$set": {
+                    "delivery_status": status.lower() if isinstance(status, str) else str(status),
+                    "delivery_timestamp": datetime.utcnow(),
+                    "raw_delivery_payload": request_data
+                }
+            }
+        )
+    
+    return {"status": "ok", "received": True}
+
+
+@router.get("/message/{message_id}/status")
+async def get_message_delivery_status(
+    message_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get delivery status for a specific message"""
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+    
+    message = await db.sms_messages.find_one({"message_id": message_id})
+    
+    if not message:
+        raise HTTPException(status_code=404, detail="Message not found")
+    
+    # Get delivery report if exists
+    delivery_report = await db.delivery_reports.find_one(
+        {"message_id": message_id},
+        sort=[("received_at", -1)]
+    )
+    
+    return {
+        "message_id": message_id,
+        "recipient": message.get("recipient"),
+        "status": message.get("status", "unknown"),
+        "delivery_status": message.get("delivery_status", "pending"),
+        "sent_at": message.get("sent_at").isoformat() if message.get("sent_at") else None,
+        "delivered_at": message.get("delivery_timestamp").isoformat() if message.get("delivery_timestamp") else None,
+        "error_code": message.get("error_code"),
+        "error_message": message.get("error_message"),
+        "delivery_report": {
+            "raw_status": delivery_report.get("raw_status"),
+            "received_at": delivery_report.get("received_at").isoformat()
+        } if delivery_report else None
+    }
+
+
+@router.get("/delivery-reports")
+async def get_delivery_reports(
+    limit: int = Query(50, le=200),
+    status: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get recent delivery reports"""
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database not initialized")
+    
+    business_id = current_user.get("business_id")
+    
+    # Build query
+    query = {}
+    if status:
+        query["status"] = status
+    
+    reports = await db.delivery_reports.find(query).sort("received_at", -1).limit(limit).to_list(limit)
+    
+    return {
+        "reports": [{
+            "message_id": r.get("message_id"),
+            "status": r.get("status"),
+            "raw_status": r.get("raw_status"),
+            "recipient": r.get("recipient"),
+            "received_at": r.get("received_at").isoformat() if r.get("received_at") else None,
+            "error_code": r.get("error_code")
+        } for r in reports],
+        "count": len(reports)
+    }
+
+
+@router.get("/webhook/test")
+async def test_webhook_endpoint():
+    """Test endpoint to verify webhook URL is accessible"""
+    return {
+        "status": "ok",
+        "message": "Webhook endpoint is reachable",
+        "timestamp": datetime.utcnow().isoformat(),
+        "endpoints": {
+            "delivery_report": "/api/unitxt/webhook/delivery",
+            "raw_delivery": "/api/unitxt/webhook/delivery/raw"
+        }
+    }
+
+
 # ============== ANALYTICS ==============
 
 @router.get("/analytics")
