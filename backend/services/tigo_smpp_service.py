@@ -108,6 +108,7 @@ class TigoSMPPService:
         self._lock = threading.Lock()
         self._message_queue = queue.Queue()
         self._delivery_reports: Dict[str, SMPPMessageStatus] = {}
+        self._pending_reports: List[Dict[str, Any]] = []  # Queue for async DB sync
         
         # Cost per SMS (approximate, in USD)
         self.cost_per_sms = 0.015  # ~35 TZS
