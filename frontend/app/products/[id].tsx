@@ -198,7 +198,11 @@ export default function ProductPage() {
     <SafeAreaView style={styles.container}>
       {isWeb && <style dangerouslySetInnerHTML={{ __html: webStyles }} />}
       
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        style={isWeb ? { flex: 1, height: '100%' } : undefined}
+        contentContainerStyle={isWeb ? { flexGrow: 1 } : undefined}
+      >
         {/* Header */}
         <View style={[styles.header, isMobile && styles.headerMobile]}>
           <TouchableOpacity style={styles.logo} onPress={() => router.push('/landing')}>
