@@ -291,8 +291,8 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
                 onPress={() => handleNavPress(item.name)}
                 activeOpacity={0.7}
               >
-                <Ionicons
-                  name={item.icon as any}
+                <Icon
+                  name={item.icon}
                   size={20}
                   color={isActive(item.name) ? theme.sidebarActiveText : theme.sidebarText}
                 />
