@@ -198,7 +198,7 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
       <View style={styles.topHeader}>
         <View style={styles.headerLeft}>
           <View style={styles.logoContainer}>
-            <Ionicons name="storefront" size={22} color="#FFFFFF" />
+            <Icon name="storefront" size={22} color="#FFFFFF" />
           </View>
           <Text style={styles.brandName} numberOfLines={1}>
             {businessSettings?.name || 'RetailPro'}
