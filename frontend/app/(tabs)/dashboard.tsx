@@ -958,8 +958,8 @@ export default function Dashboard() {
         {/* Stats Row */}
         <View style={webDashStyles.statsRow}>
           <View style={webDashStyles.statCard}>
-            <View style={[webDashStyles.statIcon, { backgroundColor: '#D1FAE5' }]}>
-              <Icon name="cash" size={24} color="#10B981" />
+            <View style={[webDashStyles.statIcon, { backgroundColor: '#D8F3DC' }]}>
+              <Icon name="cash" size={24} color="#40916C" />
             </View>
             <View style={webDashStyles.statInfo}>
               <Text style={webDashStyles.statValue}>{formatCurrency(stats?.total_sales_today || 0)}</Text>
@@ -968,8 +968,8 @@ export default function Dashboard() {
           </View>
           
           <View style={webDashStyles.statCard}>
-            <View style={[webDashStyles.statIcon, { backgroundColor: '#DBEAFE' }]}>
-              <Icon name="receipt" size={24} color="#2563EB" />
+            <View style={[webDashStyles.statIcon, { backgroundColor: '#D8F3DC' }]}>
+              <Icon name="receipt" size={24} color="#2D6A4F" />
             </View>
             <View style={webDashStyles.statInfo}>
               <Text style={webDashStyles.statValue}>{stats?.total_orders_today || 0}</Text>
@@ -978,8 +978,8 @@ export default function Dashboard() {
           </View>
           
           <View style={webDashStyles.statCard}>
-            <View style={[webDashStyles.statIcon, { backgroundColor: '#EDE9FE' }]}>
-              <Icon name="people" size={24} color="#8B5CF6" />
+            <View style={[webDashStyles.statIcon, { backgroundColor: '#B7E4C7' }]}>
+              <Icon name="people" size={24} color="#1B4332" />
             </View>
             <View style={webDashStyles.statInfo}>
               <Text style={webDashStyles.statValue}>{stats?.total_customers || 0}</Text>
@@ -989,7 +989,7 @@ export default function Dashboard() {
           
           <View style={webDashStyles.statCard}>
             <View style={[webDashStyles.statIcon, { backgroundColor: '#FEF3C7' }]}>
-              <Icon name="cube" size={24} color="#F59E0B" />
+              <Icon name="cube" size={24} color="#E9A319" />
             </View>
             <View style={webDashStyles.statInfo}>
               <Text style={webDashStyles.statValue}>{stats?.total_products || 0}</Text>
