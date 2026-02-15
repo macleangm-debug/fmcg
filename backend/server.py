@@ -22172,6 +22172,14 @@ try:
 except Exception as e:
     logger.warning(f"Failed to load Affiliate routes: {e}")
 
+# Import and register Advertisement routes
+try:
+    from routes.adverts import router as adverts_router
+    api_router.include_router(adverts_router)
+    logger.info("Advertisement routes initialized successfully")
+except Exception as e:
+    logger.warning(f"Failed to load Advertisement routes: {e}")
+
 # Re-mount to include all modular routes
 app.include_router(api_router)
 
