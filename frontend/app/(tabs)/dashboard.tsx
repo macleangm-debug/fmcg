@@ -499,12 +499,14 @@ export default function Dashboard() {
   useEffect(() => {
     fetchStats();
     fetchLinkedApps(); // Fetch linked apps on mount
+    fetchAdverts(); // Fetch adverts for carousel
   }, [selectedLocationId]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     fetchStats();
     fetchLinkedApps(); // Also refresh linked apps
+    fetchAdverts(); // Refresh adverts
   }, [selectedLocationId]);
 
   const handleLogout = () => {
