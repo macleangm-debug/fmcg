@@ -312,17 +312,17 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
               <>
                 <Text style={[styles.navSectionTitle, { marginTop: 24 }]}>CATALOG</Text>
                 {catalogItems.map((item) => (
-                  <TouchableOpacity
-                    key={item.name}
-                    style={[styles.navItem, isActive(item.name) && styles.navItemActive]}
-                    onPress={() => handleNavPress(item.name)}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons
-                      name={item.icon as any}
-                      size={20}
-                      color={isActive(item.name) ? theme.sidebarActiveText : theme.sidebarText}
-                    />
+              <TouchableOpacity
+                key={item.name}
+                style={[styles.navItem, isActive(item.name) && styles.navItemActive]}
+                onPress={() => handleNavPress(item.name)}
+                activeOpacity={0.7}
+              >
+                <Icon
+                  name={item.icon}
+                  size={20}
+                  color={isActive(item.name) ? theme.sidebarActiveText : theme.sidebarText}
+                />
                     <Text style={[styles.navLabel, isActive(item.name) && styles.navLabelActive]}>
                       {item.label}
                     </Text>
@@ -336,17 +336,17 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
               <>
                 <Text style={[styles.navSectionTitle, { marginTop: 24 }]}>INSIGHTS</Text>
                 {financeItems.filter(item => item.name === '/admin/reports').map((item) => (
-                  <TouchableOpacity
-                    key={item.name}
-                    style={[styles.navItem, isActive(item.name) && styles.navItemActive]}
-                    onPress={() => handleNavPress(item.name)}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons
-                      name={item.icon as any}
-                      size={20}
-                      color={isActive(item.name) ? theme.sidebarActiveText : theme.sidebarText}
-                    />
+              <TouchableOpacity
+                key={item.name}
+                style={[styles.navItem, isActive(item.name) && styles.navItemActive]}
+                onPress={() => handleNavPress(item.name)}
+                activeOpacity={0.7}
+              >
+                <Icon
+                  name={item.icon}
+                  size={20}
+                  color={isActive(item.name) ? theme.sidebarActiveText : theme.sidebarText}
+                />
                     <Text style={[styles.navLabel, isActive(item.name) && styles.navLabelActive]}>
                       {item.label}
                     </Text>
@@ -360,17 +360,17 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
               <>
                 <Text style={[styles.navSectionTitle, { marginTop: 24 }]}>SETTINGS</Text>
                 {settingsItems.map((item) => (
-                  <TouchableOpacity
-                    key={item.name}
-                    style={[styles.navItem, isActive(item.name) && styles.navItemActive]}
-                    onPress={() => handleNavPress(item.name)}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons
-                      name={item.icon as any}
-                      size={20}
-                      color={isActive(item.name) ? theme.sidebarActiveText : theme.sidebarText}
-                    />
+              <TouchableOpacity
+                key={item.name}
+                style={[styles.navItem, isActive(item.name) && styles.navItemActive]}
+                onPress={() => handleNavPress(item.name)}
+                activeOpacity={0.7}
+              >
+                <Icon
+                  name={item.icon}
+                  size={20}
+                  color={isActive(item.name) ? theme.sidebarActiveText : theme.sidebarText}
+                />
                     <Text style={[styles.navLabel, isActive(item.name) && styles.navLabelActive]}>
                       {item.label}
                     </Text>
