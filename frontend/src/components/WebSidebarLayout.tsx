@@ -10,8 +10,8 @@ import {
   Linking,
   Modal,
 } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useSegments } from 'expo-router';
+import Icon from './Icon';
 import { useAuthStore } from '../store/authStore';
 import { useCartStore } from '../store/cartStore';
 import { useBusinessStore } from '../store/businessStore';
