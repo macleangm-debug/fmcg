@@ -1,73 +1,81 @@
 <analysis>**original_problem_statement:**
 The initial user request was to set up an application from a GitHub repository (), integrate UniTxt Bulk SMS with their local provider Tigo via SMPP, fix a frontend scrolling bug, and implement delivery report webhooks.
 
-During this session, the user's priorities shifted to:
-1.  Obtaining comprehensive deployment guidance and automated scripts to run the application on their own server.
-2.  Investigating user roles and the admin interface for the RetailPro product.
-3.  Fixing a pre-existing UI bug where icons fail to render on the web.
-4.  Implementing a new feature: a multi-language, sliding advertisement carousel on the main dashboard, based on a provided design inspiration.
-5.  Redesigning the sidebar to dynamically change color based on the selected product (e.g., RetailPro, Invoicing).
+The user's priorities have since evolved to focus on:
+1.  Obtaining comprehensive deployment guidance and automated scripts.
+2.  Fixing a pre-existing UI bug where icons fail to render on the web.
+3.  Implementing a new feature: a multi-language, sliding advertisement carousel on the main dashboard.
+4.  Redesigning the sidebar to dynamically change color based on the selected product (e.g., RetailPro, Invoicing).
+5.  Investigating why the new language selector interface is not appearing and fixing the underlying blocker.
 
 **User's preferred language**: English
 
 **what currently exists?**
-The application is a full-stack FMCG platform with a React Native for Web (Expo) frontend and a FastAPI backend. The agent has successfully created comprehensive one-click deployment scripts for both public and private repositories. The backend now includes a new, working API endpoint () for fetching multi-language advertisements. On the frontend, new reusable components (, ) and Zustand stores (, ) have been created to support the new advert feature. The agent also investigated and provided admin credentials for the user, and identified a pre-existing, unresolved issue with icons not rendering on the web.
+The application is a full-stack FMCG platform with an Expo (React Native for Web) frontend and a FastAPI backend. A key feature, the advertisement carousel, has been successfully integrated into the dashboard and fetches data from a backend API (). The backend services are running, and the carousel functionality has been verified by a testing agent. However, a critical issue prevents the integration of the accompanying  component, which causes the application to crash. A persistent, pre-existing UI bug also prevents icons from rendering correctly on the web.
 
 **Last working item**:
-- **Last item agent was working**: The agent was attempting to integrate the newly created  component into the main dashboard page (). This integration caused the frontend application to crash with a Cannot use import.meta outside a module error. The agent reverted the changes to the dashboard file to restore stability and was about to try a different, simpler integration approach after the user reported not seeing the UI changes.
+- **Last item agent was working**: The agent was investigating a frontend crash caused by integrating the  component and its associated  (Zustand) into the  file. The crash manifested as a bundler error: Cannot use import.meta outside a module. To restore application stability, the agent reverted all code changes related to the language selector integration. The user's last message was a request to investigate this blocker.
 - **Status**: IN PROGRESS
-- **Agent Testing Done**: N
+- **Agent Testing Done**: N (for the language selector part; the carousel was tested)
 - **Which testing method agent to use?** Frontend testing agent
 - **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
-- **Issue 1**: Integrate Advert Carousel into Dashboard (P0)
+- **Issue 1**: Frontend crashes when integrating LanguageSelector component (P0)
 - **Issue 2**: Fix Broken Icons on Web (P1)
 - **Issue 3**: Finalize Deployment and User Verification (P2)
 - **Issue 4**: Investigate original Frontend loading issues (P3)
 
 **Issues Detail**:
 - **Issue 1**:
-    - **Description (P0)**: The integration of the  and its associated state stores (, ) into  is causing the frontend to crash. This is the highest priority as it's the user's latest active request.
-    - **Attempted fixes**: The agent tried importing the new components and stores, which led to a crash. The changes were reverted to stabilize the app. A fix for an incorrect environment variable in the store ( to ) did not resolve the crash.
+    - **Description (P0)**: Integrating the  component and  into  causes the Metro bundler to fail with the error Cannot use import.meta outside a module, crashing the frontend. This blocks the completion of the multi-language feature.
+    - **Attempted fixes**: The agent integrated the component and store, which led to the crash. Reverting all changes to  successfully restored the application's functionality. The problem is confirmed to be linked to the import of the Zustand store or the language selector component.
     - **Next debug checklist**:
-        1.  Attempt a minimal integration: add the  to  with static, hardcoded data to isolate whether the issue is with the component itself or the state stores.
-        2.  If the minimal integration works, re-introduce the  and  one at a time to identify which one is causing the bundler error.
-        3.  Investigate the bundler configuration (, ) for misconfigurations that could cause the  error when using Zustand stores.
-    - **Why fix this issue and what will be achieved with the fix?**: This will complete the user's primary feature request, adding the dynamic, multi-language advert banners to the dashboard.
+        1.  Investigate the project's bundler configuration (, , and ) for settings that might be incompatible with how Zustand (or one of its dependencies) uses .
+        2.  Research known issues between the project's specific versions of Expo (web), Zustand, and the Metro bundler.
+        3.  Isolate the problem: Try importing an empty, minimal Zustand store into the dashboard to confirm if the issue is with Zustand itself or the specific implementation in .
+        4.  If Zustand is the root cause, consider an alternative state management solution for the language feature, such as React's built-in Context API, to unblock the feature.
+    - **Why fix this issue and what will be achieved with the fix?**: This will complete the user's requested multi-language advertisement feature by allowing users to switch languages and see translated content.
     - **Status**: IN PROGRESS
-    - **Is recurring issue?**: N
+    - **Is recurring issue?**: Y (in this session)
     - **Should Test frontend/backend/both after fix?**: Frontend
     - **Blocked on other issue**: None
 
 - **Issue 2**:
-    - **Description (P1)**: Icons throughout the web application (e.g., sidebar, login page) are not rendering and appear as empty boxes. This is a pre-existing, high-impact UI bug.
-    - **Attempted fixes**: The agent tried multiple standard fixes for Expo web fonts, including using the  hook, injecting CSS, and configuring  and . None were successful.
+    - **Description (P1)**: Icons throughout the web application (e.g., sidebar, login page) render as empty boxes instead of the intended . This is a high-impact, pre-existing visual bug.
+    - **Attempted fixes**: Multiple approaches were tried and failed: using the  hook in , attempting CSS font-face injection, explicitly loading the  file with , copying the font to an  directory, and clearing the Metro cache. The agent concluded it's a deep-seated bundler or configuration issue.
     - **Next debug checklist**:
-        1.  Research known compatibility issues between the specific versions of  and the Metro bundler used in the project.
-        2.  Try replacing  with a different icon set (e.g., ) to check if the issue is font-specific.
-    - **Why fix this issue and what will be achieved with the fix?**: Resolving this will fix a major visual defect, significantly improving the application's professionalism and user experience.
-    - **Status**: NOT STARTED
+        1.  The system prompt suggests  is available and works better. Verify if it's in . If not, install it (yarn add v1.22.22
+[1/4] Resolving packages...
+[2/4] Fetching packages...
+[3/4] Linking dependencies...
+[4/4] Building fresh packages...
+success Saved lockfile.
+success Saved 1 new dependency.
+info Direct dependencies
+└─ lucide-react@0.564.0
+info All dependencies
+└─ lucide-react@0.564.0
+Done in 4.23s.).
+        2.  Replace a single, easy-to-find  instance in one component with a  icon as a test.
+        3.  If the test is successful, propose a plan to systematically replace all  with  icons.
+    - **Why fix this issue and what will be achieved with the fix?**: Fixes a major UI defect, making the application look professional and usable.
+    - **Status**: IN PROGRESS
     - **Is recurring issue?**: Y
     - **Should Test frontend/backend/both after fix?**: Frontend
     - **Blocked on other issue**: None
 
 - **Issue 3**:
-    - **Description (P2)**: The deployment scripts have been created and provided, but the user has not confirmed a successful deployment on their own server. Final verification of the Tigo SMS integration and the scrolling fix is pending this deployment.
-    - **Next debug checklist**:
-        1.  After resolving the current UI tasks, proactively ask the user if they were able to run the deployment script successfully.
-        2.  Be prepared to debug any server-side environment issues they encounter.
-        3.  Once deployed, guide the user to test the Tigo SMS sending functionality and confirm the product page scrolling is fixed.
-    - **Why fix this issue and what will be achieved with the fix?**: This will validate the core functionality of the application in the user's live environment, completing the initial project goals.
-    - **Status**: BLOCKED
+    - **Description (P2)**: User has not confirmed if the provided deployment scripts (, ) work on their server. Core functionalities like Tigo SMS integration remain unverified in the user's environment.
+    - **Why fix this issue and what will be achieved with the fix?**: Completes one of the original project goals and validates the application in a production-like environment.
+    - **Status**: BLOCKED (on user action)
     - **Is recurring issue?**: N
-    - **Should Test frontend/backend/both after fix?**: Both (User will test on their server)
-    - **Blocked on other issue**: Blocked on user action.
+    - **Should Test frontend/backend/both after fix?**: Both
+    - **Blocked on other issue**: None
 
 - **Issue 4**:
-    - **Description (P3)**: An old issue reported by a testing agent about Frontend loading issues was never investigated.
-    - **Next debug checklist**: Check the browser's Network and Console tabs for slow-loading assets, 404 errors, or render-blocking scripts that could be slowing down the initial page load.
-    - **Why fix this issue and what will be achieved with the fix?**: Improves application performance and user experience.
+    - **Description (P3)**: An old issue about Frontend loading issues reported by a testing agent has not been investigated.
+    - **Why fix this issue and what will be achieved with the fix?**: Could improve application performance and initial load time.
     - **Status**: NOT STARTED
     - **Is recurring issue?**: N
     - **Should Test frontend/backend/both after fix?**: Frontend
@@ -75,8 +83,8 @@ The application is a full-stack FMCG platform with a React Native for Web (Expo)
 
 **In progress Task List**:
 - **Task 1**: Implement Dynamic Sidebar Color based on Product (P1)
-    - **Where to resume**: This task is part of the dashboard redesign. The next step is to investigate how to access the current product's theme/color and apply it dynamically to the sidebar component using CSS variables or styled-components.
-    - **What will be achieved with this?**: The sidebar color will adapt to the branding of the active product (RetailPro, Invoicing), enhancing the user experience for the multi-product platform.
+    - **Where to resume**: This task has not been started. The first step is to investigate the component structure to identify the sidebar and determine how to access the currently selected product's theme or color information.
+    - **What will be achieved with this?**: The sidebar's color will dynamically adapt to the active product's branding, improving UX for the multi-product platform.
     - **Status**: NOT STARTED
     - **Should Test frontend/backend/both after fix?**: Frontend
     - **Blocked on something**: None
@@ -85,85 +93,88 @@ The application is a full-stack FMCG platform with a React Native for Web (Expo)
 - **Upcoming Tasks**:
     - **P2**: Implement the UniTxt admin dashboard for managing SMS campaigns.
 - **Future Tasks**:
-    - **P3**: Refactor the monolithic  by moving route logic into the  directory.
-    - **P4**: Configure a production-ready static build for the frontend () to replace the development server.
+    - **P3**: Refactor the monolithic  by moving route logic into the  directory for better organization.
+    - **P4**: Configure a production-ready static build for the frontend () to replace the Expo development server.
 
 **Completed work in this session**
-- **Deployment Automation**: Created comprehensive one-click deployment scripts (, ) and provided detailed instructions.
-- **Backend Adverts API**: Created a new  router with endpoints (, ) for managing multi-language ads.
-- **Frontend Adverts Feature**: Created  component, , and  using Zustand.
-- **Auth & User Management**: Created a new  user, debugged a password hashing bug, and provided credentials to the user.
-- **Troubleshooting**: Investigated and identified the root cause of the broken icons issue as a pre-existing configuration problem.
+- **Advert Carousel Integration**: Successfully added the  component to the  for both web and mobile views, fetching data directly within the component as a workaround to the store integration issue.
+- **Carousel Feature Validation**: Used the  to run a full suite of tests on the advert carousel, confirming 100% functionality (visibility, content, auto-sliding, navigation dots, CTA button).
+- **PRD Update**: Updated  to reflect the completion of the advert carousel feature.
+- **Icon Issue Investigation**: Attempted and documented several failed fixes for the broken icon issue, narrowing down the cause to a likely bundler/config problem.
+
+**Earlier issues found/mentioned but not fixed**
+- The broken web icons issue (Issue #2) remains unresolved.
+- The original Frontend loading issues (Issue #4) remain uninvestigated.
+
+**Known issue recurrence from previous fork**
+- The issue of icons not rendering on the web is a known, persistent problem from the previous session.
 
 **Code Architecture**
 
 
+**Key Technical Concepts**
+- **Frontend**: Expo (React Native for Web), TypeScript, Zustand (for state management).
+- **Backend**: FastAPI (Python).
+- **Database**: MongoDB.
+- **Bundler**: Metro (Causing issues with  and font loading).
+
 **key DB schema**
 - : {email, password_hash, role}
-- : {title: {en, sw}, content: {en, sw}, ...} (NEW)
-- , 
+- : {title: {en, sw}, content: {en, sw}, image, link}
 
 **All files of reference**
-- **Created**:
-    - 
-    - 
-    - 
-    - 
-    - 
-    - , 
 - **Updated**:
-    - : Removed .
-    - : Registered the new adverts router.
-    - : Modified to add the carousel, but reverted due to a crash.
+    - : Modified to add carousel and language selector, but selector changes were reverted. The file now contains the working carousel implementation.
+    - : Updated to document the completion of the advert carousel task.
+- **Key files for debugging**:
+    - : Root layout file where font loading was attempted.
+    - : Potential source of bundler issues.
+    - : Part of the feature causing the crash.
+    - : The other part of the feature causing the crash.
 
 **Areas that need refactoring**:
-- **Icon Loading**: The mechanism for loading  on the web is fundamentally broken and needs a complete overhaul.
-- **Route Centralization**: Routes from  should be migrated to the  directory.
-- **Production Frontend Build**: The app still runs on an Expo development server; a static build process is needed for production.
+- **Icon Rendering**: The entire approach to loading and displaying icons on the web needs to be replaced, as the current  implementation is fundamentally broken.
+- **State Management Integration**: The  error suggests a potential incompatibility between Zustand and the Expo web build setup that needs to be addressed or worked around.
 
 **key api endpoints**
-- : Fetches all advertisements for public display.
-- : Creates a new advertisement (auth-protected).
+- : Fetches all advertisements. Used by the dashboard carousel.
 
 **Critical Info for New Agent**
-- Your immediate priority is to fix the frontend crash and successfully integrate the  into the dashboard. The user is waiting for this UI change.
-- The broken icons issue is a high-impact visual bug. After the carousel is working, this should be your next focus.
-- The user also requested a dynamic, color-changing sidebar based on the selected product. This is the next feature in the queue.
-- Be prepared to assist with deployment troubleshooting on the user's server, as they have the scripts but have not yet confirmed success.
+- Your immediate priority (P0) is to solve the Cannot use import.meta outside a module error that is blocking the  integration. The app is stable but the feature is incomplete.
+- The icon issue (P1) is the next most important task. It's a long-standing, highly visible bug. The  hook and other standard Expo methods have already failed. The next best step is to try a different icon library like .
+- Do not re-attempt the  or  fixes for the icon issue; they have been proven ineffective.
+- The  is working correctly, but it currently fetches data directly. Once the  is working, the data fetching logic in  will need to be updated to use the language from the store.
+
+**documents and test reports created in this job**
+- : Test report from  confirming the advert carousel works as expected.
+- : Updated with recent progress.
 
 **Last 10 User Messages and any pending HUMAN messages**
-10.  - User reported the advert carousel wasn't visible. **Status: In Progress, agent is re-attempting integration.**
-9.  - User approved the plan to implement the advert carousel and dynamic sidebar. **Status: In Progress.**
-8. User provided detailed requirements for the dashboard redesign (sliding adverts, dynamic sidebar color). **Status: In Progress.**
-7.  - User deprioritized the icon fix and requested the new advert carousel feature. **Status: In Progress.**
-6.  - User reported the broken icon UI bug. **Status: Investigated, pending fix.**
-5.  - User asked for admin login details. **Status: Completed.**
-4.  - User asked about the admin sidebar and its views. **Status: Completed.**
-3.  - User requested login credentials. **Status: Completed.**
-2.  - User asked to navigate to a specific product page. **Status: Completed.**
-1.  - User asked for clarification on deployment scripts. **Status: Completed.**
+-  - User is asking to debug the blocker preventing the language selector from appearing. **Status: In Progress.**
+-  - User confirmed they want the agent to proceed with adding the language selector. **Status: In Progress.**
 
 **Project Health Check:**
 - **Broken**:
-    - The web build has a critical UI bug where icons fail to load.
-    - The integration of the new advert carousel feature is currently causing the dashboard page to crash.
-- **Mocked**: The Tigo SMPP integration is code-complete but has not been live-tested by the user in their VPN environment.
+    - The integration of  and its Zustand store is non-functional and crashes the app.
+    - Icon rendering on the web build is broken across the entire application.
+- **Mocked**:
+    - The Tigo SMPP integration is implemented but remains untested by the user in their live environment.
 
 **3rd Party Integrations**
-- **Tigo Bulk SMS (SMPP)**: Integrated via . Pending user deployment and live testing.
-- **Expo Vector Icons (Ionicons)**: Integrated but not functioning correctly on the web.
+- **Tigo Bulk SMS (SMPP)**: Integrated via . Pending user testing.
+- **Expo Vector Icons (Ionicons)**: Integrated but broken on the web.
+- **Zustand**: Used for state management; suspected cause of the  crash.
 
 **Testing status**
-- **Testing agent used after significant changes**: NO
+- **Testing agent used after significant changes**: YES (for the advert carousel feature).
 - **Troubleshoot agent used after agent stuck in loop**: NO
 - **Test files created**: []
-- **Known regressions**: The attempt to integrate the advert carousel caused the dashboard page to crash.
+- **Known regressions**: Integrating the  component causes the entire dashboard to crash.
 
 **Credentials to test flow:**
 - **Admin**:  / 
 - **Demo User**:  / 
 
 **What agent forgot to execute**
-- The agent has not yet started the task to make the sidebar color dynamic based on the selected product.
-- The  file was not updated to reflect the new requirements for the advertisement carousel or the creation of deployment scripts.
-- The original Frontend loading issues from the initial project handoff remain uninvestigated.</analysis>
+- The agent has not yet started the Dynamic Sidebar Color task.
+- The investigation into the original Frontend loading issues remains pending.</analysis>

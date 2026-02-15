@@ -9,7 +9,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://advert-feature.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://multi-product-hub-3.preview.emergentagent.com')
 
 # Test credentials
 SUPERADMIN_EMAIL = "superadmin@softwaregalaxy.com"
