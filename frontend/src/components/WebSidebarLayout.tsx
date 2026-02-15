@@ -685,10 +685,11 @@ const styles = StyleSheet.create({
   navSectionTitle: {
     fontSize: 11,
     fontWeight: '600',
-    color: theme.textMuted,
+    color: 'rgba(255, 255, 255, 0.5)',
     letterSpacing: 0.5,
     paddingHorizontal: 12,
     marginBottom: 8,
+    textTransform: 'uppercase',
   },
   navItem: {
     flexDirection: 'row',
@@ -713,7 +714,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   badge: {
-    backgroundColor: theme.error,
+    backgroundColor: '#E9A319',
     borderRadius: 10,
     minWidth: 20,
     height: 20,
@@ -724,9 +725,9 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#1B4332',
   },
-  // Referral Section
+  // Referral Section - Updated for dark sidebar
   referralSection: {
     paddingHorizontal: 12,
     paddingVertical: 16,
@@ -739,19 +740,19 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 12,
     borderRadius: 12,
-    backgroundColor: '#EEF2FF',
+    backgroundColor: 'rgba(64, 145, 108, 0.3)',
     borderWidth: 1,
-    borderColor: '#C7D2FE',
+    borderColor: 'rgba(149, 213, 178, 0.3)',
   },
   referralButtonActive: {
-    backgroundColor: '#E0E7FF',
-    borderColor: '#A5B4FC',
+    backgroundColor: 'rgba(64, 145, 108, 0.5)',
+    borderColor: 'rgba(149, 213, 178, 0.5)',
   },
   referralIconContainer: {
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: '#6366F1',
+    backgroundColor: '#40916C',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -761,11 +762,11 @@ const styles = StyleSheet.create({
   referralButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#4F46E5',
+    color: '#FFFFFF',
   },
   referralSubtext: {
     fontSize: 11,
-    color: '#6B7280',
+    color: 'rgba(255, 255, 255, 0.6)',
     marginTop: 1,
   },
   // Affiliate Button
