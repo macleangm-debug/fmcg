@@ -1242,6 +1242,20 @@ export default function Dashboard() {
         <ProductSwitcher currentProductId="retailpro" />
       </View>
 
+      {/* Advertisement Carousel for Mobile */}
+      {adverts.length > 0 && (
+        <View style={{ paddingHorizontal: 16, marginBottom: 16 }}>
+          <AdvertCarousel
+            adverts={adverts}
+            autoPlayInterval={5000}
+            showDots={true}
+            showArrows={false}
+            height={90}
+            variant="card"
+          />
+        </View>
+      )}
+
       <View style={styles.statsGrid}>
         <MobileStatCard
           icon="cash-outline"
