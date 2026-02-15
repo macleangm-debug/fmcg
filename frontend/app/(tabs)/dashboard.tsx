@@ -959,7 +959,7 @@ export default function Dashboard() {
         <View style={webDashStyles.statsRow}>
           <View style={webDashStyles.statCard}>
             <View style={[webDashStyles.statIcon, { backgroundColor: '#D1FAE5' }]}>
-              <Ionicons name="cash" size={24} color="#10B981" />
+              <Icon name="cash" size={24} color="#10B981" />
             </View>
             <View style={webDashStyles.statInfo}>
               <Text style={webDashStyles.statValue}>{formatCurrency(stats?.total_sales_today || 0)}</Text>
@@ -969,7 +969,7 @@ export default function Dashboard() {
           
           <View style={webDashStyles.statCard}>
             <View style={[webDashStyles.statIcon, { backgroundColor: '#DBEAFE' }]}>
-              <Ionicons name="receipt" size={24} color="#2563EB" />
+              <Icon name="receipt" size={24} color="#2563EB" />
             </View>
             <View style={webDashStyles.statInfo}>
               <Text style={webDashStyles.statValue}>{stats?.total_orders_today || 0}</Text>
@@ -979,7 +979,7 @@ export default function Dashboard() {
           
           <View style={webDashStyles.statCard}>
             <View style={[webDashStyles.statIcon, { backgroundColor: '#EDE9FE' }]}>
-              <Ionicons name="people" size={24} color="#8B5CF6" />
+              <Icon name="people" size={24} color="#8B5CF6" />
             </View>
             <View style={webDashStyles.statInfo}>
               <Text style={webDashStyles.statValue}>{stats?.total_customers || 0}</Text>
@@ -989,7 +989,7 @@ export default function Dashboard() {
           
           <View style={webDashStyles.statCard}>
             <View style={[webDashStyles.statIcon, { backgroundColor: '#FEF3C7' }]}>
-              <Ionicons name="cube" size={24} color="#F59E0B" />
+              <Icon name="cube" size={24} color="#F59E0B" />
             </View>
             <View style={webDashStyles.statInfo}>
               <Text style={webDashStyles.statValue}>{stats?.total_products || 0}</Text>
