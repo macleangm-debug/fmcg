@@ -4493,6 +4493,11 @@ const webDashStyles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   pageTitle: {
     fontSize: 24,
     fontWeight: '700',
