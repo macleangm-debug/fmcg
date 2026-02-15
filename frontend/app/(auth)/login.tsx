@@ -277,10 +277,10 @@ export default function Login() {
       <AnimatedView style={styles.form} entering={FadeInDown.delay(500).duration(400)}>
         {error && (
           <View style={styles.errorContainer}>
-            <Ionicons name="alert-circle" size={18} color="#DC2626" />
+            <Icon name="alert-circle" size={18} color="#DC2626" />
             <Text style={styles.errorText}>{error}</Text>
             <TouchableOpacity onPress={clearError}>
-              <Ionicons name="close" size={18} color="#DC2626" />
+              <Icon name="close" size={18} color="#DC2626" />
             </TouchableOpacity>
           </View>
         )}
@@ -299,11 +299,11 @@ export default function Login() {
             onBlur={() => handleBlur('email')}
             keyboardType="email-address"
             autoCapitalize="none"
-            leftIcon={<Ionicons name="mail-outline" size={18} color={touched.email && fieldErrors.email ? '#DC2626' : '#6B7280'} />}
+            leftIcon={<Icon name="mail-outline" size={18} color={touched.email && fieldErrors.email ? '#DC2626' : '#6B7280'} />}
           />
           {touched.email && fieldErrors.email && (
             <View style={styles.fieldError}>
-              <Ionicons name="alert-circle" size={14} color="#DC2626" />
+              <Icon name="alert-circle" size={14} color="#DC2626" />
               <Text style={styles.fieldErrorText}>{fieldErrors.email}</Text>
             </View>
           )}
@@ -324,10 +324,10 @@ export default function Login() {
             onSubmitEditing={handleLogin}
             returnKeyType="done"
             secureTextEntry={!showPassword}
-            leftIcon={<Ionicons name="lock-closed-outline" size={18} color={touched.password && fieldErrors.password ? '#DC2626' : '#6B7280'} />}
+            leftIcon={<Icon name="lock-closed-outline" size={18} color={touched.password && fieldErrors.password ? '#DC2626' : '#6B7280'} />}
             rightIcon={
               <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-                <Ionicons
+                <Icon
                   name={showPassword ? 'eye-outline' : 'eye-off-outline'}
                   size={18}
                   color="#6B7280"
@@ -337,7 +337,7 @@ export default function Login() {
           />
           {touched.password && fieldErrors.password && (
             <View style={styles.fieldError}>
-              <Ionicons name="alert-circle" size={14} color="#DC2626" />
+              <Icon name="alert-circle" size={14} color="#DC2626" />
               <Text style={styles.fieldErrorText}>{fieldErrors.password}</Text>
             </View>
           )}
