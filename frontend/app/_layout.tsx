@@ -3,7 +3,7 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import * as Font from 'expo-font';
+import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { useAuthStore } from '../src/store/authStore';
 import { useBusinessStore } from '../src/store/businessStore';
@@ -13,48 +13,16 @@ import GlobalModals from '../src/components/GlobalModals';
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-// For web: Inject Ionicons font CSS directly
-if (Platform.OS === 'web' && typeof document !== 'undefined') {
-  const iconFontCSS = `
-    @font-face {
-      font-family: 'Ionicons';
-      src: url('https://cdn.jsdelivr.net/npm/ionicons@5.5.2/dist/fonts/ionicons.woff2?v=5.5.2') format('woff2'),
-           url('https://cdn.jsdelivr.net/npm/ionicons@5.5.2/dist/fonts/ionicons.woff?v=5.5.2') format('woff'),
-           url('https://cdn.jsdelivr.net/npm/ionicons@5.5.2/dist/fonts/ionicons.ttf?v=5.5.2') format('truetype');
-      font-weight: normal;
-      font-style: normal;
-    }
-  `;
-  
-  const style = document.createElement('style');
-  style.type = 'text/css';
-  style.appendChild(document.createTextNode(iconFontCSS));
-  document.head.appendChild(style);
-}
-
 export default function RootLayout() {
   const { loadUser, isLoading, isAuthenticated } = useAuthStore();
   const { loadSettings } = useBusinessStore();
   const [ready, setReady] = useState(false);
-  const [fontsLoaded, setFontsLoaded] = useState(false);
 
-  // Load fonts explicitly
-  useEffect(() => {
-    const loadFonts = async () => {
-      try {
-        await Font.loadAsync({
-          'Ionicons': require('@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Ionicons.ttf'),
-          'ionicons': require('@expo/vector-icons/build/vendor/react-native-vector-icons/Fonts/Ionicons.ttf'),
-        });
-        setFontsLoaded(true);
-      } catch (error) {
-        console.log('Font loading error:', error);
-        // Continue even if fonts fail to load
-        setFontsLoaded(true);
-      }
-    };
-    loadFonts();
-  }, []);
+  // Load fonts using useFonts hook - load from assets folder for better web support
+  const [fontsLoaded] = useFonts({
+    Ionicons: require('../assets/fonts/Ionicons.ttf'),
+    ionicons: require('../assets/fonts/Ionicons.ttf'),
+  });
 
   useEffect(() => {
     const initialize = async () => {
