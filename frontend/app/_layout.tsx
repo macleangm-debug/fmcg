@@ -76,7 +76,7 @@ export default function RootLayout() {
   }
 
   return (
-    <SafeAreaProvider>
+    <SafeAreaProvider onLayout={onLayoutRootView}>
       <ModalProvider>
         <StatusBar style="dark" />
         <Stack screenOptions={{ headerShown: false }}>
