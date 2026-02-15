@@ -269,7 +269,7 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
                 style={styles.logoutConfirmBtn}
                 onPress={confirmLogout}
               >
-                <Ionicons name="log-out-outline" size={18} color="#FFFFFF" />
+                <Icon name="log-out-outline" size={18} color="#FFFFFF" />
                 <Text style={styles.logoutConfirmText}>Logout</Text>
               </TouchableOpacity>
             </View>
