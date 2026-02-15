@@ -25,6 +25,9 @@ import { useLocationStore } from '../../src/store/locationStore';
 import { dashboardApi, retailproApi } from '../../src/api/client';
 import ProductSwitcher from '../../src/components/ProductSwitcher';
 import WebModal from '../../src/components/WebModal';
+import ConfirmationModal from '../../src/components/ConfirmationModal';
+import { PieChart, BarChart, LineChart } from 'react-native-gifted-charts';
+import { format } from 'date-fns';
 import AdvertCarousel from '../../src/components/AdvertCarousel';
 import { useAdvertStore } from '../../src/store/advertStore';
 import { useLanguageStore } from '../../src/store/languageStore';
@@ -33,9 +36,6 @@ import { useLanguageStore } from '../../src/store/languageStore';
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
-import ConfirmationModal from '../../src/components/ConfirmationModal';
-import { PieChart, BarChart, LineChart } from 'react-native-gifted-charts';
-import { format } from 'date-fns';
 
 interface Order {
   id: string;
