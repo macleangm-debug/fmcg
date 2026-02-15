@@ -1073,7 +1073,7 @@ export default function Dashboard() {
 
         {/* Main Dashboard Grid - Matches Reference Design */}
         <View style={webDashStyles.dashboardGrid}>
-          {/* Left Column: Transaction List + Sales Report */}
+          {/* Left Column: Transaction List */}
           <View style={webDashStyles.leftColumn}>
             {/* Transaction List */}
             <TransactionList 
@@ -1092,6 +1092,15 @@ export default function Dashboard() {
               }
               onViewMore={() => router.push('/(tabs)/orders')}
             />
+          </View>
+          
+          {/* Middle Column: Revenue Chart + Sales Report */}
+          <View style={webDashStyles.middleColumn}>
+            <RevenueChart 
+              totalRevenue={stats?.total_sales_today ? stats.total_sales_today * 4 : 193000}
+              percentageChange={35}
+              formatCurrency={formatCurrency}
+            />
             
             {/* Sales Report */}
             <SalesReport 
@@ -1101,15 +1110,6 @@ export default function Dashboard() {
                 { label: 'Product Sold', value: stats?.total_orders_today ? stats.total_orders_today * 10 : 482, color: '#D8F3DC' },
               ]}
               onViewMore={() => router.push('/admin/reports')}
-            />
-          </View>
-          
-          {/* Middle Column: Revenue Chart */}
-          <View style={webDashStyles.middleColumn}>
-            <RevenueChart 
-              totalRevenue={stats?.total_sales_today ? stats.total_sales_today * 4 : 193000}
-              percentageChange={35}
-              formatCurrency={formatCurrency}
             />
           </View>
           
