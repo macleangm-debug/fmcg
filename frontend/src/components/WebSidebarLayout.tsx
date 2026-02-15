@@ -245,7 +245,7 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
           <View style={styles.logoutModal}>
             {/* Icon */}
             <View style={styles.logoutIconContainer}>
-              <Ionicons name="log-out-outline" size={32} color="#DC2626" />
+              <Icon name="log-out-outline" size={32} color="#DC2626" />
             </View>
             
             {/* Title */}
