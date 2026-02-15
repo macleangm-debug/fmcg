@@ -11,24 +11,46 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 
 ## What's Been Implemented
 
+### February 15, 2026 - Advertisement System & Multi-Language Support
+- ✅ Created `/app/backend/routes/adverts.py` - Full advertisement management API
+- ✅ Created `/app/frontend/src/components/AdvertCarousel.tsx` - Reusable sliding advert component
+- ✅ Created `/app/frontend/src/store/languageStore.ts` - Multi-language support (EN, SW, FR, AR, PT)
+- ✅ Created `/app/frontend/src/store/advertStore.ts` - Advert state management
+- ✅ Created `/app/frontend/src/components/LanguageSelector.tsx` - Language picker component
+- ✅ Deployment script created at `/app/deploy.sh`
+- ⚠️ Integration into dashboard pending - needs further debugging
+
 ### February 13, 2026 - Tigo SMPP Integration
 - ✅ Created `/app/backend/services/tigo_smpp_service.py` - Full SMPP client service
-- ✅ Added Tigo SMPP API endpoints to `/app/backend/routes/unitxt.py`:
-  - `POST /api/unitxt/tigo/send` - Send single SMS
-  - `POST /api/unitxt/tigo/bulk-send` - Send bulk SMS with personalization
-  - `GET /api/unitxt/tigo/batch/{batch_id}` - Check bulk SMS batch status
-  - `GET /api/unitxt/tigo/status` - Check Tigo service status
-- ✅ Added Tigo credentials to backend `.env`
+- ✅ Added Tigo SMPP API endpoints to `/app/backend/routes/unitxt.py`
 - ✅ Fixed scrolling issue on product pages
-- ✅ All backend APIs tested and working (sandbox mode)
 
 ### February 13, 2026 - Delivery Report Webhooks
-- ✅ `POST /api/unitxt/webhook/delivery` - HTTP webhook for Tigo delivery reports
-- ✅ `POST /api/unitxt/webhook/delivery/raw` - Alternative endpoint for unknown payload formats
-- ✅ `GET /api/unitxt/message/{message_id}/status` - Get delivery status for specific message
-- ✅ `GET /api/unitxt/delivery-reports` - Get recent delivery reports
-- ✅ `GET /api/unitxt/webhook/test` - Test webhook accessibility
-- ✅ SMPP delivery receipt handling (via `deliver_sm` PDUs)
+- ✅ HTTP webhook endpoints for Tigo delivery reports
+- ✅ SMPP delivery receipt handling
+
+---
+
+## Advertisement System
+
+### Backend API Endpoints
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/api/adverts/public` | GET | No | Get active adverts (with language param) |
+| `/api/adverts/` | GET | Yes | Get all adverts (admin) |
+| `/api/adverts/{id}` | GET | Yes | Get single advert |
+| `/api/adverts/` | POST | Admin | Create new advert |
+| `/api/adverts/{id}` | PUT | Admin | Update advert |
+| `/api/adverts/{id}` | DELETE | Admin | Delete advert |
+| `/api/adverts/seed` | POST | Admin | Seed sample adverts |
+| `/api/adverts/languages/available` | GET | No | Get supported languages |
+
+### Supported Languages
+- English (en)
+- Swahili (sw)
+- French (fr)
+- Arabic (ar) - RTL support
+- Portuguese (pt)
 
 ---
 
@@ -42,93 +64,64 @@ Sender ID: UNITXT
 Status: SANDBOX MODE (set TIGO_SANDBOX=false for production)
 ```
 
-**VPN Requirement**: The SMPP connection requires VPN connectivity to Tigo's gateway (41.222.182.6).
+**VPN Requirement**: The SMPP connection requires VPN connectivity to Tigo's gateway.
 
 ---
 
-## Deployment Instructions
+## One-Click Deployment
 
-### Step 1: Get the Code
-**Option A - GitHub (Private repo supported):**
+### Using deploy.sh (for PUBLIC repos)
 ```bash
-# Using Personal Access Token
-git clone https://YOUR_TOKEN@github.com/macleangm-debug/fmcg.git
-
-# Or using SSH key
-git clone git@github.com:macleangm-debug/fmcg.git
+ssh joseph@41.220.143.37
+# Copy deploy.sh to server and run:
+chmod +x deploy.sh
+sudo bash deploy.sh
 ```
 
-### Step 2: Install Dependencies
-```bash
-cd fmcg/backend
-pip install -r requirements.txt
-```
-
-### Step 3: Configure for Production
-Edit `/backend/.env`:
-```
-TIGO_SANDBOX=false
-```
-
-### Step 4: Configure Tigo Webhook
-In your Tigo account, set delivery report URL to:
-```
-https://yourdomain.com/api/unitxt/webhook/delivery
-```
-
-### Step 5: Run the Server
-```bash
-python -m uvicorn server:app --host 0.0.0.0 --port 8001
-```
+### For PRIVATE repos
+The script will prompt for GitHub username and Personal Access Token.
 
 ---
 
 ## Key Files
+- `/app/backend/routes/adverts.py` - Advertisement management API
 - `/app/backend/services/tigo_smpp_service.py` - Tigo SMPP service
-- `/app/backend/routes/unitxt.py` - UniTxt SMS routes including Tigo integration & webhooks
-- `/app/backend/.env` - Tigo credentials
-- `/app/frontend/app/products/[id].tsx` - Product pages with scrolling fix
-
-## API Endpoints Summary
-
-### SMS Sending
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/unitxt/tigo/send` | POST | Send single SMS |
-| `/api/unitxt/tigo/bulk-send` | POST | Send bulk SMS |
-| `/api/unitxt/tigo/batch/{id}` | GET | Get batch status |
-| `/api/unitxt/tigo/status` | GET | Service status |
-
-### Delivery Reports
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/api/unitxt/webhook/delivery` | POST | Receive Tigo callbacks |
-| `/api/unitxt/webhook/delivery/raw` | POST | Raw payload handler |
-| `/api/unitxt/message/{id}/status` | GET | Get message status |
-| `/api/unitxt/delivery-reports` | GET | List recent reports |
-| `/api/unitxt/webhook/test` | GET | Test webhook URL |
+- `/app/backend/routes/unitxt.py` - UniTxt SMS routes
+- `/app/frontend/src/components/AdvertCarousel.tsx` - Sliding advert carousel
+- `/app/frontend/src/store/languageStore.ts` - Multi-language translations
+- `/app/frontend/src/components/LanguageSelector.tsx` - Language picker
+- `/app/deploy.sh` - One-click deployment script
 
 ---
 
 ## P0 - Completed
 - [x] Tigo SMPP integration (sandbox mode working)
-- [x] Single SMS sending via Tigo
-- [x] Bulk SMS sending with personalization ({{name}} placeholder)
-- [x] Batch status tracking
-- [x] Delivery report webhooks (HTTP)
-- [x] SMPP delivery receipt handling
+- [x] Single & Bulk SMS sending via Tigo
+- [x] Delivery report webhooks (HTTP & SMPP)
 - [x] Product page scrolling fix
+- [x] Deployment script for user's server
+- [x] Advertisement backend API
+- [x] Multi-language support (5 languages)
+- [x] AdvertCarousel component
 
-## P1 - Next Steps
+## P1 - In Progress
+- [ ] Integrate AdvertCarousel into dashboard (debugging needed)
+- [ ] Sidebar theming per product color
+- [ ] Admin UI for managing adverts
+
+## P2 - Next Steps
 - [ ] Deploy to VPN-connected server
-- [ ] Set TIGO_SANDBOX=false and test live
-- [ ] Configure webhook URL in Tigo account
+- [ ] Test live SMS sending
+- [ ] Fix icon loading issue on web
 
-## P2 - Future Tasks
-- [ ] UniTxt admin dashboard for managing SMS campaigns
-- [ ] Full production build for Expo web (`expo export:web`)
+## P3 - Future Tasks
+- [ ] UniTxt admin dashboard for SMS campaigns
+- [ ] Production build for Expo web
 - [ ] SMS analytics dashboard
 
+---
+
 ## Testing Credentials
-- **API Test User**: admin@test.com / admin123
+- **Admin User**: admin@fmcg.com / Admin@2025
+- **Demo User**: demo@fmcg.com / Demo@2025
 - **Preview URL**: https://unitxt-bulk-sms.preview.emergentagent.com
