@@ -1,17 +1,28 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useAuthStore } from '../src/store/authStore';
 import { useBusinessStore } from '../src/store/businessStore';
 import { ModalProvider } from '../src/context/ModalContext';
 import GlobalModals from '../src/components/GlobalModals';
+import { useFonts } from 'expo-font';
+import { Ionicons } from '@expo/vector-icons';
+import * as SplashScreen from 'expo-splash-screen';
+
+// Prevent splash screen from auto-hiding
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   const { loadUser, isLoading, isAuthenticated } = useAuthStore();
   const { loadSettings } = useBusinessStore();
   const [ready, setReady] = useState(false);
+
+  // Load Ionicons font for web
+  const [fontsLoaded] = useFonts({
+    ...Ionicons.font,
+  });
 
   useEffect(() => {
     const initialize = async () => {
@@ -27,6 +38,17 @@ export default function RootLayout() {
     
     initialize();
   }, []);
+
+  // Hide splash screen when fonts are loaded
+  const onLayoutRootView = useCallback(async () => {
+    if (fontsLoaded && ready) {
+      await SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [fontsLoaded, ready]);
+
+  useEffect(() => {
+    onLayoutRootView();
+  }, [onLayoutRootView]);
 
   // Load business settings when authenticated
   useEffect(() => {
