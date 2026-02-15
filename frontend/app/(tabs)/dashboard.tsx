@@ -156,10 +156,6 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
   
-  // Adverts State
-  const { adverts, fetchAdverts } = useAdvertStore();
-  const { currentLanguage } = useLanguageStore();
-  
   // Linked Apps State - Initialize empty, fetch from API
   const [linkedAppIds, setLinkedAppIds] = useState<string[]>([]);
   const [appsWithStatus, setAppsWithStatus] = useState<any[]>([]);
