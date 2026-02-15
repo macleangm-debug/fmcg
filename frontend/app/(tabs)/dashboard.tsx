@@ -928,17 +928,10 @@ export default function Dashboard() {
           <Text style={webDashStyles.pageTitle}>Dashboard</Text>
           <Text style={webDashStyles.pageSubtitle}>Retail Pro - Point of Sale Overview</Text>
         </View>
-        <View style={webDashStyles.headerActions}>
-          <LanguageSelector 
-            variant="dropdown" 
-            themeColor="#2563EB"
-            style={{ marginRight: 12 }}
-          />
-          <TouchableOpacity style={webDashStyles.newSaleBtn} onPress={() => router.push('/(tabs)/cart')}>
-            <Ionicons name="add" size={20} color="#FFFFFF" />
-            <Text style={webDashStyles.newSaleBtnText}>New Sale</Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity style={webDashStyles.newSaleBtn} onPress={() => router.push('/(tabs)/cart')}>
+          <Ionicons name="add" size={20} color="#FFFFFF" />
+          <Text style={webDashStyles.newSaleBtnText}>New Sale</Text>
+        </TouchableOpacity>
       </View>
       
       <ScrollView
