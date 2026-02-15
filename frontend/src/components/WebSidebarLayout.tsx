@@ -24,24 +24,29 @@ interface WebSidebarLayoutProps {
   children: React.ReactNode;
 }
 
-// Inline theme colors
+// Inline theme colors - Dark green modern theme
 const theme = {
-  background: '#F9FAFB',
+  background: '#F5F5F0',
   surface: '#FFFFFF',
   surfaceSecondary: '#F3F4F6',
   text: '#111827',
   textSecondary: '#6B7280',
   textMuted: '#9CA3AF',
   border: '#E5E7EB',
-  primary: '#2563EB',
-  primaryLight: '#EFF6FF',
-  success: '#10B981',
+  primary: '#1B4332',
+  primaryLight: '#D8F3DC',
+  success: '#40916C',
+  successLight: '#95D5B2',
   warning: '#F59E0B',
   error: '#DC2626',
-  sidebarBg: '#FFFFFF',
-  sidebarText: '#374151',
-  sidebarActiveText: '#2563EB',
-  sidebarActiveBg: '#EFF6FF',
+  accent: '#E9A319',
+  // New sidebar theme - Dark Green
+  sidebarBg: '#1B4332',
+  sidebarText: '#95D5B2',
+  sidebarActiveText: '#FFFFFF',
+  sidebarActiveBg: 'rgba(255, 255, 255, 0.15)',
+  sidebarHover: 'rgba(255, 255, 255, 0.08)',
+  sidebarDivider: 'rgba(255, 255, 255, 0.1)',
 };
 
 export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
