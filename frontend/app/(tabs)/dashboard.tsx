@@ -25,6 +25,9 @@ import { useLocationStore } from '../../src/store/locationStore';
 import { dashboardApi, retailproApi } from '../../src/api/client';
 import ProductSwitcher from '../../src/components/ProductSwitcher';
 import WebModal from '../../src/components/WebModal';
+import AdvertCarousel from '../../src/components/AdvertCarousel';
+import { useAdvertStore } from '../../src/store/advertStore';
+import { useLanguageStore } from '../../src/store/languageStore';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
