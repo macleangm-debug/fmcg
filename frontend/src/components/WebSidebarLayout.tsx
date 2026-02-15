@@ -769,7 +769,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255, 255, 255, 0.6)',
     marginTop: 1,
   },
-  // Affiliate Button
+  // Affiliate Button - Updated for dark sidebar
   affiliateButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -777,26 +777,26 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 12,
     borderRadius: 12,
-    backgroundColor: '#D1FAE5',
+    backgroundColor: 'rgba(233, 163, 25, 0.2)',
     borderWidth: 1,
-    borderColor: '#86EFAC',
+    borderColor: 'rgba(233, 163, 25, 0.3)',
     marginTop: 10,
   },
   affiliateButtonActive: {
-    backgroundColor: '#A7F3D0',
-    borderColor: '#6EE7B7',
+    backgroundColor: 'rgba(233, 163, 25, 0.3)',
+    borderColor: 'rgba(233, 163, 25, 0.5)',
   },
   affiliateButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#059669',
+    color: '#E9A319',
   },
-  // Help Section
+  // Help Section - Updated for dark sidebar
   helpSection: {
     paddingHorizontal: 12,
     paddingVertical: 16,
     borderTopWidth: 1,
-    borderTopColor: theme.border,
+    borderTopColor: theme.sidebarDivider,
     marginTop: 'auto',
   },
   helpButton: {
@@ -806,12 +806,12 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 12,
     borderRadius: 8,
-    backgroundColor: theme.primaryLight,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   helpButtonText: {
     fontSize: 14,
     fontWeight: '500',
-    color: theme.primary,
+    color: '#95D5B2',
   },
   // Main Content
   mainContent: {
