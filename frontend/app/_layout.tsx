@@ -3,6 +3,8 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { useFonts } from 'expo-font';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useAuthStore } from '../src/store/authStore';
 import { useBusinessStore } from '../src/store/businessStore';
 import { ModalProvider } from '../src/context/ModalContext';
@@ -12,6 +14,11 @@ export default function RootLayout() {
   const { loadUser, isLoading, isAuthenticated } = useAuthStore();
   const { loadSettings } = useBusinessStore();
   const [ready, setReady] = useState(false);
+
+  // Load fonts for web compatibility
+  const [fontsLoaded] = useFonts({
+    ...Ionicons.font,
+  });
 
   useEffect(() => {
     const initialize = async () => {
@@ -35,8 +42,8 @@ export default function RootLayout() {
     }
   }, [isAuthenticated]);
 
-  // Show loading only until ready flag is set
-  if (!ready) {
+  // Show loading until both ready flag is set AND fonts are loaded
+  if (!ready || !fontsLoaded) {
     return (
       <View style={styles.loading}>
         <ActivityIndicator size="large" color="#2563EB" />
