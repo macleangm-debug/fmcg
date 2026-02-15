@@ -14,30 +14,14 @@ import * as SplashScreen from 'expo-splash-screen';
 // Prevent splash screen from auto-hiding
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-// Inject Ionicons font CSS for web
-if (Platform.OS === 'web' && typeof document !== 'undefined') {
-  const style = document.createElement('style');
-  style.textContent = `
-    @font-face {
-      font-family: 'Ionicons';
-      src: url('https://cdn.jsdelivr.net/npm/ionicons@5.5.2/dist/fonts/ionicons.woff2?v=5.5.2') format('woff2'),
-           url('https://cdn.jsdelivr.net/npm/ionicons@5.5.2/dist/fonts/ionicons.woff?v=5.5.2') format('woff'),
-           url('https://cdn.jsdelivr.net/npm/ionicons@5.5.2/dist/fonts/ionicons.ttf?v=5.5.2') format('truetype');
-      font-weight: normal;
-      font-style: normal;
-    }
-  `;
-  document.head.appendChild(style);
-}
-
 export default function RootLayout() {
   const { loadUser, isLoading, isAuthenticated } = useAuthStore();
   const { loadSettings } = useBusinessStore();
   const [ready, setReady] = useState(false);
 
-  // Load Ionicons font for web
+  // Load Ionicons font explicitly
   const [fontsLoaded] = useFonts({
-    ...Ionicons.font,
+    'Ionicons': require('../assets/fonts/Ionicons.ttf'),
   });
 
   useEffect(() => {
