@@ -921,17 +921,27 @@ export default function Dashboard() {
         }
         contentContainerStyle={webDashStyles.dashboardContent}
       >
-        {/* Dynamic Advertisement Carousel */}
-        {adverts.length > 0 && (
-          <AdvertCarousel
-            adverts={adverts}
-            autoPlayInterval={6000}
-            showDots={true}
-            height={100}
-            variant="card"
-            style={{ marginBottom: 20 }}
-          />
-        )}
+        {/* Referral Banner */}
+        <TouchableOpacity 
+          style={webDashStyles.referralBanner}
+          onPress={() => router.push('/referral')}
+          activeOpacity={0.9}
+          data-testid="referral-banner"
+        >
+          <View style={webDashStyles.referralBannerContent}>
+            <View style={webDashStyles.referralIconContainer}>
+              <Ionicons name="gift" size={28} color="#FFFFFF" />
+            </View>
+            <View style={webDashStyles.referralBannerText}>
+              <Text style={webDashStyles.referralBannerTitle}>Refer & Earn $10 Credit</Text>
+              <Text style={webDashStyles.referralBannerSubtitle}>Invite friends and earn rewards for each successful referral</Text>
+            </View>
+          </View>
+          <View style={webDashStyles.referralBannerAction}>
+            <Text style={webDashStyles.referralBannerActionText}>Get Your Link</Text>
+            <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+          </View>
+        </TouchableOpacity>
 
         {/* Stats Row */}
         <View style={webDashStyles.statsRow}>
