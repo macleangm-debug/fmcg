@@ -17,12 +17,24 @@ export default function RootLayout() {
   const { loadUser, isLoading, isAuthenticated } = useAuthStore();
   const { loadSettings } = useBusinessStore();
   const [ready, setReady] = useState(false);
+  const [fontTimeout, setFontTimeout] = useState(false);
 
   // Load fonts using useFonts hook - load from assets folder for better web support
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     Ionicons: require('../assets/fonts/Ionicons.ttf'),
     ionicons: require('../assets/fonts/Ionicons.ttf'),
   });
+
+  // Font loading timeout - proceed after 3 seconds even if fonts fail
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!fontsLoaded) {
+        console.log('Font loading timeout - proceeding without fonts');
+        setFontTimeout(true);
+      }
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [fontsLoaded]);
 
   useEffect(() => {
     const initialize = async () => {
@@ -48,13 +60,16 @@ export default function RootLayout() {
 
   // Hide splash screen when app is ready
   const onLayoutRootView = useCallback(async () => {
-    if (ready && fontsLoaded) {
+    if (ready && (fontsLoaded || fontTimeout)) {
       await SplashScreen.hideAsync().catch(() => {});
     }
-  }, [ready, fontsLoaded]);
+  }, [ready, fontsLoaded, fontTimeout]);
 
-  // Show loading until both ready flag is set AND fonts are loaded
-  if (!ready || !fontsLoaded) {
+  // Determine if we should show the app
+  const shouldShowApp = ready && (fontsLoaded || fontTimeout || fontError);
+
+  // Show loading until ready
+  if (!shouldShowApp) {
     return (
       <View style={styles.loading}>
         <ActivityIndicator size="large" color="#2563EB" />
