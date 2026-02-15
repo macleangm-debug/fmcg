@@ -388,13 +388,13 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
                 data-testid="sidebar-refer-earn-btn"
               >
                 <View style={styles.referralIconContainer}>
-                  <Ionicons name="gift" size={18} color="#FFFFFF" />
+                  <Icon name="gift" size={18} color="#FFFFFF" />
                 </View>
                 <View style={styles.referralTextContainer}>
                   <Text style={styles.referralButtonText}>Refer & Earn</Text>
                   <Text style={styles.referralSubtext}>Get $10 per referral</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={18} color="#6366F1" />
+                <Icon name="chevron-forward" size={18} color="#6366F1" />
               </TouchableOpacity>
               
               {/* Affiliate Partner Dashboard Link */}
@@ -405,13 +405,13 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
                 data-testid="sidebar-affiliate-dashboard-btn"
               >
                 <View style={[styles.referralIconContainer, { backgroundColor: '#10B981' }]}>
-                  <Ionicons name="people" size={18} color="#FFFFFF" />
+                  <Icon name="people" size={18} color="#FFFFFF" />
                 </View>
                 <View style={styles.referralTextContainer}>
                   <Text style={styles.affiliateButtonText}>Affiliate Program</Text>
                   <Text style={styles.referralSubtext}>Become a partner</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={18} color="#10B981" />
+                <Icon name="chevron-forward" size={18} color="#10B981" />
               </TouchableOpacity>
             </View>
 
