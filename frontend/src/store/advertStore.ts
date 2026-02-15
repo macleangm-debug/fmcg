@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import axios from 'axios';
 import { useLanguageStore } from './languageStore';
 
-const API_URL = process.env.REACT_APP_BACKEND_URL || '';
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
 
 export interface Advert {
   id: string;
