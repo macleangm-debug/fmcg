@@ -124,4 +124,4 @@ The script will prompt for GitHub username and Personal Access Token.
 ## Testing Credentials
 - **Admin User**: admin@fmcg.com / Admin@2025
 - **Demo User**: demo@fmcg.com / Demo@2025
-- **Preview URL**: https://unitxt-bulk-sms.preview.emergentagent.com
+- **Preview URL**: https://advert-feature.preview.emergentagent.com
