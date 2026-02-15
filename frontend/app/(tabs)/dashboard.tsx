@@ -4481,7 +4481,7 @@ const webDashStyles = StyleSheet.create({
   pageTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#111827',
+    color: '#1B4332',
   },
   pageSubtitle: {
     fontSize: 14,
@@ -4492,7 +4492,7 @@ const webDashStyles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#2563EB',
+    backgroundColor: '#1B4332',
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 12,
@@ -4592,7 +4592,7 @@ const webDashStyles = StyleSheet.create({
   statValue: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#111827',
+    color: '#1B4332',
   },
   statLabel: {
     fontSize: 14,
