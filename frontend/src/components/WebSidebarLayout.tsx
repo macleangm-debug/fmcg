@@ -399,7 +399,7 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
                   <Text style={styles.referralButtonText}>Refer & Earn</Text>
                   <Text style={styles.referralSubtext}>Get $10 per referral</Text>
                 </View>
-                <Icon name="chevron-forward" size={18} color="#6366F1" />
+                <Icon name="chevron-forward" size={18} color="#95D5B2" />
               </TouchableOpacity>
               
               {/* Affiliate Partner Dashboard Link */}
@@ -409,14 +409,14 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
                 activeOpacity={0.7}
                 data-testid="sidebar-affiliate-dashboard-btn"
               >
-                <View style={[styles.referralIconContainer, { backgroundColor: '#10B981' }]}>
-                  <Icon name="people" size={18} color="#FFFFFF" />
+                <View style={[styles.referralIconContainer, { backgroundColor: '#E9A319' }]}>
+                  <Icon name="people" size={18} color="#1B4332" />
                 </View>
                 <View style={styles.referralTextContainer}>
                   <Text style={styles.affiliateButtonText}>Affiliate Program</Text>
                   <Text style={styles.referralSubtext}>Become a partner</Text>
                 </View>
-                <Icon name="chevron-forward" size={18} color="#10B981" />
+                <Icon name="chevron-forward" size={18} color="#E9A319" />
               </TouchableOpacity>
             </View>
 
