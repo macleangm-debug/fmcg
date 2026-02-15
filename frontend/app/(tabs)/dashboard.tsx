@@ -1238,15 +1238,8 @@ export default function Dashboard() {
             <Text style={styles.userName}>{user?.name || 'User'}</Text>
           </View>
         </View>
-        {/* Language Selector and Apps Grid */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <LanguageSelector 
-            variant="modal" 
-            showLabel={false}
-            themeColor="#2563EB"
-          />
-          <ProductSwitcher currentProductId="retailpro" />
-        </View>
+        {/* Apps Grid Icon with Dropdown */}
+        <ProductSwitcher currentProductId="retailpro" />
       </View>
 
       {/* Advertisement Carousel for Mobile */}
