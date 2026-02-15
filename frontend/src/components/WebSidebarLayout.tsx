@@ -431,7 +431,7 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
                 onPress={handleOpenHelp}
                 activeOpacity={0.7}
               >
-                <Ionicons name="help-circle-outline" size={20} color={theme.primary} />
+                <Icon name="help-circle-outline" size={20} color={theme.primary} />
                 <Text style={styles.helpButtonText}>Help & Support</Text>
               </TouchableOpacity>
             </View>
