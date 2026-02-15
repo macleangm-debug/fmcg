@@ -106,3 +106,7 @@ android-sdk/ temp_fmcg/.git/objects/pack/pack-e09157c5fc226ae62193a514ec7152f38f
 # Environment files
 *.env
 *.env.*
+-e 
+# Environment files
+*.env
+*.env.*

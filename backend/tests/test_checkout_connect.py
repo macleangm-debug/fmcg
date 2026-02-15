@@ -6,7 +6,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://multi-product-hub-3.preview.emergentagent.com')
+BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://retailpro-dashboard.preview.emergentagent.com')
 
 class TestPublicCheckoutAPI:
     """Test the public checkout API endpoints at /api/pay/{code}"""
