@@ -927,12 +927,22 @@ export default function Dashboard() {
       <View style={webDashStyles.pageHeader}>
         <View>
           <Text style={webDashStyles.pageTitle}>Dashboard</Text>
-          <Text style={webDashStyles.pageSubtitle}>Retail Pro - Point of Sale Overview</Text>
+          <Text style={webDashStyles.pageSubtitle}>An easy way to manage sales with care and precision</Text>
         </View>
-        <TouchableOpacity style={webDashStyles.newSaleBtn} onPress={() => router.push('/(tabs)/cart')}>
-          <Icon name="add" size={20} color="#FFFFFF" />
-          <Text style={webDashStyles.newSaleBtnText}>New Sale</Text>
-        </TouchableOpacity>
+        <View style={webDashStyles.headerActions}>
+          {/* Date Range Picker */}
+          <TouchableOpacity style={webDashStyles.dateRangePicker}>
+            <Icon name="calendar-outline" size={18} color="#1B4332" />
+            <Text style={webDashStyles.dateRangeText}>
+              {new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+            </Text>
+            <Icon name="chevron-down-outline" size={16} color="#6B7280" />
+          </TouchableOpacity>
+          <TouchableOpacity style={webDashStyles.newSaleBtn} onPress={() => router.push('/(tabs)/cart')}>
+            <Icon name="add" size={20} color="#FFFFFF" />
+            <Text style={webDashStyles.newSaleBtnText}>New Sale</Text>
+          </TouchableOpacity>
+        </View>
       </View>
       
       <ScrollView
@@ -942,6 +952,61 @@ export default function Dashboard() {
         }
         contentContainerStyle={webDashStyles.dashboardContent}
       >
+        {/* Top Row: Update Card + Net Income + Total Return */}
+        <View style={webDashStyles.topCardsRow}>
+          {/* Update/Revenue Card */}
+          <View style={webDashStyles.updateCard}>
+            <View style={webDashStyles.updateCardContent}>
+              <View style={webDashStyles.updateBadge}>
+                <Text style={webDashStyles.updateBadgeText}>Update</Text>
+              </View>
+              <Text style={webDashStyles.updateTitle}>Sales revenue increased</Text>
+              <Text style={webDashStyles.updatePercentage}>
+                <Text style={webDashStyles.updatePercentageNum}>40%</Text> in 1 week
+              </Text>
+              <TouchableOpacity style={webDashStyles.seeStatsBtn}>
+                <Text style={webDashStyles.seeStatsBtnText}>See Statistics</Text>
+                <Icon name="arrow-forward" size={16} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+            <View style={webDashStyles.updateCardGraph}>
+              <View style={webDashStyles.miniBarChart}>
+                <View style={[webDashStyles.miniBar, { height: 40 }]} />
+                <View style={[webDashStyles.miniBar, { height: 25 }]} />
+                <View style={[webDashStyles.miniBar, { height: 55 }]} />
+                <View style={[webDashStyles.miniBar, { height: 35 }]} />
+                <View style={[webDashStyles.miniBar, { height: 60 }]} />
+              </View>
+            </View>
+          </View>
+
+          {/* Net Income Card */}
+          <View style={webDashStyles.metricCard}>
+            <Text style={webDashStyles.metricLabel}>Net Income</Text>
+            <Text style={webDashStyles.metricValue}>{formatCurrency(stats?.total_sales_today * 30 || 0)}</Text>
+            <View style={webDashStyles.metricTrend}>
+              <View style={[webDashStyles.trendBadge, { backgroundColor: '#D1FAE5' }]}>
+                <Icon name="trending-up" size={14} color="#10B981" />
+                <Text style={[webDashStyles.trendText, { color: '#10B981' }]}>+35%</Text>
+              </View>
+              <Text style={webDashStyles.trendPeriod}>from last month</Text>
+            </View>
+          </View>
+
+          {/* Total Return Card */}
+          <View style={webDashStyles.metricCard}>
+            <Text style={webDashStyles.metricLabel}>Total Return</Text>
+            <Text style={webDashStyles.metricValue}>{formatCurrency(stats?.total_returns || 32000)}</Text>
+            <View style={webDashStyles.metricTrend}>
+              <View style={[webDashStyles.trendBadge, { backgroundColor: '#FEE2E2' }]}>
+                <Icon name="trending-down" size={14} color="#DC2626" />
+                <Text style={[webDashStyles.trendText, { color: '#DC2626' }]}>-24%</Text>
+              </View>
+              <Text style={webDashStyles.trendPeriod}>from last month</Text>
+            </View>
+          </View>
+        </View>
+
         {/* Advertisement Carousel */}
         {adverts.length > 0 && (
           <AdvertCarousel
@@ -958,6 +1023,7 @@ export default function Dashboard() {
         {/* Stats Row */}
         <View style={webDashStyles.statsRow}>
           <View style={webDashStyles.statCard}>
+
             <View style={[webDashStyles.statIcon, { backgroundColor: '#D8F3DC' }]}>
               <Icon name="cash" size={24} color="#40916C" />
             </View>
