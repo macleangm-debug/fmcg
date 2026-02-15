@@ -11,88 +11,56 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 
 ## What's Been Implemented
 
-### February 15, 2026 (Current Session) - Icon Fix Implementation
+### February 15, 2026 (Current Session) - GREEN THEME REDESIGN
+- ✅ **Complete UI Redesign** matching user's reference screenshot
+- ✅ **Dark Green Sidebar** (#1B4332) with updated navigation styling
+- ✅ **Update Card** - Shows "Sales revenue increased 40% in 1 week" with mini bar chart
+- ✅ **Net Income Card** - With +35% green trend badge
+- ✅ **Total Return Card** - With -24% red trend badge
+- ✅ **Date Range Picker** - Shows current month (Feb 2026)
+- ✅ **Header Actions** - Date picker + green "New Sale" button
+- ✅ **Updated Stat Cards** - Green-themed icons for Sales, Orders, Customers, Products
+- ✅ **Green Carousel Banners** - Updated advert colors to match theme
+- ✅ **Testing Agent Validation** - 100% pass rate
+
+### February 15, 2026 - Icon Fix Implementation
 - ✅ **FIXED: Web Icon Rendering Issue** - Created unified Icon component using `lucide-react`
 - ✅ Created `/app/frontend/src/components/Icon.tsx` - Cross-platform icon wrapper
 - ✅ Updated `WebSidebarLayout.tsx` to use new Icon component
 - ✅ Updated `dashboard.tsx` stat cards and quick actions with Icon component
 - ✅ Updated `login.tsx` form icons with Icon component
-- ✅ All sidebar icons now render correctly (Dashboard, New Sale, Orders, Customers, Products, etc.)
-- ✅ All stat card icons working (Sales, Orders, Customers, Products)
-- ✅ Login form icons working (Email, Password, Eye toggle, Arrow)
 
 ### February 15, 2026 - Advertisement Carousel Integration
 - ✅ Successfully integrated AdvertCarousel component into dashboard
 - ✅ Carousel displays on both web and mobile dashboards
-- ✅ Auto-rotation every 5 seconds between 4 adverts
+- ✅ Auto-rotation every 5 seconds between adverts
 - ✅ Navigation dots visible and functional
-- ✅ CTA buttons navigate to linked pages
-- ✅ API endpoint `/api/adverts/public` working with multi-language support
-- ✅ Testing agent validation: 100% pass rate
-- ⚠️ Language Selector integration attempted but caused bundler issues
-
-### February 15, 2026 - Advertisement Backend System
-- ✅ Created `/app/backend/routes/adverts.py` - Full advertisement management API
-- ✅ Created `/app/frontend/src/components/AdvertCarousel.tsx` - Reusable sliding advert component
-- ✅ Created `/app/frontend/src/store/languageStore.ts` - Multi-language support (EN, SW, FR, AR, PT)
-- ✅ Created `/app/frontend/src/store/advertStore.ts` - Advert state management
-- ✅ Created `/app/frontend/src/components/LanguageSelector.tsx` - Language dropdown component
-- ✅ Deployment script created at `/app/deploy.sh`
 
 ### February 13, 2026 - Tigo SMPP Integration
 - ✅ Created `/app/backend/services/tigo_smpp_service.py` - Full SMPP client service
 - ✅ Added Tigo SMPP API endpoints to `/app/backend/routes/unitxt.py`
-- ✅ Fixed scrolling issue on product pages
 
 ---
 
-## Icon System
-
-### New Icon Component
-The app now uses a unified `Icon` component that:
-- Uses `lucide-react` on web (works reliably)
-- Falls back to `Ionicons` on native mobile (where they work)
-- Maps Ionicons names to equivalent Lucide icons
-
-**Usage:**
-```tsx
-import Icon from '../../src/components/Icon';
-<Icon name="cart-outline" size={24} color="#2563EB" />
-```
-
-**Key Files:**
-- `/app/frontend/src/components/Icon.tsx` - Unified icon component
-
----
-
-## Advertisement System
-
-### Backend API Endpoints
-| Endpoint | Method | Auth | Description |
-|----------|--------|------|-------------|
-| `/api/adverts/public` | GET | No | Get active adverts (with language param) |
-| `/api/adverts/` | GET | Yes | Get all adverts (admin) |
-| `/api/adverts/{id}` | GET | Yes | Get single advert |
-| `/api/adverts/` | POST | Admin | Create new advert |
-| `/api/adverts/{id}` | PUT | Admin | Update advert |
-| `/api/adverts/{id}` | DELETE | Admin | Delete advert |
-| `/api/adverts/seed` | POST | Admin | Seed sample adverts |
-
-### Supported Languages
-- English (en), Swahili (sw), French (fr), Arabic (ar) - RTL, Portuguese (pt)
+## Green Theme Color Palette
+| Element | Color Code | Description |
+|---------|------------|-------------|
+| Sidebar Background | #1B4332 | Dark forest green |
+| Primary Green | #40916C | Medium green |
+| Light Green | #95D5B2 | Accent/text on dark |
+| Accent/Warning | #E9A319 | Gold/amber accent |
+| Card Backgrounds | #D8F3DC, #B7E4C7 | Light green tints |
+| Success Trend | #10B981 | Green for positive |
+| Error Trend | #DC2626 | Red for negative |
 
 ---
 
 ## Key Files
-- `/app/frontend/src/components/Icon.tsx` - Unified icon component (NEW)
-- `/app/frontend/src/components/WebSidebarLayout.tsx` - Sidebar with fixed icons
-- `/app/backend/routes/adverts.py` - Advertisement management API
-- `/app/frontend/src/components/AdvertCarousel.tsx` - Sliding advert carousel
-- `/app/frontend/src/components/LanguageSelector.tsx` - Language dropdown (created but not integrated)
-- `/app/frontend/src/store/languageStore.ts` - Multi-language translations
-- `/app/frontend/app/(tabs)/dashboard.tsx` - Dashboard with carousel integration
+- `/app/frontend/src/components/Icon.tsx` - Unified icon component (lucide-react)
+- `/app/frontend/src/components/WebSidebarLayout.tsx` - Dark green sidebar implementation
+- `/app/frontend/app/(tabs)/dashboard.tsx` - Dashboard with Update card, metrics, charts
 - `/app/frontend/app/(auth)/login.tsx` - Login page with fixed icons
-- `/app/deploy.sh` - One-click deployment script
+- `/app/backend/routes/adverts.py` - Advertisement management API
 
 ---
 
@@ -102,12 +70,14 @@ import Icon from '../../src/components/Icon';
 - [x] Multi-language support (5 languages)
 - [x] AdvertCarousel component
 - [x] Carousel integration into dashboard
-- [x] **Web icon rendering fix (COMPLETED)**
+- [x] Web icon rendering fix
+- [x] **GREEN THEME REDESIGN (COMPLETED)**
 
-## P1 - In Progress / Next
-- [ ] Language Selector integration (blocked - causes bundler error with import.meta)
-- [ ] Dynamic sidebar theming per product color
-- [ ] Continue expanding Icon component to more components
+## P1 - Next
+- [ ] Language Selector integration (blocked - `import.meta` bundler error)
+- [ ] Transaction list component (from reference design)
+- [ ] Revenue bar chart (Income vs Expenses)
+- [ ] Sales Report horizontal bar chart
 
 ## P2 - Upcoming
 - [ ] Deploy to VPN-connected server
@@ -116,13 +86,12 @@ import Icon from '../../src/components/Icon';
 ## P3 - Future Tasks
 - [ ] UniTxt admin dashboard for SMS campaigns
 - [ ] Production build for Expo web
-- [ ] SMS analytics dashboard
 
 ---
 
 ## Known Issues
-1. **Language Selector Bundler Error**: Importing `useLanguageStore` or `LanguageSelector` into the dashboard causes "Cannot use 'import.meta' outside a module" bundler error. Requires Metro bundler configuration fix.
-2. ~~**Icon Font Loading (Pre-existing)**: Ionicons appear as empty boxes on web.~~ **FIXED** - Using lucide-react via Icon component
+1. **Language Selector Bundler Error**: Importing `useLanguageStore` causes "Cannot use 'import.meta' outside a module"
+2. ~~Icon Font Loading~~ **FIXED** - Using lucide-react via Icon component
 
 ---
 
@@ -134,4 +103,5 @@ import Icon from '../../src/components/Icon';
 ---
 
 ## Test Reports
-- `/app/test_reports/iteration_2.json` - Latest carousel feature test results (100% pass)
+- `/app/test_reports/iteration_3.json` - Green theme redesign tests (100% pass)
+- `/app/test_reports/iteration_2.json` - Carousel feature tests (100% pass)
