@@ -216,11 +216,12 @@ export default function Dashboard() {
   // Check if any app has expiring trial (for warning banner)
   const expiringApps = appsWithStatus.filter(a => a.status === 'expiring_soon' || a.status === 'expired');
 
-  // Fetch adverts from backend
-  const fetchAdverts = async () => {
+  // Fetch adverts from backend with current language
+  const fetchAdverts = async (lang?: string) => {
     try {
       const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
-      const response = await fetch(`${API_URL}/api/adverts/public?product=retailpro&language=en`);
+      const language = lang || currentLanguage;
+      const response = await fetch(`${API_URL}/api/adverts/public?product=retailpro&language=${language}`);
       if (response.ok) {
         const data = await response.json();
         setAdverts(data);
