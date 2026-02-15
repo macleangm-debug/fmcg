@@ -28,9 +28,6 @@ import WebModal from '../../src/components/WebModal';
 import ConfirmationModal from '../../src/components/ConfirmationModal';
 import { PieChart, BarChart, LineChart } from 'react-native-gifted-charts';
 import { format } from 'date-fns';
-import AdvertCarousel from '../../src/components/AdvertCarousel';
-import { useAdvertStore } from '../../src/store/advertStore';
-import { useLanguageStore } from '../../src/store/languageStore';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
