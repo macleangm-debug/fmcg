@@ -941,7 +941,7 @@ export default function Dashboard() {
           <TouchableOpacity style={webDashStyles.dateRangePicker}>
             <Icon name="calendar-outline" size={18} color="#1B4332" />
             <Text style={webDashStyles.dateRangeText}>
-              {new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+              January 2024 - May 2024
             </Text>
             <Icon name="chevron-down-outline" size={16} color="#6B7280" />
           </TouchableOpacity>
