@@ -150,7 +150,6 @@ export default function Dashboard() {
   const { user, logout } = useAuthStore();
   const { formatCurrency, formatNumber } = useBusinessStore();
   const { selectedLocationId } = useLocationStore();
-  const { currentLanguage } = useLanguageStore();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
