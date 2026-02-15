@@ -502,17 +502,12 @@ export default function Dashboard() {
     fetchAdverts(); // Fetch adverts for carousel
   }, [selectedLocationId]);
 
-  // Refetch adverts when language changes
-  useEffect(() => {
-    fetchAdverts(currentLanguage);
-  }, [currentLanguage]);
-
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     fetchStats();
     fetchLinkedApps(); // Also refresh linked apps
     fetchAdverts(); // Refresh adverts
-  }, [selectedLocationId, currentLanguage]);
+  }, [selectedLocationId]);
 
   const handleLogout = () => {
     setShowLogoutModal(true);
