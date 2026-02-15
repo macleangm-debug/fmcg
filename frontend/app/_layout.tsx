@@ -35,8 +35,8 @@ export default function RootLayout() {
     }
   }, [isAuthenticated]);
 
-  // Show loading until ready and fonts are loaded
-  if (!ready || !fontsLoaded) {
+  // Show loading only until ready flag is set
+  if (!ready) {
     return (
       <View style={styles.loading}>
         <ActivityIndicator size="large" color="#2563EB" />
