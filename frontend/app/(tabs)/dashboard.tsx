@@ -4615,6 +4615,24 @@ const webDashStyles = StyleSheet.create({
     gap: 20,
     marginBottom: 24,
   },
+  // New Dashboard Grid Layout - Matches Reference Design
+  dashboardGrid: {
+    flexDirection: 'row',
+    gap: 20,
+    marginBottom: 24,
+  },
+  leftColumn: {
+    flex: 1,
+    gap: 20,
+  },
+  middleColumn: {
+    flex: 1,
+    gap: 20,
+  },
+  rightColumn: {
+    flex: 1,
+    gap: 20,
+  },
   statCard: {
     flex: 1,
     flexDirection: 'row',
