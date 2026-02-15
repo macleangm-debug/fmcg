@@ -488,12 +488,19 @@ export default function Dashboard() {
   useEffect(() => {
     fetchStats();
     fetchLinkedApps(); // Fetch linked apps on mount
+    fetchAdverts('retailpro'); // Fetch adverts for RetailPro
   }, [selectedLocationId]);
+
+  // Re-fetch adverts when language changes
+  useEffect(() => {
+    fetchAdverts('retailpro');
+  }, [currentLanguage]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     fetchStats();
     fetchLinkedApps(); // Also refresh linked apps
+    fetchAdverts('retailpro'); // Refresh adverts too
   }, [selectedLocationId]);
 
   const handleLogout = () => {
