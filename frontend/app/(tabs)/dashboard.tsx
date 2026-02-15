@@ -1067,7 +1067,7 @@ export default function Dashboard() {
                 />
               ) : (
                 <View style={webDashStyles.chartPlaceholder}>
-                  <Ionicons name="bar-chart-outline" size={48} color="#D1D5DB" />
+                  <Icon name="bar-chart-outline" size={48} color="#D1D5DB" />
                   <Text style={webDashStyles.chartPlaceholderText}>No data yet</Text>
                 </View>
               )}
