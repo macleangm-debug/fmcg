@@ -377,7 +377,7 @@ export default function Login() {
             ) : (
               <>
                 <Text style={styles.submitButtonText}>Sign In</Text>
-                <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+                <Icon name="arrow-forward" size={18} color="#FFFFFF" />
               </>
             )}
           </button>
@@ -396,7 +396,7 @@ export default function Login() {
             ) : (
               <>
                 <Text style={styles.submitButtonText}>Sign In</Text>
-                <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+                <Icon name="arrow-forward" size={18} color="#FFFFFF" />
               </>
             )}
           </TouchableOpacity>
@@ -421,7 +421,7 @@ export default function Login() {
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.modalIconSuccess}>
-            <Ionicons name="checkmark-circle" size={48} color={THEME.success} />
+            <Icon name="checkmark-circle" size={48} color={THEME.success} />
           </View>
           <Text style={styles.modalTitle}>Login Successful!</Text>
           <Text style={styles.modalMessage}>
@@ -439,7 +439,7 @@ export default function Login() {
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.modalIconError}>
-            <Ionicons name="alert-circle" size={48} color={THEME.error} />
+            <Icon name="alert-circle" size={48} color={THEME.error} />
           </View>
           <Text style={styles.modalTitle}>Login Failed</Text>
           <Text style={styles.modalMessage}>{errorMessage}</Text>
