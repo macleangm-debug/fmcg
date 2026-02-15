@@ -1132,7 +1132,7 @@ export default function Dashboard() {
             {/* Table Body */}
             {!stats?.recent_orders || stats.recent_orders.length === 0 ? (
               <View style={webDashStyles.emptyState}>
-                <Ionicons name="receipt-outline" size={48} color="#6B7280" />
+                <Icon name="receipt-outline" size={48} color="#6B7280" />
                 <Text style={webDashStyles.emptyText}>No recent orders</Text>
                 <TouchableOpacity style={webDashStyles.emptyBtn} onPress={() => router.push('/(tabs)/cart')}>
                   <Text style={webDashStyles.emptyBtnText}>Create First Order</Text>
@@ -1170,15 +1170,15 @@ export default function Dashboard() {
             <View style={webDashStyles.quickActionsCard}>
               <Text style={webDashStyles.quickActionsTitle}>Quick Actions</Text>
               <TouchableOpacity style={webDashStyles.quickActionBtn} onPress={() => router.push('/(tabs)/cart')}>
-                <Ionicons name="cart" size={20} color="#2563EB" />
+                <Icon name="cart" size={20} color="#2563EB" />
                 <Text style={webDashStyles.quickActionText}>New Sale</Text>
               </TouchableOpacity>
               <TouchableOpacity style={webDashStyles.quickActionBtn} onPress={() => router.push('/(tabs)/customers')}>
-                <Ionicons name="person-add" size={20} color="#2563EB" />
+                <Icon name="person-add" size={20} color="#2563EB" />
                 <Text style={webDashStyles.quickActionText}>Add Customer</Text>
               </TouchableOpacity>
               <TouchableOpacity style={webDashStyles.quickActionBtn} onPress={() => router.push('/(tabs)/products')}>
-                <Ionicons name="cube" size={20} color="#2563EB" />
+                <Icon name="cube" size={20} color="#2563EB" />
                 <Text style={webDashStyles.quickActionText}>Manage Products</Text>
               </TouchableOpacity>
               <TouchableOpacity 
@@ -1186,7 +1186,7 @@ export default function Dashboard() {
                 onPress={handleOpenShareModal}
                 data-testid="share-earn-button"
               >
-                <Ionicons name="gift" size={20} color="#D97706" />
+                <Icon name="gift" size={20} color="#D97706" />
                 <Text style={[webDashStyles.quickActionText, { color: '#D97706' }]}>Share & Earn</Text>
               </TouchableOpacity>
             </View>
@@ -1194,24 +1194,24 @@ export default function Dashboard() {
             <View style={webDashStyles.linksCard}>
               <Text style={webDashStyles.linksTitle}>Navigation</Text>
               <TouchableOpacity style={webDashStyles.linkItem} onPress={() => router.push('/(tabs)/orders')}>
-                <Ionicons name="receipt-outline" size={20} color="#6B7280" />
+                <Icon name="receipt-outline" size={20} color="#6B7280" />
                 <Text style={webDashStyles.linkText}>Orders</Text>
-                <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+                <Icon name="chevron-forward" size={16} color="#9CA3AF" />
               </TouchableOpacity>
               <TouchableOpacity style={webDashStyles.linkItem} onPress={() => router.push('/(tabs)/customers')}>
-                <Ionicons name="people-outline" size={20} color="#6B7280" />
+                <Icon name="people-outline" size={20} color="#6B7280" />
                 <Text style={webDashStyles.linkText}>Customers</Text>
-                <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+                <Icon name="chevron-forward" size={16} color="#9CA3AF" />
               </TouchableOpacity>
               <TouchableOpacity style={webDashStyles.linkItem} onPress={() => router.push('/inventory')}>
-                <Ionicons name="layers-outline" size={20} color="#6B7280" />
+                <Icon name="layers-outline" size={20} color="#6B7280" />
                 <Text style={webDashStyles.linkText}>Inventory</Text>
-                <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+                <Icon name="chevron-forward" size={16} color="#9CA3AF" />
               </TouchableOpacity>
               <TouchableOpacity style={webDashStyles.linkItem} onPress={() => router.push('/admin/staff')}>
-                <Ionicons name="person-outline" size={20} color="#6B7280" />
+                <Icon name="person-outline" size={20} color="#6B7280" />
                 <Text style={webDashStyles.linkText}>Staff</Text>
-                <Ionicons name="chevron-forward" size={16} color="#9CA3AF" />
+                <Icon name="chevron-forward" size={16} color="#9CA3AF" />
               </TouchableOpacity>
             </View>
           </View>
