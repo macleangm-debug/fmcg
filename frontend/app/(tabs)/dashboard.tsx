@@ -29,6 +29,8 @@ import ConfirmationModal from '../../src/components/ConfirmationModal';
 import { PieChart, BarChart, LineChart } from 'react-native-gifted-charts';
 import { format } from 'date-fns';
 import AdvertCarousel, { Advert } from '../../src/components/AdvertCarousel';
+import LanguageSelector from '../../src/components/LanguageSelector';
+import { useLanguageStore } from '../../src/store/languageStore';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
