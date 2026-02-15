@@ -198,6 +198,9 @@ export default function Dashboard() {
   });
   const [loadingShareData, setLoadingShareData] = useState(false);
 
+  // Adverts Carousel State
+  const [adverts, setAdverts] = useState<Advert[]>([]);
+
   // Get linked and available apps with trial status
   const linkedApps = ALL_GALAXY_APPS.filter(app => linkedAppIds.includes(app.id));
   const availableApps = ALL_GALAXY_APPS.filter(app => !linkedAppIds.includes(app.id));
