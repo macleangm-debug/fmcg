@@ -3,11 +3,13 @@ Advertisement Management Routes
 Handles CRUD operations for promotional adverts/announcements
 """
 from fastapi import APIRouter, HTTPException, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field
 from typing import Optional, List, Dict
 from datetime import datetime
 from bson import ObjectId
 import os
+import jwt
 
 router = APIRouter(prefix="/adverts", tags=["Advertisements"])
 
@@ -15,13 +17,38 @@ router = APIRouter(prefix="/adverts", tags=["Advertisements"])
 from motor.motor_asyncio import AsyncIOMotorClient
 MONGO_URL = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
 DB_NAME = os.environ.get("DB_NAME", "fmcg_db")
+JWT_SECRET = os.environ.get("JWT_SECRET", "your-secret-key")
 client = AsyncIOMotorClient(MONGO_URL)
 db = client[DB_NAME]
 
-# Import auth dependency
-import sys
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from routes.auth import get_current_user
+# Auth dependency
+security = HTTPBearer()
+
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Verify JWT token and return current user"""
+    try:
+        token = credentials.credentials
+        payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        user_id = payload.get("sub")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        
+        user = await db.users.find_one({"_id": ObjectId(user_id)})
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+        
+        return {
+            "id": str(user["_id"]),
+            "email": user.get("email"),
+            "role": user.get("role", "user"),
+            "business_id": str(user.get("business_id")) if user.get("business_id") else None,
+        }
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    except Exception as e:
+        raise HTTPException(status_code=401, detail=str(e))
 
 # Models
 class AdvertTranslation(BaseModel):
