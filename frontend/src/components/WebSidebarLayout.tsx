@@ -675,8 +675,7 @@ const styles = StyleSheet.create({
   sidebar: {
     width: 240,
     backgroundColor: theme.sidebarBg,
-    borderRightWidth: 1,
-    borderRightColor: theme.border,
+    borderRightWidth: 0,
   },
   navSection: {
     flex: 1,
