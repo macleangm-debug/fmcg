@@ -930,7 +930,7 @@ export default function Dashboard() {
           <Text style={webDashStyles.pageSubtitle}>Retail Pro - Point of Sale Overview</Text>
         </View>
         <TouchableOpacity style={webDashStyles.newSaleBtn} onPress={() => router.push('/(tabs)/cart')}>
-          <Ionicons name="add" size={20} color="#FFFFFF" />
+          <Icon name="add" size={20} color="#FFFFFF" />
           <Text style={webDashStyles.newSaleBtnText}>New Sale</Text>
         </TouchableOpacity>
       </View>
