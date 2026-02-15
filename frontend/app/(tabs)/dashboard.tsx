@@ -1077,16 +1077,19 @@ export default function Dashboard() {
           <View style={webDashStyles.leftColumn}>
             {/* Transaction List */}
             <TransactionList 
-              transactions={stats?.recent_orders?.slice(0, 7).map((order: Order, index: number) => ({
-                id: order.id || String(index),
-                name: order.items?.[0]?.name || order.customer_name || 'Order Item',
-                date: order.created_at ? format(new Date(order.created_at), 'MMM dd yyyy') : 'Jul 12th 2024',
-                orderId: order.order_number || order.id?.substring(0, 11).toUpperCase() || 'OJWEJS7ISNC',
-                status: order.status === 'completed' ? 'Completed' : 'Pending',
-                icon: ['pricetag', 'game-controller', 'pricetag', 'phone-portrait', 'briefcase', 'cafe', 'pricetag'][index % 7],
-                iconColor: ['#DC2626', '#2563EB', '#1B4332', '#6B7280', '#1B4332', '#059669', '#DC2626'][index % 7],
-                iconBg: ['#FEE2E2', '#DBEAFE', '#D8F3DC', '#F3F4F6', '#D8F3DC', '#D1FAE5', '#FEE2E2'][index % 7],
-              })) || undefined}
+              transactions={stats?.recent_orders && stats.recent_orders.length > 0 
+                ? stats.recent_orders.slice(0, 7).map((order: Order, index: number) => ({
+                    id: order.id || String(index),
+                    name: order.items?.[0]?.name || order.customer_name || 'Order Item',
+                    date: order.created_at ? format(new Date(order.created_at), 'MMM dd yyyy') : 'Jul 12th 2024',
+                    orderId: order.order_number || order.id?.substring(0, 11).toUpperCase() || 'OJWEJS7ISNC',
+                    status: order.status === 'completed' ? 'Completed' : 'Pending',
+                    icon: ['pricetag', 'game-controller', 'pricetag', 'phone-portrait', 'briefcase', 'cafe', 'pricetag'][index % 7],
+                    iconColor: ['#DC2626', '#2563EB', '#1B4332', '#6B7280', '#1B4332', '#059669', '#DC2626'][index % 7],
+                    iconBg: ['#FEE2E2', '#DBEAFE', '#D8F3DC', '#F3F4F6', '#D8F3DC', '#D1FAE5', '#FEE2E2'][index % 7],
+                  }))
+                : undefined
+              }
               onViewMore={() => router.push('/(tabs)/orders')}
             />
             
