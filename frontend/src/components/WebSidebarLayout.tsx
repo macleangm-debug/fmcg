@@ -100,6 +100,13 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
   const cartItems = useCartStore((state) => state.items);
   const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
   
+  // Get dynamic product theme based on current route
+  const productTheme = getProductTheme(segments);
+  const dynamicSidebarBg = productTheme.primaryDark;
+  const dynamicSidebarText = 'rgba(255, 255, 255, 0.75)';
+  const dynamicSidebarActiveText = '#FFFFFF';
+  const dynamicHeaderBg = productTheme.primary;
+  
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [subscriptionPlan, setSubscriptionPlan] = useState<{ name: string; is_trial: boolean } | null>(null);
   
