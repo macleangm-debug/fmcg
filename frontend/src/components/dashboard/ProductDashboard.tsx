@@ -441,13 +441,13 @@ const ProductDashboard: React.FC<ProductDashboardProps> = ({
         {statsRow.length > 0 && (
           <View style={styles.statsRow}>
             {statsRow.map((stat, index) => (
-              <View key={index} style={styles.statCard}>
-                <View style={[styles.statIcon, { backgroundColor: stat.iconBg }]}>
-                  <Icon name={stat.icon} size={24} color={stat.iconColor} />
+              <View key={index} style={[styles.statCard, { backgroundColor: cardBgColor, borderWidth: 1, borderColor: cardBorderColor }]}>
+                <View style={[styles.statIcon, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                  <Icon name={stat.icon} size={24} color={textColor} />
                 </View>
                 <View style={styles.statInfo}>
-                  <Text style={styles.statValue}>{stat.value}</Text>
-                  <Text style={styles.statLabel}>{stat.label}</Text>
+                  <Text style={[styles.statValue, { color: textColor }]}>{stat.value}</Text>
+                  <Text style={[styles.statLabel, { color: subtextColor }]}>{stat.label}</Text>
                 </View>
               </View>
             ))}
