@@ -163,7 +163,8 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 ---
 
 ## Test Reports
-- `/app/test_reports/iteration_6.json` - **Full-bleed product theming tests (100% pass)** - All 7 products verified
+- `/app/test_reports/iteration_7.json` - **UI Standardization tests (100% pass)** - All 7 products verified with WebSidebarLayout
+- `/app/test_reports/iteration_6.json` - Full-bleed product theming tests (100% pass)
 - `/app/test_reports/iteration_5.json` - Multi-product dashboard tests (100% pass)
 - `/app/test_reports/iteration_4.json` - Full dashboard redesign tests (100% pass)
 - `/app/test_reports/iteration_3.json` - Green theme redesign tests (100% pass)
