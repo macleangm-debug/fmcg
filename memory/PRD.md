@@ -163,16 +163,16 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 
 ---
 
-## Product Theme Configuration (PRODUCT_THEMES)
-| Product | Primary | Dark | Light | Accent |
-|---------|---------|------|-------|--------|
-| RetailPro | #1B4332 | #0D2818 | #D8F3DC | #E9A319 |
-| Inventory | #059669 | #047857 | #D1FAE5 | #F59E0B |
-| Invoicing | #7C3AED | #6D28D9 | #EDE9FE | #F59E0B |
-| KwikPay | #10B981 | #059669 | #D1FAE5 | #F59E0B |
-| UniTxt | #F59E0B | #D97706 | #FEF3C7 | #10B981 |
-| Expenses | #EF4444 | #DC2626 | #FEE2E2 | #10B981 |
-| Loyalty | #EC4899 | #DB2777 | #FCE7F3 | #F59E0B |
+## Product Theme Configuration (PRODUCT_THEMES in WebSidebarLayout.tsx)
+| Product | Primary | primaryDark (sidebar/bg) | primaryLight | Status |
+|---------|---------|--------------------------|--------------|--------|
+| RetailPro | #1B4332 | #0F2D21 | #D8F3DC | ✅ Full-bleed |
+| Inventory | #1E40AF | #1E3A8A | #DBEAFE | ✅ Full-bleed |
+| Invoicing | #4F46E5 | #3730A3 | #E0E7FF | ✅ Full-bleed |
+| KwikPay | #047857 | #065F46 | #D1FAE5 | ✅ Full-bleed |
+| UniTxt | #D97706 | #B45309 | #FEF3C7 | ✅ Full-bleed |
+| Expenses | #DC2626 | #B91C1C | #FEE2E2 | ✅ Full-bleed |
+| Loyalty | #DB2777 | #BE185D | #FCE7F3 | ✅ Full-bleed |
 
 ---
 
