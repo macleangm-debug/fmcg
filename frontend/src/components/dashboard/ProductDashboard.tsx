@@ -336,15 +336,15 @@ const ProductDashboard: React.FC<ProductDashboardProps> = ({
           <Text style={[styles.pageSubtitle, { color: subtextColor }]}>{subtitle || `An easy way to manage ${theme.tagline.toLowerCase()} with care and precision`}</Text>
         </View>
         <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.dateRangePicker}>
-            <Icon name="calendar-outline" size={18} color={theme.primary} />
-            <Text style={[styles.dateRangeText, { color: theme.primary }]}>{dateRange}</Text>
-            <Icon name="chevron-down-outline" size={16} color="#6B7280" />
+          <TouchableOpacity style={[styles.dateRangePicker, { backgroundColor: cardBgColor, borderColor: cardBorderColor }]}>
+            <Icon name="calendar-outline" size={18} color={textColor} />
+            <Text style={[styles.dateRangeText, { color: textColor }]}>{dateRange}</Text>
+            <Icon name="chevron-down-outline" size={16} color={subtextColor} />
           </TouchableOpacity>
           {onNewAction && (
-            <TouchableOpacity style={[styles.newBtn, dynamicStyles.newBtn]} onPress={onNewAction}>
-              <Icon name="add" size={20} color="#FFFFFF" />
-              <Text style={styles.newBtnText}>{newActionLabel}</Text>
+            <TouchableOpacity style={[styles.newBtn, { backgroundColor: 'rgba(255, 255, 255, 0.25)' }]} onPress={onNewAction}>
+              <Icon name="add" size={20} color={textColor} />
+              <Text style={[styles.newBtnText, { color: textColor }]}>{newActionLabel}</Text>
             </TouchableOpacity>
           )}
         </View>
