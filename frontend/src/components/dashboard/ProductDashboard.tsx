@@ -449,10 +449,10 @@ const ProductDashboard: React.FC<ProductDashboardProps> = ({
           </View>
         </View>
 
-        {/* Advertisement Carousel */}
-        {adverts.length > 0 && (
+        {/* Advertisement Carousel - Theme-colored banner */}
+        {finalAdverts.length > 0 && (
           <AdvertCarousel
-            adverts={adverts}
+            adverts={finalAdverts}
             autoPlayInterval={5000}
             showDots={true}
             showArrows={true}
