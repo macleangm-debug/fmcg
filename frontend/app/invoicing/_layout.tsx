@@ -196,9 +196,9 @@ export default function InvoicingLayout() {
   if (isWebDesktop) {
     return (
       <View style={styles.webContainer}>
-        <InvoiceSidebarLayout>
+        <WebSidebarLayout>
           <Slot />
-        </InvoiceSidebarLayout>
+        </WebSidebarLayout>
       </View>
     );
   }
