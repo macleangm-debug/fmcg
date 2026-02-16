@@ -494,8 +494,8 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
           </ScrollView>
         </View>
 
-        {/* Main Content - Dynamic Background */}
-        <View style={[styles.mainContent, { backgroundColor: productTheme.primaryDark }]}>
+        {/* Main Content - Light background, NOT full-bleed theme color */}
+        <View style={[styles.mainContent, { backgroundColor: '#F5F5F0' }]}>
           <ScrollView style={styles.contentScroll} contentContainerStyle={styles.contentContainer}>
             {children}
           </ScrollView>
