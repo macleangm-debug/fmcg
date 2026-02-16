@@ -180,6 +180,32 @@ const ProductDashboard: React.FC<ProductDashboardProps> = ({
   const router = useRouter();
   const theme = PRODUCT_THEMES[productId] || PRODUCT_THEMES.retailpro;
 
+  // Default adverts with theme color - "Refer & Earn" banner
+  const defaultAdverts: Advert[] = [
+    {
+      id: 'refer-earn',
+      title: 'Refer & Earn $10',
+      description: 'Invite friends and earn $10 credit for each successful referral!',
+      cta_text: 'Get Your Link',
+      cta_link: '/(tabs)/referral',
+      background_color: theme.primary,
+      text_color: '#FFFFFF',
+      icon: 'gift',
+    },
+    {
+      id: 'upgrade',
+      title: 'Upgrade to Pro',
+      description: 'Get advanced analytics, unlimited reports, and priority support.',
+      cta_text: 'Learn More',
+      cta_link: '/admin/settings',
+      background_color: theme.primaryDark,
+      text_color: '#FFFFFF',
+      icon: 'star',
+    },
+  ];
+
+  const finalAdverts = adverts.length > 0 ? adverts : defaultAdverts;
+
   // Default update card content based on product
   const defaultUpdateCard: UpdateCardContent = {
     badge: 'Update',
