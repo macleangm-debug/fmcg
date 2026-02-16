@@ -436,13 +436,13 @@ const ProductDashboard: React.FC<ProductDashboardProps> = ({
           />
         )}
 
-        {/* Stats Row */}
+        {/* Stats Row - White cards with theme-colored icon backgrounds */}
         {statsRow.length > 0 && (
           <View style={styles.statsRow}>
             {statsRow.map((stat, index) => (
               <View key={index} style={[styles.statCard, { backgroundColor: cardBgColor, borderWidth: 1, borderColor: cardBorderColor }]}>
-                <View style={[styles.statIcon, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
-                  <Icon name={stat.icon} size={24} color={textColor} />
+                <View style={[styles.statIcon, { backgroundColor: stat.iconBg || theme.primaryLight }]}>
+                  <Icon name={stat.icon} size={24} color={stat.iconColor || theme.primary} />
                 </View>
                 <View style={styles.statInfo}>
                   <Text style={[styles.statValue, { color: textColor }]}>{stat.value}</Text>
