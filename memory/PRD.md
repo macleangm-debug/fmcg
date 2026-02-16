@@ -132,13 +132,12 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 - [x] **FULL DASHBOARD REDESIGN (COMPLETED)** - All components matching reference
 - [x] **FULL-BLEED THEMING (COMPLETED)** - Theme color covers entire sidebar, header, and dashboard background for all 7 products
 
-### P1 - In Progress
-- [ ] **Apply ProductDashboard component to remaining products**: Inventory, Invoicing, KwikPay
-  - These have complex existing layouts with custom charts and functionality
-  - The sidebar/header theming is complete, but the dashboard content uses custom layouts
+### P1 - Upcoming
 - [ ] Language Selector integration (blocked - `import.meta` bundler error)
+- [ ] Product-specific content for the advertisement carousel on each dashboard
+- [ ] UniTxt admin dashboard for SMS campaigns
 
-### P2 - Upcoming
+### P2 - Future/Backlog
 - [ ] Deploy to VPN-connected server
 - [ ] Test live SMS sending
 - [ ] UniTxt admin dashboard for SMS campaigns
