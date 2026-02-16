@@ -461,6 +461,7 @@ const ProductDashboard: React.FC<ProductDashboardProps> = ({
             <TransactionList 
               transactions={finalTransactions}
               onViewMore={onTransactionViewMore}
+              themeColor={theme.primary}
             />
           </View>
           
@@ -470,11 +471,13 @@ const ProductDashboard: React.FC<ProductDashboardProps> = ({
               totalRevenue={revenueTotal}
               percentageChange={revenueTrend}
               formatCurrency={formatCurrency}
+              themeColor={theme.primary}
             />
             
             <SalesReport 
               data={finalSalesReport}
               onViewMore={onSalesReportViewMore}
+              themeColor={theme.primary}
             />
           </View>
           
@@ -485,6 +488,7 @@ const ProductDashboard: React.FC<ProductDashboardProps> = ({
               viewCount={performanceData?.viewCount || 68}
               percentage={performanceData?.percentage || 16}
               sales={performanceData?.sales || 23}
+              themeColor={theme.primary}
             />
             
             <PromotionalCard 
@@ -492,6 +496,7 @@ const ProductDashboard: React.FC<ProductDashboardProps> = ({
               subtitle={promoSubtitle || defaultPromoSubtitle}
               buttonText={promoButtonText}
               onPress={onPromoPress}
+              themeColor={theme.primary}
             />
           </View>
         </View>
