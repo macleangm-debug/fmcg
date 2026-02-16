@@ -352,74 +352,74 @@ const ProductDashboard: React.FC<ProductDashboardProps> = ({
 
       <ScrollView
         showsVerticalScrollIndicator={false}
-        refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} /> : undefined}
+        refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={textColor} /> : undefined}
         contentContainerStyle={styles.dashboardContent}
       >
         {/* Top Row: Update Card + Net Income + Total Return */}
         <View style={styles.topCardsRow}>
           {/* Update Card */}
-          <View style={[styles.updateCard, dynamicStyles.updateCard]}>
+          <View style={[styles.updateCard, { backgroundColor: cardBgColor, borderWidth: 1, borderColor: cardBorderColor }]}>
             <View style={styles.updateCardContent}>
-              <View style={[styles.updateBadge, dynamicStyles.updateBadge]}>
-                <Text style={styles.updateBadgeText}>{finalUpdateCard.badge}</Text>
+              <View style={[styles.updateBadge, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                <Text style={[styles.updateBadgeText, { color: textColor }]}>{finalUpdateCard.badge}</Text>
               </View>
-              <Text style={styles.updateTitle}>{finalUpdateCard.title}</Text>
-              <Text style={styles.updatePercentage}>
-                <Text style={styles.updatePercentageNum}>{finalUpdateCard.percentage}</Text> {finalUpdateCard.period}
+              <Text style={[styles.updateTitle, { color: textColor }]}>{finalUpdateCard.title}</Text>
+              <Text style={[styles.updatePercentage, { color: subtextColor }]}>
+                <Text style={[styles.updatePercentageNum, { color: textColor }]}>{finalUpdateCard.percentage}</Text> {finalUpdateCard.period}
               </Text>
               <TouchableOpacity style={styles.seeStatsBtn} onPress={finalUpdateCard.onCtaPress}>
-                <Text style={[styles.seeStatsBtnText, dynamicStyles.statsBtnText]}>{finalUpdateCard.ctaText}</Text>
-                <Icon name="arrow-forward" size={16} color={theme.primaryLight} />
+                <Text style={[styles.seeStatsBtnText, { color: textColor }]}>{finalUpdateCard.ctaText}</Text>
+                <Icon name="arrow-forward" size={16} color={textColor} />
               </TouchableOpacity>
             </View>
             <View style={styles.updateCardGraph}>
               <View style={styles.miniBarChart}>
                 {[40, 25, 55, 35, 60].map((height, i) => (
-                  <View key={i} style={[styles.miniBar, { height, backgroundColor: `${theme.primaryLight}99` }]} />
+                  <View key={i} style={[styles.miniBar, { height, backgroundColor: 'rgba(255, 255, 255, 0.4)' }]} />
                 ))}
               </View>
             </View>
           </View>
 
           {/* Net Income Card */}
-          <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>Net Income</Text>
-            <Text style={[styles.metricValue, { color: theme.primary }]}>
+          <View style={[styles.metricCard, { backgroundColor: cardBgColor, borderWidth: 1, borderColor: cardBorderColor }]}>
+            <Text style={[styles.metricLabel, { color: subtextColor }]}>Net Income</Text>
+            <Text style={[styles.metricValue, { color: textColor }]}>
               {formatCurrency(netIncome?.value || 0)}
             </Text>
             <View style={styles.metricTrend}>
-              <View style={[styles.trendBadge, { backgroundColor: (netIncome?.trend || 0) >= 0 ? '#D1FAE5' : '#FEE2E2' }]}>
+              <View style={[styles.trendBadge, { backgroundColor: (netIncome?.trend || 0) >= 0 ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)' }]}>
                 <Icon 
                   name={(netIncome?.trend || 0) >= 0 ? 'trending-up' : 'trending-down'} 
                   size={14} 
-                  color={(netIncome?.trend || 0) >= 0 ? '#10B981' : '#DC2626'} 
+                  color={textColor} 
                 />
-                <Text style={[styles.trendText, { color: (netIncome?.trend || 0) >= 0 ? '#10B981' : '#DC2626' }]}>
+                <Text style={[styles.trendText, { color: textColor }]}>
                   {(netIncome?.trend || 0) >= 0 ? '+' : ''}{netIncome?.trend || 35}%
                 </Text>
               </View>
-              <Text style={styles.trendPeriod}>from last month</Text>
+              <Text style={[styles.trendPeriod, { color: subtextColor }]}>from last month</Text>
             </View>
           </View>
 
           {/* Total Return Card */}
-          <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>Total Return</Text>
-            <Text style={[styles.metricValue, { color: theme.primary }]}>
+          <View style={[styles.metricCard, { backgroundColor: cardBgColor, borderWidth: 1, borderColor: cardBorderColor }]}>
+            <Text style={[styles.metricLabel, { color: subtextColor }]}>Total Return</Text>
+            <Text style={[styles.metricValue, { color: textColor }]}>
               {formatCurrency(totalReturn?.value || 32000)}
             </Text>
             <View style={styles.metricTrend}>
-              <View style={[styles.trendBadge, { backgroundColor: (totalReturn?.trend || -24) >= 0 ? '#D1FAE5' : '#FEE2E2' }]}>
+              <View style={[styles.trendBadge, { backgroundColor: (totalReturn?.trend || -24) >= 0 ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)' }]}>
                 <Icon 
                   name={(totalReturn?.trend || -24) >= 0 ? 'trending-up' : 'trending-down'} 
                   size={14} 
-                  color={(totalReturn?.trend || -24) >= 0 ? '#10B981' : '#DC2626'} 
+                  color={textColor} 
                 />
-                <Text style={[styles.trendText, { color: (totalReturn?.trend || -24) >= 0 ? '#10B981' : '#DC2626' }]}>
+                <Text style={[styles.trendText, { color: textColor }]}>
                   {(totalReturn?.trend || -24) >= 0 ? '+' : ''}{totalReturn?.trend || -24}%
                 </Text>
               </View>
-              <Text style={styles.trendPeriod}>from last month</Text>
+              <Text style={[styles.trendPeriod, { color: subtextColor }]}>from last month</Text>
             </View>
           </View>
         </View>
