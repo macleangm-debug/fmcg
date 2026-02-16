@@ -189,9 +189,9 @@ export default function UnitxtLayout() {
   if (isWebDesktop) {
     return (
       <View style={styles.webContainer}>
-        <UnitxtSidebarLayout>
+        <WebSidebarLayout>
           <Slot />
-        </UnitxtSidebarLayout>
+        </WebSidebarLayout>
       </View>
     );
   }
