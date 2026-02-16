@@ -173,279 +173,35 @@ export default function UnitxtDashboard() {
     );
   }
 
-  // Web Layout
+  // Web Layout - Using ProductDashboard
   if (isWeb) {
     return (
-      <SafeAreaView style={styles.container} edges={['top']}>
-        <ScrollView
-          style={styles.scrollView}
-          contentContainerStyle={styles.webScrollContent}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
-          }
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Web Header */}
-          <View style={styles.webHeader}>
-            <View>
-              <Text style={styles.webTitle}>Dashboard</Text>
-              <Text style={styles.webSubtitle}>UniTxt - Messaging Platform Overview</Text>
-            </View>
-            <TouchableOpacity
-              style={styles.webPrimaryBtn}
-              onPress={() => router.push('/unitxt/compose')}
-            >
-              <Ionicons name="add" size={18} color={COLORS.white} />
-              <Text style={styles.webPrimaryBtnText}>New Message</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Stats Row */}
-          <View style={styles.webStatsRow}>
-            <View style={styles.webStatCard}>
-              <View style={[styles.webStatIcon, { backgroundColor: COLORS.primaryLight }]}>
-                <Ionicons name="paper-plane" size={22} color={COLORS.primary} />
-              </View>
-              <View>
-                <Text style={styles.webStatValue}>{formatNumber(stats.total_messages_sent)}</Text>
-                <Text style={styles.webStatLabel}>Total Sent</Text>
-              </View>
-            </View>
-
-            <View style={styles.webStatCard}>
-              <View style={[styles.webStatIcon, { backgroundColor: COLORS.blueLight }]}>
-                <Ionicons name="checkmark-done" size={22} color={COLORS.blue} />
-              </View>
-              <View>
-                <Text style={styles.webStatValue}>{stats.delivery_rate}%</Text>
-                <Text style={styles.webStatLabel}>Delivery Rate</Text>
-              </View>
-            </View>
-
-            <View style={styles.webStatCard}>
-              <View style={[styles.webStatIcon, { backgroundColor: COLORS.purpleLight }]}>
-                <Ionicons name="people" size={22} color={COLORS.purple} />
-              </View>
-              <View>
-                <Text style={styles.webStatValue}>{formatNumber(stats.total_contacts)}</Text>
-                <Text style={styles.webStatLabel}>Contacts</Text>
-              </View>
-            </View>
-
-            <View style={styles.webStatCard}>
-              <View style={[styles.webStatIcon, { backgroundColor: COLORS.warningLight }]}>
-                <Ionicons name="wallet" size={22} color={COLORS.warning} />
-              </View>
-              <View>
-                <Text style={styles.webStatValue}>{formatNumber(stats.credits_remaining)}</Text>
-                <Text style={styles.webStatLabel}>Credits</Text>
-              </View>
-            </View>
-          </View>
-
-          {/* Charts Row */}
-          <View style={styles.webChartsRow}>
-            {/* Message Breakdown Chart */}
-            <View style={styles.webChartCard}>
-              <Text style={styles.webChartTitle}>Messages by Channel</Text>
-              <View style={styles.webDonutContainer}>
-                <View style={styles.webDonutChart}>
-                  <View style={[styles.webDonutSegment, { backgroundColor: COLORS.blue, transform: [{ rotate: '0deg' }] }]} />
-                  <View style={[styles.webDonutSegment, { backgroundColor: COLORS.success, transform: [{ rotate: `${(stats.sms_sent / (stats.total_messages_sent || 1)) * 360}deg` }] }]} />
-                  <View style={styles.webDonutCenter}>
-                    <Text style={styles.webDonutValue}>{formatNumber(stats.total_messages_sent)}</Text>
-                    <Text style={styles.webDonutLabel}>Total</Text>
-                  </View>
-                </View>
-                <View style={styles.webChartLegend}>
-                  <View style={styles.webLegendItem}>
-                    <View style={[styles.webLegendDot, { backgroundColor: COLORS.blue }]} />
-                    <Text style={styles.webLegendText}>SMS ({formatNumber(stats.sms_sent)})</Text>
-                  </View>
-                  <View style={styles.webLegendItem}>
-                    <View style={[styles.webLegendDot, { backgroundColor: COLORS.success }]} />
-                    <Text style={styles.webLegendText}>WhatsApp ({formatNumber(stats.whatsapp_sent)})</Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-
-            {/* Top Templates */}
-            <View style={styles.webChartCard}>
-              <Text style={styles.webChartTitle}>Top Templates</Text>
-              <View style={styles.webEmptyChart}>
-                <Ionicons name="document-text-outline" size={48} color={COLORS.border} />
-                <Text style={styles.webEmptyText}>View template analytics</Text>
-              </View>
-            </View>
-
-            {/* Delivery Trend */}
-            <View style={styles.webChartCard}>
-              <Text style={styles.webChartTitle}>Delivery Trend</Text>
-              <View style={styles.webTrendChart}>
-                <View style={styles.webTrendYAxis}>
-                  <Text style={styles.webTrendLabel}>100</Text>
-                  <Text style={styles.webTrendLabel}>75</Text>
-                  <Text style={styles.webTrendLabel}>50</Text>
-                  <Text style={styles.webTrendLabel}>25</Text>
-                  <Text style={styles.webTrendLabel}>0</Text>
-                </View>
-                <View style={styles.webTrendArea}>
-                  <View style={styles.webTrendLine} />
-                  <View style={styles.webTrendXAxis}>
-                    <Text style={styles.webTrendLabel}>Mon</Text>
-                    <Text style={styles.webTrendLabel}>Tue</Text>
-                    <Text style={styles.webTrendLabel}>Wed</Text>
-                    <Text style={styles.webTrendLabel}>Thu</Text>
-                    <Text style={styles.webTrendLabel}>Fri</Text>
-                    <Text style={styles.webTrendLabel}>Sat</Text>
-                    <Text style={styles.webTrendLabel}>Sun</Text>
-                  </View>
-                </View>
-              </View>
-            </View>
-          </View>
-
-          {/* Bottom Row */}
-          <View style={styles.webBottomRow}>
-            {/* Recent Campaigns */}
-            <View style={styles.webTableCard}>
-              <View style={styles.webTableHeader}>
-                <Text style={styles.webTableTitle}>Recent Campaigns</Text>
-                <TouchableOpacity onPress={() => router.push('/unitxt/campaigns')}>
-                  <Text style={styles.webViewAllText}>View All →</Text>
-                </TouchableOpacity>
-              </View>
-              
-              <View style={styles.webTable}>
-                <View style={styles.webTableHeaderRow}>
-                  <Text style={[styles.webTableHeaderCell, { flex: 2 }]}>CAMPAIGN</Text>
-                  <Text style={styles.webTableHeaderCell}>CHANNEL</Text>
-                  <Text style={styles.webTableHeaderCell}>RECIPIENTS</Text>
-                  <Text style={styles.webTableHeaderCell}>STATUS</Text>
-                </View>
-                
-                {recentCampaigns.length > 0 ? (
-                  recentCampaigns.slice(0, 5).map((campaign) => (
-                    <TouchableOpacity
-                      key={campaign.id}
-                      style={styles.webTableRow}
-                      onPress={() => router.push(`/unitxt/campaigns/${campaign.id}`)}
-                    >
-                      <Text style={[styles.webTableCell, { flex: 2 }]}>{campaign.name}</Text>
-                      <View style={styles.webTableCell}>
-                        <View style={[styles.webChannelBadge, { backgroundColor: campaign.type === 'sms' ? COLORS.blueLight : COLORS.successLight }]}>
-                          <Ionicons 
-                            name={campaign.type === 'sms' ? 'chatbubble' : 'logo-whatsapp'} 
-                            size={12} 
-                            color={campaign.type === 'sms' ? COLORS.blue : COLORS.success} 
-                          />
-                          <Text style={[styles.webChannelText, { color: campaign.type === 'sms' ? COLORS.blue : COLORS.success }]}>
-                            {campaign.type.toUpperCase()}
-                          </Text>
-                        </View>
-                      </View>
-                      <Text style={styles.webTableCell}>{formatNumber(campaign.recipients)}</Text>
-                      <View style={styles.webTableCell}>
-                        <View style={[styles.webStatusBadge, { backgroundColor: getStatusBg(campaign.status) }]}>
-                          <Text style={[styles.webStatusText, { color: getStatusColor(campaign.status) }]}>
-                            {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
-                          </Text>
-                        </View>
-                      </View>
-                    </TouchableOpacity>
-                  ))
-                ) : (
-                  <View style={styles.webEmptyTable}>
-                    <Ionicons name="megaphone-outline" size={48} color={COLORS.border} />
-                    <Text style={styles.webEmptyTableText}>No recent campaigns</Text>
-                    <TouchableOpacity
-                      style={styles.webCreateBtn}
-                      onPress={() => router.push('/unitxt/compose')}
-                    >
-                      <Text style={styles.webCreateBtnText}>Create First Campaign</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </View>
-            </View>
-
-            {/* Right Sidebar */}
-            <View style={styles.webSidebar}>
-              {/* Quick Actions */}
-              <View style={styles.webSidebarCard}>
-                <Text style={styles.webSidebarTitle}>Quick Actions</Text>
-                <TouchableOpacity
-                  style={styles.webQuickAction}
-                  onPress={() => router.push('/unitxt/compose')}
-                >
-                  <Ionicons name="create" size={18} color={COLORS.white} />
-                  <Text style={styles.webQuickActionText}>New Message</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.webQuickAction, { backgroundColor: COLORS.lightGray }]}
-                  onPress={() => router.push('/unitxt/contacts')}
-                >
-                  <Ionicons name="person-add" size={18} color={COLORS.dark} />
-                  <Text style={[styles.webQuickActionText, { color: COLORS.dark }]}>Add Contact</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.webQuickAction, { backgroundColor: COLORS.lightGray }]}
-                  onPress={() => router.push('/unitxt/templates')}
-                >
-                  <Ionicons name="document-text" size={18} color={COLORS.dark} />
-                  <Text style={[styles.webQuickActionText, { color: COLORS.dark }]}>Manage Templates</Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Navigation */}
-              <View style={styles.webSidebarCard}>
-                <Text style={styles.webSidebarTitle}>Navigation</Text>
-                <TouchableOpacity
-                  style={styles.webNavItem}
-                  onPress={() => router.push('/unitxt/campaigns')}
-                >
-                  <View style={styles.webNavItemLeft}>
-                    <Ionicons name="megaphone-outline" size={18} color={COLORS.gray} />
-                    <Text style={styles.webNavItemText}>Campaigns</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={18} color={COLORS.gray} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.webNavItem}
-                  onPress={() => router.push('/unitxt/contacts')}
-                >
-                  <View style={styles.webNavItemLeft}>
-                    <Ionicons name="people-outline" size={18} color={COLORS.gray} />
-                    <Text style={styles.webNavItemText}>Contacts</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={18} color={COLORS.gray} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.webNavItem}
-                  onPress={() => router.push('/unitxt/analytics')}
-                >
-                  <View style={styles.webNavItemLeft}>
-                    <Ionicons name="analytics-outline" size={18} color={COLORS.gray} />
-                    <Text style={styles.webNavItemText}>Analytics</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={18} color={COLORS.gray} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.webNavItem}
-                  onPress={() => router.push('/unitxt/settings')}
-                >
-                  <View style={styles.webNavItemLeft}>
-                    <Ionicons name="settings-outline" size={18} color={COLORS.gray} />
-                    <Text style={styles.webNavItemText}>Settings</Text>
-                  </View>
-                  <Ionicons name="chevron-forward" size={18} color={COLORS.gray} />
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </ScrollView>
-      </SafeAreaView>
+      <ProductDashboard
+        productId="unitxt"
+        subtitle="Send bulk SMS and manage marketing campaigns with ease"
+        onNewAction={() => router.push('/unitxt/compose')}
+        newActionLabel="New Message"
+        statsRow={[
+          { label: 'Messages Sent', value: formatNumber(stats.total_messages_sent), icon: 'paper-plane', iconBg: COLORS.primaryLight, iconColor: COLORS.primary },
+          { label: 'Delivery Rate', value: `${stats.delivery_rate}%`, icon: 'checkmark-done', iconBg: COLORS.blueLight, iconColor: COLORS.blue },
+          { label: 'Contacts', value: formatNumber(stats.total_contacts), icon: 'people', iconBg: COLORS.purpleLight, iconColor: COLORS.purple },
+          { label: 'Credits Left', value: formatNumber(stats.credits_remaining), icon: 'wallet', iconBg: COLORS.warningLight, iconColor: COLORS.warning },
+        ]}
+        netIncome={{ value: stats.messages_delivered, trend: 15 }}
+        totalReturn={{ value: stats.messages_failed, trend: -8 }}
+        revenueTotal={stats.total_messages_sent * 0.5}
+        revenueTrend={12}
+        adverts={adverts}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        onTransactionViewMore={() => router.push('/unitxt/campaigns')}
+        onSalesReportViewMore={() => router.push('/unitxt/analytics')}
+        onPromoPress={() => router.push('/unitxt/credits')}
+        promoTitle="Reach more customers with SMS marketing."
+        promoSubtitle="Send personalized messages at scale with high delivery rates."
+        promoButtonText="Buy More Credits"
+        formatCurrency={(amount) => formatNumber(Math.round(amount))}
+      />
     );
   }
 
