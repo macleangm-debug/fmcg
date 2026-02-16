@@ -1,7 +1,7 @@
 # FMCG Application - Product Requirements Document
 
 ## Original Problem Statement
-Set up and preview the FMCG application from GitHub repository (`https://github.com/macleangm-debug/fmcg`) and integrate UniTxt Bulk SMS with Tigo Tanzania using SMPP protocol. Later expanded to include advertisement carousel integration and comprehensive dashboard UI redesign to match user reference design. Most recently, apply the new dashboard layout across ALL products in the SSO Soko app suite.
+Set up and preview the FMCG application from GitHub repository (`https://github.com/macleangm-debug/fmcg`) and integrate UniTxt Bulk SMS with Tigo Tanzania using SMPP protocol. Later expanded to include advertisement carousel integration and comprehensive dashboard UI redesign to match user reference design. Most recently, apply the new dashboard layout across ALL products in the SSO Soko app suite with **full-bleed theming** (theme color covers entire sidebar + header + dashboard background).
 
 ## Architecture
 - **Frontend**: React Native Expo (running as web via `expo start --web`)
@@ -11,7 +11,25 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 
 ## What's Been Implemented
 
-### February 16, 2026 (Current Session) - UNIVERSAL DASHBOARD LAYOUT
+### February 16, 2026 (Latest) - FULL-BLEED PRODUCT THEMING ✅
+- ✅ **P0 COMPLETED: Full-Bleed Theming** - Product theme color now covers:
+  - Top header bar (product-specific color)
+  - Sidebar (darker shade of product color)
+  - Main content background (product color)
+  - Dashboard cards with glass-morphism (transparent overlay)
+- ✅ **All 7 Products Themed**:
+  - RetailPro (Dark Green #1B4332 / #0F2D21)
+  - Inventory (Blue #1E40AF / #1E3A8A)
+  - Invoicing (Indigo #4F46E5 / #3730A3)
+  - KwikPay (Emerald #047857 / #065F46)
+  - UniTxt (Amber #D97706 / #B45309)
+  - Expenses (Red #DC2626 / #B91C1C)
+  - Loyalty (Pink #DB2777 / #BE185D)
+- ✅ **White Text Contrast** - All text on colored backgrounds uses white (#FFFFFF) for readability
+- ✅ **Dynamic Theme Detection** - `getProductTheme()` function detects product from URL segments
+- ✅ **Testing Agent Validation** - 100% frontend pass rate (iteration_6.json)
+
+### February 16, 2026 (Earlier) - UNIVERSAL DASHBOARD LAYOUT
 - ✅ **ProductDashboard Component** - Reusable, theme-configurable dashboard
 - ✅ **Applied to 4 Products**:
   - RetailPro (Dark Green #1B4332) - Original implementation
