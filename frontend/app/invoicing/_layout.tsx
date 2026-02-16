@@ -3,7 +3,7 @@ import { Tabs, Slot, useRouter, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Platform, View, StyleSheet, useWindowDimensions, TouchableOpacity, Text } from 'react-native';
 import { useAuthStore } from '../../src/store/authStore';
-import InvoiceSidebarLayout from '../../src/components/InvoiceSidebarLayout';
+import WebSidebarLayout from '../../src/components/WebSidebarLayout';
 import FloatingHelpButton from '../../src/components/FloatingHelpButton';
 
 // Invoice theme colors (Purple)
