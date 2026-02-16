@@ -1,180 +1,154 @@
 <analysis>**original_problem_statement:**
-The initial user request was to set up an application from a GitHub repository (), integrate UniTxt Bulk SMS with their local provider Tigo via SMPP, fix a frontend scrolling bug, and implement delivery report webhooks.
+The user initially wanted to set up an application from a GitHub repository, integrate SMS services, and fix bugs. The project's focus then shifted to a complete UI/UX overhaul for the RetailPro product dashboard. After successfully completing that, the user requested the new, modern layout be implemented across **all** products within the SSO Soko app suite.
 
-The user's priorities have since evolved to focus on:
-1.  Obtaining comprehensive deployment guidance and automated scripts.
-2.  Fixing a pre-existing UI bug where icons fail to render on the web.
-3.  Implementing a new feature: a multi-language, sliding advertisement carousel on the main dashboard.
-4.  Redesigning the sidebar to dynamically change color based on the selected product (e.g., RetailPro, Invoicing).
-5.  Investigating why the new language selector interface is not appearing and fixing the underlying blocker.
+The latest user feedback is a new design requirement: the product-specific theme color should apply to the **entire dashboard background and sidebar**, not just a few elements, ensuring good font contrast for readability.
+
+**PRODUCT REQUIREMENTS:**
+1.  **P0**: Apply the new dashboard layout to all products (RetailPro, Invoicing, Inventory, KwikPay, UniTxt, Expenses, Loyalty).
+2.  **P0.1**: The product theme color must cover the entire dashboard and sidebar for a fully immersive experience.
+3.  **P1**: The advertisement carousel on the dashboard should display content relevant to the specific product.
+4.  **P2**: Fix the Cannot use import.meta crash that occurs when integrating the  component.
+5.  **P3**: Implement a UniTxt admin dashboard for managing SMS campaigns.
+6.  **P4**: Investigate and resolve original Frontend loading issues.
+7.  **P5**: Get user verification on the Tigo SMS integration and deployment scripts.
 
 **User's preferred language**: English
 
 **what currently exists?**
-The application is a full-stack FMCG platform with an Expo (React Native for Web) frontend and a FastAPI backend. A key feature, the advertisement carousel, has been successfully integrated into the dashboard and fetches data from a backend API (). The backend services are running, and the carousel functionality has been verified by a testing agent. However, a critical issue prevents the integration of the accompanying  component, which causes the application to crash. A persistent, pre-existing UI bug also prevents icons from rendering correctly on the web.
+The application is a full-stack platform with an Expo (React Native for Web) frontend and a FastAPI backend. A reusable, themeable  component has been created and implemented for four out of seven products: **RetailPro, Expenses, Loyalty, and UniTxt**. These implementations have been tested and verified. However, the theming is incomplete according to recent user feedback. Three products with more complex UIs (**Inventory, Invoicing, KwikPay**) still use their old, custom dashboard layouts.
 
 **Last working item**:
-- **Last item agent was working**: The agent was investigating a frontend crash caused by integrating the  component and its associated  (Zustand) into the  file. The crash manifested as a bundler error: Cannot use import.meta outside a module. To restore application stability, the agent reverted all code changes related to the language selector integration. The user's last message was a request to investigate this blocker.
-- **Status**: IN PROGRESS
-- **Agent Testing Done**: N (for the language selector part; the carousel was tested)
-- **Which testing method agent to use?** Frontend testing agent
+- **Last item agent was working**: The agent had just received new, critical feedback from the user after implementing the  on four products. The user specified that the product's theme color (e.g., amber for UniTxt) must be applied to the **entire dashboard background and the sidebar**, not just a few cards. The agent acknowledged this new requirement and was about to begin implementation.
+- **Status**: NOT STARTED (on the full-bleed theming requirement).
+- **Agent Testing Done**: Y (for the previous partial implementation, which is now considered incomplete).
+- **Which testing method agent to use?** Frontend testing agent.
 - **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
-- **Issue 1**: Frontend crashes when integrating LanguageSelector component (P0)
-- **Issue 2**: Fix Broken Icons on Web (P1)
-- **Issue 3**: Finalize Deployment and User Verification (P2)
-- **Issue 4**: Investigate original Frontend loading issues (P3)
+- **Issue 1**: Theming is incomplete and doesn't meet user's design standards. (P0)
+- **Issue 2**: Frontend crashes when integrating LanguageSelector component. (P2)
+- **Issue 3**: Finalize Deployment and User Verification. (P5)
+- **Issue 4**: Investigate original Frontend loading issues. (P4)
 
 **Issues Detail**:
 - **Issue 1**:
-    - **Description (P0)**: Integrating the  component and  into  causes the Metro bundler to fail with the error Cannot use import.meta outside a module, crashing the frontend. This blocks the completion of the multi-language feature.
-    - **Attempted fixes**: The agent integrated the component and store, which led to the crash. Reverting all changes to  successfully restored the application's functionality. The problem is confirmed to be linked to the import of the Zustand store or the language selector component.
+    - **Description (P0)**: The product-specific theme color is only applied to a few cards on the dashboard. The user wants the color to extend to the entire dashboard background and the main sidebar for a more immersive, branded feel. Font colors must be adjusted to maintain contrast and readability against the new colored backgrounds.
+    - **Attempted fixes**: None. This is a new requirement based on user feedback.
     - **Next debug checklist**:
-        1.  Investigate the project's bundler configuration (, , and ) for settings that might be incompatible with how Zustand (or one of its dependencies) uses .
-        2.  Research known issues between the project's specific versions of Expo (web), Zustand, and the Metro bundler.
-        3.  Isolate the problem: Try importing an empty, minimal Zustand store into the dashboard to confirm if the issue is with Zustand itself or the specific implementation in .
-        4.  If Zustand is the root cause, consider an alternative state management solution for the language feature, such as React's built-in Context API, to unblock the feature.
-    - **Why fix this issue and what will be achieved with the fix?**: This will complete the user's requested multi-language advertisement feature by allowing users to switch languages and see translated content.
-    - **Status**: IN PROGRESS
-    - **Is recurring issue?**: Y (in this session)
+        1. Modify the main layout component () to dynamically set the sidebar and main content background color based on the current product route.
+        2. Update the  component and its parent containers to use the theme color for the background.
+        3. Adjust text colors globally (e.g., to white or a light gray) on the themed backgrounds to ensure good contrast.
+    - **Why fix this issue and what will be achieved with the fix?**: Fulfills the user's explicit design requirement for a fully themed and professional product experience.
+    - **Status**: NOT STARTED
+    - **Is recurring issue?**: N
     - **Should Test frontend/backend/both after fix?**: Frontend
     - **Blocked on other issue**: None
-
 - **Issue 2**:
-    - **Description (P1)**: Icons throughout the web application (e.g., sidebar, login page) render as empty boxes instead of the intended . This is a high-impact, pre-existing visual bug.
-    - **Attempted fixes**: Multiple approaches were tried and failed: using the  hook in , attempting CSS font-face injection, explicitly loading the  file with , copying the font to an  directory, and clearing the Metro cache. The agent concluded it's a deep-seated bundler or configuration issue.
-    - **Next debug checklist**:
-        1.  The system prompt suggests  is available and works better. Verify if it's in . If not, install it (yarn add v1.22.22
-[1/4] Resolving packages...
-[2/4] Fetching packages...
-[3/4] Linking dependencies...
-[4/4] Building fresh packages...
-success Saved lockfile.
-success Saved 1 new dependency.
-info Direct dependencies
-└─ lucide-react@0.564.0
-info All dependencies
-└─ lucide-react@0.564.0
-Done in 4.23s.).
-        2.  Replace a single, easy-to-find  instance in one component with a  icon as a test.
-        3.  If the test is successful, propose a plan to systematically replace all  with  icons.
-    - **Why fix this issue and what will be achieved with the fix?**: Fixes a major UI defect, making the application look professional and usable.
+    - **Description (P2)**: Integrating  and its  (Zustand) into the dashboard causes a Metro bundler error Cannot use import.meta outside a module, crashing the frontend.
     - **Status**: IN PROGRESS
     - **Is recurring issue?**: Y
     - **Should Test frontend/backend/both after fix?**: Frontend
-    - **Blocked on other issue**: None
-
 - **Issue 3**:
-    - **Description (P2)**: User has not confirmed if the provided deployment scripts (, ) work on their server. Core functionalities like Tigo SMS integration remain unverified in the user's environment.
-    - **Why fix this issue and what will be achieved with the fix?**: Completes one of the original project goals and validates the application in a production-like environment.
+    - **Description (P5)**: User has not confirmed if the provided deployment scripts () work on their server, and the Tigo SMS integration remains unverified in their environment.
     - **Status**: BLOCKED (on user action)
-    - **Is recurring issue?**: N
-    - **Should Test frontend/backend/both after fix?**: Both
-    - **Blocked on other issue**: None
-
 - **Issue 4**:
-    - **Description (P3)**: An old issue about Frontend loading issues reported by a testing agent has not been investigated.
-    - **Why fix this issue and what will be achieved with the fix?**: Could improve application performance and initial load time.
+    - **Description (P4)**: An old issue about Frontend loading issues reported by a testing agent has not been investigated.
     - **Status**: NOT STARTED
-    - **Is recurring issue?**: N
-    - **Should Test frontend/backend/both after fix?**: Frontend
-    - **Blocked on other issue**: None
 
 **In progress Task List**:
-- **Task 1**: Implement Dynamic Sidebar Color based on Product (P1)
-    - **Where to resume**: This task has not been started. The first step is to investigate the component structure to identify the sidebar and determine how to access the currently selected product's theme or color information.
-    - **What will be achieved with this?**: The sidebar's color will dynamically adapt to the active product's branding, improving UX for the multi-product platform.
-    - **Status**: NOT STARTED
+- **Task 1**: Apply Universal Dashboard Layout Across All Products (P0)
+    - **Where to resume**: The task is partially complete. After addressing the new theming requirement (Issue #1), the agent must update the three remaining complex products: **Inventory, Invoicing, and KwikPay**. These pages have sophisticated custom layouts that need to be carefully migrated to the  component.
+    - **What will be achieved with this?**: A consistent, modern UI/UX across the entire application suite.
+    - **Status**: IN PROGRESS
     - **Should Test frontend/backend/both after fix?**: Frontend
-    - **Blocked on something**: None
+    - **Blocked on something**: Blocked by **Issue 1**, as the theme implementation should be finalized before rolling it out to more pages.
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks**:
-    - **P2**: Implement the UniTxt admin dashboard for managing SMS campaigns.
+    - **P1**: Implement product-specific content for the advertisement carousel.
+    - **P3**: Implement the UniTxt admin dashboard for managing SMS campaigns.
 - **Future Tasks**:
-    - **P3**: Refactor the monolithic  by moving route logic into the  directory for better organization.
-    - **P4**: Configure a production-ready static build for the frontend () to replace the Expo development server.
+    - Refactor the monolithic  into a routed structure within .
+    - Configure a production-ready static web build for the frontend ().
 
 **Completed work in this session**
-- **Advert Carousel Integration**: Successfully added the  component to the  for both web and mobile views, fetching data directly within the component as a workaround to the store integration issue.
-- **Carousel Feature Validation**: Used the  to run a full suite of tests on the advert carousel, confirming 100% functionality (visibility, content, auto-sliding, navigation dots, CTA button).
-- **PRD Update**: Updated  to reflect the completion of the advert carousel feature.
-- **Icon Issue Investigation**: Attempted and documented several failed fixes for the broken icon issue, narrowing down the cause to a likely bundler/config problem.
+- **Multi-Product Dashboard Rollout (Partial)**:
+  - Applied the new  layout to four product pages:
+    -  (Red theme)
+    -  (Pink theme)
+    -  (Amber theme)
+- **Testing**: Verified the initial implementation for these four pages using the , which passed successfully before the new theming feedback was received.
+- **PRD Update**: Updated  to reflect the progress.
 
 **Earlier issues found/mentioned but not fixed**
-- The broken web icons issue (Issue #2) remains unresolved.
-- The original Frontend loading issues (Issue #4) remain uninvestigated.
+- **Issue 1**: The Cannot use import.meta outside a module crash related to the  component remains unresolved.
 
 **Known issue recurrence from previous fork**
-- The issue of icons not rendering on the web is a known, persistent problem from the previous session.
+- None.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Frontend**: Expo (React Native for Web), TypeScript, Zustand (for state management).
-- **Backend**: FastAPI (Python).
-- **Database**: MongoDB.
-- **Bundler**: Metro (Causing issues with  and font loading).
+- **Component-based Theming**: The  component accepts a  prop. This needs to be enhanced to apply color to the entire view (sidebar and background).
+- **Platform-specific Code**: The implementation uses  to render the new dashboard while preserving the existing mobile UI. This pattern should be continued.
 
 **key DB schema**
-- : {email, password_hash, role}
-- : {title: {en, sw}, content: {en, sw}, image, link}
+- No changes. The  schema remains relevant for future tasks.
 
 **All files of reference**
-- **Updated**:
-    - : Modified to add carousel and language selector, but selector changes were reverted. The file now contains the working carousel implementation.
-    - : Updated to document the completion of the advert carousel task.
-- **Key files for debugging**:
-    - : Root layout file where font loading was attempted.
-    - : Potential source of bundler issues.
-    - : Part of the feature causing the crash.
-    - : The other part of the feature causing the crash.
+- **Updated in this session**:
+    - 
+    - 
+    - 
+    - 
+- **Key files for next steps**:
+    -  (for global layout theming)
+    -  (to update component theming)
+    - 
+    - 
+    - 
 
 **Areas that need refactoring**:
-- **Icon Rendering**: The entire approach to loading and displaying icons on the web needs to be replaced, as the current  implementation is fundamentally broken.
-- **State Management Integration**: The  error suggests a potential incompatibility between Zustand and the Expo web build setup that needs to be addressed or worked around.
+- The main layout () and  component need to be refactored to support the new full-bleed theming requirement.
+- The complex product pages (, , ) require significant refactoring to migrate their custom functionality to the new  layout.
 
 **key api endpoints**
-- : Fetches all advertisements. Used by the dashboard carousel.
+- No changes made to API endpoints in this session.
 
 **Critical Info for New Agent**
-- Your immediate priority (P0) is to solve the Cannot use import.meta outside a module error that is blocking the  integration. The app is stable but the feature is incomplete.
-- The icon issue (P1) is the next most important task. It's a long-standing, highly visible bug. The  hook and other standard Expo methods have already failed. The next best step is to try a different icon library like .
-- Do not re-attempt the  or  fixes for the icon issue; they have been proven ineffective.
-- The  is working correctly, but it currently fetches data directly. Once the  is working, the data fetching logic in  will need to be updated to use the language from the store.
+- **P0 Priority**: Your immediate priority is to fix the theming. The product-specific color must be applied to the **entire dashboard background and sidebar** for the four already-updated products, ensuring good font contrast.
+- **Phased Rollout**: Once the theming is perfected, resume the rollout of the  to the three remaining complex products: , , and .
+- **User Feedback is Key**: The user is highly engaged with the design. Prioritize visual and UX-related feedback above all else.
+- **Preserve Mobile UI**: Continue using the  conditional logic to ensure the existing mobile layouts are not affected.
 
 **documents and test reports created in this job**
-- : Test report from  confirming the advert carousel works as expected.
-- : Updated with recent progress.
+- 
+- 
 
 **Last 10 User Messages and any pending HUMAN messages**
--  - User is asking to debug the blocker preventing the language selector from appearing. **Status: In Progress.**
--  - User confirmed they want the agent to proceed with adding the language selector. **Status: In Progress.**
+- **User**: The whole dashboardand menu side bar should reflect the product them color not just the few areas. Just manage the contrast of the font so that it can be seen. **Status: Pending Implementation.**
+- **User**: PRoceed. **Status: Completed.**
 
 **Project Health Check:**
-- **Broken**:
-    - The integration of  and its Zustand store is non-functional and crashes the app.
-    - Icon rendering on the web build is broken across the entire application.
-- **Mocked**:
-    - The Tigo SMPP integration is implemented but remains untested by the user in their live environment.
+- **Broken**: The  and  integration is non-functional and crashes the application.
+- **Mocked**: The  component uses hardcoded mock data.
+- **Inconsistent UI**: The application currently has a fragmented user experience. Four products use the new (but incompletely themed) dashboard, while three use an entirely different legacy design.
 
 **3rd Party Integrations**
-- **Tigo Bulk SMS (SMPP)**: Integrated via . Pending user testing.
-- **Expo Vector Icons (Ionicons)**: Integrated but broken on the web.
-- **Zustand**: Used for state management; suspected cause of the  crash.
+- **Tigo Bulk SMS (SMPP)**: Integrated via , awaiting user testing.
+- **lucide-react**: Used for icons.
+- **Zustand**: Integrated, but its use is blocked by a crash.
+- **recharts**: Used for rendering charts on the dashboard.
 
 **Testing status**
-- **Testing agent used after significant changes**: YES (for the advert carousel feature).
-- **Troubleshoot agent used after agent stuck in loop**: NO
+- **Testing agent used after significant changes**: YES. A test was run on the partial implementation, but the results are now outdated due to new user requirements. Further testing will be required.
 - **Test files created**: []
-- **Known regressions**: Integrating the  component causes the entire dashboard to crash.
+- **Known regressions**: None.
 
 **Credentials to test flow:**
 - **Admin**:  / 
 - **Demo User**:  / 
 
 **What agent forgot to execute**
-- The agent has not yet started the Dynamic Sidebar Color task.
-- The investigation into the original Frontend loading issues remains pending.</analysis>
+- The agent correctly followed user priorities. The rollout to all products was staged, correctly leaving the more complex pages for later. The new user feedback on theming was received at the very end of the last session and has now become the top priority.</analysis>
