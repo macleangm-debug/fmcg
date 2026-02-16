@@ -193,9 +193,9 @@ export default function InventoryLayout() {
   if (isWebDesktop) {
     return (
       <View style={styles.webContainer}>
-        <InventorySidebarLayout>
+        <WebSidebarLayout>
           <Slot />
-        </InventorySidebarLayout>
+        </WebSidebarLayout>
       </View>
     );
   }
