@@ -1,7 +1,7 @@
 # FMCG Application - Product Requirements Document
 
 ## Original Problem Statement
-Set up and preview the FMCG application from GitHub repository (`https://github.com/macleangm-debug/fmcg`) and integrate UniTxt Bulk SMS with Tigo Tanzania using SMPP protocol. Later expanded to include advertisement carousel integration and comprehensive dashboard UI redesign to match user reference design. Most recently, apply the new dashboard layout across ALL products in the SSO Soko app suite with **full-bleed theming** (theme color covers entire sidebar + header + dashboard background).
+Set up and preview the FMCG application from GitHub repository (`https://github.com/macleangm-debug/fmcg`) and integrate UniTxt Bulk SMS with Tigo Tanzania using SMPP protocol. Later expanded to include advertisement carousel integration and comprehensive dashboard UI redesign to match user reference design. Most recently, standardize all product pages (SSO Soko app suite) to use a unified `WebSidebarLayout` component for consistent UI - white/light backgrounds with themed headers and accent colors.
 
 ## Architecture
 - **Frontend**: React Native Expo (running as web via `expo start --web`)
@@ -11,12 +11,21 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 
 ## What's Been Implemented
 
-### February 16, 2026 (Latest) - FULL-BLEED PRODUCT THEMING ✅
-- ✅ **P0 COMPLETED: Full-Bleed Theming** - Product theme color now covers:
-  - Top header bar (product-specific color)
-  - Sidebar (darker shade of product color)
-  - Main content background (product color)
-  - Dashboard cards with glass-morphism (transparent overlay)
+### February 16, 2026 (Latest Session) - UI STANDARDIZATION COMPLETE ✅
+- ✅ **P0 COMPLETED: UI Unification** - All 7 product pages now use the shared `WebSidebarLayout` component
+- ✅ **Layout Migration**:
+  - Updated `/app/frontend/app/unitxt/_layout.tsx` - Now uses WebSidebarLayout (was UnitxtSidebarLayout)
+  - Updated `/app/frontend/app/inventory/_layout.tsx` - Now uses WebSidebarLayout (was InventorySidebarLayout)
+  - Updated `/app/frontend/app/invoicing/_layout.tsx` - Now uses WebSidebarLayout (was InvoiceSidebarLayout)
+  - Updated `/app/frontend/app/kwikpay/_layout.tsx` - Now uses WebSidebarLayout (was KwikPaySidebarLayout)
+  - `/app/frontend/app/expenses/_layout.tsx` - Already using WebSidebarLayout
+  - `/app/frontend/app/loyalty/_layout.tsx` - Already using WebSidebarLayout
+- ✅ **Deprecated Files Removed**:
+  - Deleted `/app/frontend/src/components/UnitxtSidebarLayout.tsx`
+  - Deleted `/app/frontend/src/components/InventorySidebarLayout.tsx`
+  - Deleted `/app/frontend/src/components/InvoiceSidebarLayout.tsx`
+  - Deleted `/app/frontend/src/components/KwikPaySidebarLayout.tsx`
+- ✅ **Testing Agent Validation** - 100% frontend pass rate (iteration_7.json)
 - ✅ **All 7 Products Themed**:
   - RetailPro (Dark Green #1B4332 / #0F2D21)
   - Inventory (Blue #1E40AF / #1E3A8A)
