@@ -113,13 +113,13 @@ export default function InventorySidebarLayout({ children }: InventorySidebarLay
 
   return (
     <View style={styles.container}>
-      {/* Top Header Bar */}
-      <View style={styles.topHeader}>
+      {/* Top Header Bar - Themed Color */}
+      <View style={[styles.topHeader, { backgroundColor: theme.primary, borderBottomColor: 'rgba(255,255,255,0.1)' }]}>
         <View style={styles.headerLeft}>
-          <View style={styles.logoContainer}>
+          <View style={[styles.logoContainer, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
             <Ionicons name="cube" size={22} color="#FFFFFF" />
           </View>
-          <Text style={styles.brandName}>Inventory</Text>
+          <Text style={[styles.brandName, { color: '#FFFFFF' }]}>Inventory</Text>
         </View>
         
         <View style={styles.headerRight}>
@@ -135,15 +135,15 @@ export default function InventorySidebarLayout({ children }: InventorySidebarLay
           <ProductSwitcher currentProductId="inventory" />
           
           {/* User Info */}
-          <View style={styles.userInfo}>
-            <View style={styles.userAvatar}>
+          <View style={[styles.userInfo, { borderLeftColor: 'rgba(255,255,255,0.2)' }]}>
+            <View style={[styles.userAvatar, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
               <Text style={styles.userAvatarText}>
                 {user?.name?.charAt(0)?.toUpperCase() || 'U'}
               </Text>
             </View>
             <View style={styles.userDetails}>
-              <Text style={styles.userName} numberOfLines={1}>{user?.name || 'User'}</Text>
-              <Text style={styles.userEmail} numberOfLines={1}>{user?.email || ''}</Text>
+              <Text style={[styles.userName, { color: '#FFFFFF' }]} numberOfLines={1}>{user?.name || 'User'}</Text>
+              <Text style={[styles.userEmail, { color: 'rgba(255, 255, 255, 0.7)' }]} numberOfLines={1}>{user?.email || ''}</Text>
             </View>
           </View>
         </View>
