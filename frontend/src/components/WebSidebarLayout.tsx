@@ -441,14 +441,14 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
                 activeOpacity={0.7}
                 data-testid="sidebar-refer-earn-btn"
               >
-                <View style={styles.referralIconContainer}>
+                <View style={[styles.referralIconContainer, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
                   <Icon name="gift" size={18} color="#FFFFFF" />
                 </View>
                 <View style={styles.referralTextContainer}>
                   <Text style={styles.referralButtonText}>Refer & Earn</Text>
-                  <Text style={styles.referralSubtext}>Get $10 per referral</Text>
+                  <Text style={[styles.referralSubtext, { color: dynamicSidebarText }]}>Get $10 per referral</Text>
                 </View>
-                <Icon name="chevron-forward" size={18} color="#95D5B2" />
+                <Icon name="chevron-forward" size={18} color={dynamicSidebarText} />
               </TouchableOpacity>
               
               {/* Affiliate Partner Dashboard Link */}
@@ -463,7 +463,7 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
                 </View>
                 <View style={styles.referralTextContainer}>
                   <Text style={styles.affiliateButtonText}>Affiliate Program</Text>
-                  <Text style={styles.referralSubtext}>Become a partner</Text>
+                  <Text style={[styles.referralSubtext, { color: dynamicSidebarText }]}>Become a partner</Text>
                 </View>
                 <Icon name="chevron-forward" size={18} color="#E9A319" />
               </TouchableOpacity>
@@ -473,8 +473,8 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
             {['admin', 'manager', 'superadmin'].includes(userRole) && (
               <LinkedAppsSidebar 
                 currentProductId="retailpro"
-                themeColor={theme.primary}
-                themeBgColor={theme.primaryLight}
+                themeColor={productTheme.primary}
+                themeBgColor={productTheme.primaryLight}
               />
             )}
             
@@ -485,15 +485,15 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
                 onPress={handleOpenHelp}
                 activeOpacity={0.7}
               >
-                <Icon name="help-circle-outline" size={20} color="#95D5B2" />
-                <Text style={styles.helpButtonText}>Help & Support</Text>
+                <Icon name="help-circle-outline" size={20} color={dynamicSidebarText} />
+                <Text style={[styles.helpButtonText, { color: dynamicSidebarText }]}>Help & Support</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
         </View>
 
-        {/* Main Content */}
-        <View style={styles.mainContent}>
+        {/* Main Content - Dynamic Background */}
+        <View style={[styles.mainContent, { backgroundColor: productTheme.primaryDark }]}>
           <ScrollView style={styles.contentScroll} contentContainerStyle={styles.contentContainer}>
             {children}
           </ScrollView>
