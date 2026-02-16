@@ -3,7 +3,7 @@ import { Tabs, Slot, useRouter, useSegments } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Platform, View, StyleSheet, useWindowDimensions, TouchableOpacity, Text } from 'react-native';
 import { useAuthStore } from '../../src/store/authStore';
-import UnitxtSidebarLayout from '../../src/components/UnitxtSidebarLayout';
+import WebSidebarLayout from '../../src/components/WebSidebarLayout';
 import FloatingHelpButton from '../../src/components/FloatingHelpButton';
 
 // Unitxt theme colors - Orange/Amber for messaging
