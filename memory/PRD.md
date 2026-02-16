@@ -121,12 +121,12 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 - [x] Web icon rendering fix
 - [x] **GREEN THEME REDESIGN (COMPLETED)**
 - [x] **FULL DASHBOARD REDESIGN (COMPLETED)** - All components matching reference
-- [x] **MULTI-PRODUCT DASHBOARD (4/7 COMPLETE)** - RetailPro, Expenses, Loyalty, UniTxt
+- [x] **FULL-BLEED THEMING (COMPLETED)** - Theme color covers entire sidebar, header, and dashboard background for all 7 products
 
 ### P1 - In Progress
-- [ ] **Apply ProductDashboard to remaining products**: Inventory, Invoicing, KwikPay
+- [ ] **Apply ProductDashboard component to remaining products**: Inventory, Invoicing, KwikPay
   - These have complex existing layouts with custom charts and functionality
-  - May require careful integration to preserve existing features
+  - The sidebar/header theming is complete, but the dashboard content uses custom layouts
 - [ ] Language Selector integration (blocked - `import.meta` bundler error)
 
 ### P2 - Upcoming
