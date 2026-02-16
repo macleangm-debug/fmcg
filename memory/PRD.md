@@ -137,6 +137,28 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 ---
 
 ## Test Reports
+- `/app/test_reports/iteration_5.json` - Multi-product dashboard tests (100% pass)
 - `/app/test_reports/iteration_4.json` - Full dashboard redesign tests (100% pass)
 - `/app/test_reports/iteration_3.json` - Green theme redesign tests (100% pass)
 - `/app/test_reports/iteration_2.json` - Carousel feature tests (100% pass)
+
+---
+
+## Product Theme Configuration (PRODUCT_THEMES)
+| Product | Primary | Dark | Light | Accent |
+|---------|---------|------|-------|--------|
+| RetailPro | #1B4332 | #0D2818 | #D8F3DC | #E9A319 |
+| Inventory | #059669 | #047857 | #D1FAE5 | #F59E0B |
+| Invoicing | #7C3AED | #6D28D9 | #EDE9FE | #F59E0B |
+| KwikPay | #10B981 | #059669 | #D1FAE5 | #F59E0B |
+| UniTxt | #F59E0B | #D97706 | #FEF3C7 | #10B981 |
+| Expenses | #EF4444 | #DC2626 | #FEE2E2 | #10B981 |
+| Loyalty | #EC4899 | #DB2777 | #FCE7F3 | #F59E0B |
+
+---
+
+## Updated Files (February 16, 2026)
+- `/app/frontend/app/expenses/index.tsx` - Uses ProductDashboard with red theme
+- `/app/frontend/app/loyalty/index.tsx` - Uses ProductDashboard with pink theme
+- `/app/frontend/app/unitxt/index.tsx` - Uses ProductDashboard with amber theme
+- `/app/frontend/src/components/dashboard/index.ts` - Exports ProductDashboard
