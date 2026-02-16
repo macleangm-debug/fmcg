@@ -1,139 +1,155 @@
 <analysis>**original_problem_statement:**
-The user initially wanted to set up an application from a GitHub repository, integrate SMS services, and fix bugs. The project's focus then shifted to a complete UI/UX overhaul for the RetailPro product dashboard. After successfully completing that, the user requested the new, modern layout be implemented across **all** products within the SSO Soko app suite.
+The initial goal was to set up an application from a GitHub repository and integrate SMS services. The project then evolved into a major UI/UX overhaul for the RetailPro product dashboard. After an initial implementation of a full-bleed theme was rejected by the user, the agent corrected the design based on a reference image. The new, approved design features a white/light background with product-specific theme colors applied only to key elements like the header bar, hero cards, banners, buttons, and charts.
 
-The most recent user requirement was a critical design change: the product-specific theme color must apply to the **entire dashboard background and sidebar**, not just a few elements, ensuring good font contrast for readability. This has now been implemented.
+The most recent user request is to standardize the entire SSO Soko app suite by refactoring all other products (Invoicing, Inventory, KwikPay, UniTxt, Expenses, Loyalty) to use this new, corrected RetailPro interface for a consistent look and feel.
 
 **PRODUCT REQUIREMENTS:**
-1.  **P0**: Apply the new dashboard layout to all products (RetailPro, Invoicing, Inventory, KwikPay, UniTxt, Expenses, Loyalty). **(DONE)**
-2.  **P0.1**: The product theme color must cover the entire dashboard and sidebar for a fully immersive experience. **(DONE)**
-3.  **P1**: The advertisement carousel on the dashboard should display content relevant to the specific product.
-4.  **P2**: Fix the Cannot use import.meta crash that occurs when integrating the  component.
-5.  **P3**: Implement a UniTxt admin dashboard for managing SMS campaigns.
-6.  **P4**: Investigate and resolve original Frontend loading issues.
-7.  **P5**: Get user verification on the Tigo SMS integration and deployment scripts.
+1.  **P0**: Refactor all product pages to use the shared  and  components, replicating the approved RetailPro UI. **(IN PROGRESS)**
+2.  **P1**: The advertisement carousel on the dashboard should display content relevant to the specific product.
+3.  **P2**: Fix the Cannot use import.meta crash that occurs when integrating the  component.
+4.  **P3**: Implement a UniTxt admin dashboard for managing SMS campaigns.
+5.  **P4**: Investigate and resolve original Frontend loading issues.
+6.  **P5**: Get user verification on the Tigo SMS integration and deployment scripts.
 
 **User's preferred language**: English
 
 **what currently exists?**
-The application is a full-stack platform with an Expo (React Native for Web) frontend and a FastAPI backend. A dynamic, full-bleed theming system has been successfully implemented across all seven products. The  now reads the product from the URL and applies the correct theme color to the entire sidebar and the main content background. Individual components and cards use a glass-morphism effect against the colored background, with text colors adjusted for contrast. The implementation was verified for all products by the testing agent.
+The application is a full-stack platform with an Expo (React Native for Web) frontend and a FastAPI backend. A dynamic theming system is in place. After user feedback, the UI was corrected from an incorrect full-bleed colored background to a more refined design with a light background and strategically applied theme colors on the header, cards, and interactive elements.
+
+This corrected UI has been applied to several products, but the implementation is inconsistent. Some products use custom layout files (), while others were missing layout wrappers entirely. The agent has just finished applying fixes to ensure all products display a themed header and a sidebar, but they do not yet share the same master layout component. A reference document, , has been created to guide the final standardization.
 
 **Last working item**:
-- **Last item agent was working**: The agent successfully completed the implementation of the full-bleed, dynamic theming across all 7 products, as requested by the user. The work was verified by the frontend testing agent, and the agent updated the  file before finishing the session.
-- **Status**: USER VERIFICATION PENDING
-- **Agent Testing Done**: Y
-- **Which testing method agent to use?**: NA
+- **Last item agent was working**: The user has just given the explicit instruction to refactor all remaining product pages to use the standardized UI from the RetailPro dashboard. The agent created a reference markdown file and was about to begin the refactoring process.
+- **Status**: IN PROGRESS
+- **Agent Testing Done**: N
+- **Which testing method agent to use?**: frontend testing agent (after all products have been refactored).
 - **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
-- **Issue 1**: Frontend crashes when integrating  component. (P0)
-- **Issue 2**: Finalize Deployment and User Verification for Tigo SMS. (P2)
-- **Issue 3**: Investigate original Frontend loading issues. (P3)
+- **Issue 1**: Refactor all product UIs for consistency. (P0)
+- **Issue 2**: Frontend crashes when integrating  component. (P1)
+- **Issue 3**: Finalize Deployment and User Verification for Tigo SMS. (P2)
+- **Issue 4**: Investigate original Frontend loading issues. (P3)
 
 **Issues Detail**:
 - **Issue 1**:
-    - **Description (P0)**: Integrating  and its  (Zustand) into the dashboard causes a Metro bundler error Cannot use import.meta outside a module, crashing the frontend. This is the highest priority bug.
-    - **Attempted fixes**: None in this session.
+    - **Description (P0)**: All product pages (UniTxt, Expenses, Loyalty, Inventory, Invoicing, KwikPay) must be refactored to use the common  and  components to match the user-approved RetailPro interface. This is the current highest priority task.
+    - **Attempted fixes**: The agent has already corrected the base components (, ) and added missing layout files for some products. The next step is the full refactor.
     - **Next debug checklist**:
-        1.  Examine  and .
-        2.  Check the  and  for misconfigurations that might prevent  from being transpiled correctly.
-        3.  Search for known issues with Expo SDK, Metro, and .
-    - **Why fix this issue and what will be achieved with the fix?**: Enables multi-language support, a critical feature for the application.
-    - **Status**: NOT STARTED
-    - **Is recurring issue?**: Y
+        1.  For each product, replace its custom  (or create one) to use .
+        2.  Modify each product's  to use the  component, passing the correct  and props.
+        3.  Remove redundant/deprecated layout files (e.g., , ).
+    - **Why fix this issue and what will be achieved with the fix?**: It will create a visually consistent and unified user experience across the entire application suite, fulfilling the user's primary request.
+    - **Status**: IN PROGRESS
+    - **Is recurring issue?**: N
     - **Should Test frontend/backend/both after fix?**: Frontend
     - **Blocked on other issue**: None
 - **Issue 2**:
-    - **Description (P2)**: User has not confirmed if the provided deployment scripts () work on their server, and the Tigo SMS integration remains unverified in their environment.
-    - **Status**: BLOCKED (on user action)
+    - **Description (P1)**: Integrating  causes a Metro bundler error Cannot use import.meta outside a module, crashing the frontend.
+    - **Status**: NOT STARTED
+    - **Is recurring issue?**: Y
 - **Issue 3**:
+    - **Description (P2)**: User has not confirmed if the provided deployment scripts () work on their server, and the Tigo SMS integration remains unverified.
+    - **Status**: BLOCKED (on user action)
+- **Issue 4**:
     - **Description (P3)**: An old issue about Frontend loading issues reported by a testing agent has not been investigated.
     - **Status**: NOT STARTED
 
 **In progress Task List**:
-- None. The primary task of implementing the theme was completed.
+- **Task 1**: Refactor all product pages for UI consistency. (P0)
+
+**Task Detail**:
+- **Task 1**:
+    - **Where to resume**: Start with the  directory. Replace its  to use the shared  and refactor its  to use the  component. Proceed sequentially through the other products.
+    - **What will be achieved with this?**: A standardized, modern UI across all 7 products.
+    - **Status**: IN PROGRESS
+    - **Should Test frontend/backend/both after fix?**: Frontend
+    - **Blocked on something**: None
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks**:
     - **(P1)** Implement product-specific content for the advertisement carousel on the dashboard.
     - **(P2)** Implement the UniTxt admin dashboard for managing SMS campaigns.
-    - **(Enhancement)** Add smooth, animated transitions for when the sidebar and dashboard morph between theme colors when switching products.
+    - **(Enhancement)** Add animated transitions for theme color changes when switching products.
 - **Future Tasks**:
-    - Refactor the monolithic  into a routed structure within .
+    - Refactor the monolithic  into a routed structure.
     - Configure a production-ready static web build for the frontend ().
-    - Standardize the content layouts for , , and  to fully use the  component structure, rather than just being wrapped by the theme.
 
 **Completed work in this session**
-- **Full-Bleed Dynamic Theming**: Implemented product-specific theme colors for the entire dashboard background and sidebar across all 7 products (RetailPro, UniTxt, Expenses, Loyalty, Inventory, KwikPay, Invoicing).
-- **Layout Refactoring**:
-  - Updated  to dynamically derive theme colors from the URL slug.
-  - Updated  and child components with glass-morphism styles and improved text contrast to work on colored backgrounds.
-- **Testing**: Successfully verified the complete theming feature on all products using . The test report confirms the correct colors and layouts are applied.
-- **PRD Update**: Updated  to reflect the completion of the UI overhaul task.
+- **Corrected Dynamic Theming**: Reworked the entire theming logic based on user feedback. The UI now correctly features a light main background with theme colors applied to the header bar, hero card, referral banner, charts, and buttons.
+- **Layout Unification Prep**:
+    - Added missing  wrappers for the  and  pages to ensure they display with a sidebar.
+    - Updated all custom sidebar layouts (, etc.) to include the new themed header, as a temporary fix before the full refactor.
+- **Component Theming**: Modified  and  to be theme-aware by accepting color props.
+- **Created UI Reference Guide**: Wrote  to document how to reuse the  UI.
 
 **Earlier issues found/mentioned but not fixed**
 - **Issue 1**: The Cannot use import.meta outside a module crash related to the  component remains unresolved.
 
 **Known issue recurrence from previous fork**
-- The  crash is a known recurring issue that has blocked progress on internationalization in past sessions.
+- The  crash is a known recurring issue.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Dynamic Theming via URL**: Uses Expo Router's  in  to get the product ID from the URL and apply the corresponding theme.
-- **Glass-morphism UI**: Cards and elements are styled with semi-transparent backgrounds (, ) to create a frosted glass effect over the themed background.
-- **Platform-Specific Rendering**: Logic uses  to ensure new UI changes only apply to the web version, preserving the native mobile app's existing UI.
+- **Component-driven Refactoring**: The current core task is to replace bespoke product page code with a standardized architecture using reusable  and  components.
+- **Prop-driven Theming**: UI elements like charts are made dynamic by passing theme colors down as props.
+- **Expo Router Layouts**: Using  files to wrap routes and apply a consistent UI shell.
 
 **key DB schema**
 - No changes.
 
 **All files of reference**
-- **Updated in this session**:
-    - 
-    - 
-    - 
+- **Updated/Created in this session**:
+    -  (Corrected styles)
+    -  (Corrected styles)
+    -  (Made themeable)
+    -  (Made themeable)
+    -  (Created to add sidebar)
+    - Various custom sidebar layouts (e.g., ) were temporarily updated.
+    -  (New reference document)
 - **Key files for next steps**:
-    -  (For fixing the  bug)
-    -  (All product pages are relevant for the advertisement carousel task)
+    - All directories under 
+    - 
+    - 
 
 **Areas that need refactoring**:
-- The complex product pages (, , ) still contain large, custom layouts. While they now correctly display the themed sidebar and background, their internal content structure has not been migrated to use the reusable components within . This could be a future task to improve code consistency.
+- The main task is to refactor all product pages to align with the new, standardized UI architecture defined by the  page. This involves deleting several custom layout components.
 
 **key api endpoints**
-- No changes made to API endpoints.
+- No changes.
 
 **Critical Info for New Agent**
-- **Priority #1: User Verification**: Your first action should be to present the completed theming work to the user and ask for their confirmation.
-- **Priority #2: Fix the Blocker**: The next task is to fix the  crash (Cannot use import.meta). This is the most critical pending bug.
-- **Pragmatic Decision**: The previous agent intentionally did *not* refactor the complex UI of , , and . Instead, it wrapped their existing layouts within the newly themed . This was a strategic choice to deliver the user's main request (full-bleed theming) quickly. Do not refactor them unless the user explicitly asks for it.
+- **Priority #1: UI Unification**: The previous full-bleed theme was WRONG. The user has approved a new design with a light background and themed header/elements. Your immediate task is to refactor ALL product pages to use the  and  components to match this new, approved design. Do not work on other features or bugs until this is complete.
+- **Use the Reference Doc**: The file  was created to guide this refactoring. Refer to it.
+- **Goal**: Deprecate and delete all custom sidebar layouts (e.g., , ) and have a single, consistent UI structure across all products.
 
 **documents and test reports created in this job**
 - 
-- 
 
 **Last 10 User Messages and any pending HUMAN messages**
-- **User**: Proceed, Which is the best option, Do it to all of them.
-- **Summary**: User approved the agent's plan to implement a solid color theme (instead of gradient) and apply it to all seven products. **Status: Completed.**
+- The user provided multiple rounds of feedback to correct the UI theming, moving away from a full-page color background to a more subtle design. The last messages were a request for the  code, followed by a direct instruction: Now re-use this code for the rest of the products just changing the areas of the theme colors. This confirms the priority is to complete the UI refactoring across the entire application.
 
 **Project Health Check:**
-- **Broken**: The  component integration is non-functional and crashes the application.
-- **Mocked**: The  component still uses hardcoded mock data.
-- **Inconsistent UI**: This has been significantly improved. While the content *layout* of three products remains custom, the overall branding, color scheme, and navigation are now consistent across the entire application.
+- **Broken**: The  component integration remains non-functional and crashes the app.
+- **Mocked**:  still uses hardcoded mock data.
+- **Inconsistent UI**: This is the core problem currently being addressed. The UI is a mix of the new, correct layout and older, divergent layouts.
 
 **3rd Party Integrations**
 - **Tigo Bulk SMS (SMPP)**: Integrated via , awaiting user testing.
 - **lucide-react**: Used for icons.
-- **Zustand**: Integrated, but its use in the language store is blocked by a crash.
+- **Zustand**: Integrated, but usage is blocked by the language selector crash.
 - **recharts**: Used for rendering charts on the dashboard.
 
 **Testing status**
-- **Testing agent used after significant changes**: YES. A comprehensive frontend test was successfully run, and the report is available at .
+- **Testing agent used after significant changes**: NO. Agent used screenshots to verify UI changes during the theme correction process. A full frontend test should be run after the complete UI refactoring task is finished.
 - **Test files created**: []
-- **Known regressions**: The testing agent noted a pre-existing low-priority issue with session persistence when navigating directly to product URLs, but this is not a new regression.
+- **Known regressions**: None new. A pre-existing issue with session persistence was noted in the previous handoff.
 
 **Credentials to test flow:**
 - **Admin**:  / 
 - **Demo User**:  / 
 
 **What agent forgot to execute**
-- Nothing. The agent correctly prioritized and executed the user's most recent and critical feedback, completing the task successfully. The decision to defer a major refactoring of complex pages was a correct and efficient strategy.</analysis>
+- The agent correctly followed the user's guidance, pivoting from the initial incorrect implementation to a corrected one, and is now ready to execute the user's latest and most critical request for UI standardization. Nothing was forgotten.</analysis>
