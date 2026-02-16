@@ -113,7 +113,7 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 ## Testing Credentials
 - **Admin User**: admin@fmcg.com / Admin@2025
 - **Demo User**: demo@fmcg.com / Demo@2025
-- **Preview URL**: https://retailpro-dashboard.preview.emergentagent.com
+- **Preview URL**: https://unified-layout-sync.preview.emergentagent.com
 
 ---
 
