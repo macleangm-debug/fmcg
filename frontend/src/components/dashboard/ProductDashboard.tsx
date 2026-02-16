@@ -318,13 +318,22 @@ const ProductDashboard: React.FC<ProductDashboardProps> = ({
     },
   };
 
+  // Determine if we should use light text (when background is dark/saturated)
+  const useLightText = true; // Full-bleed theme means we use light text on colored backgrounds
+  const headerBgColor = theme.primary;
+  const contentBgColor = theme.primaryDark;
+  const textColor = '#FFFFFF';
+  const subtextColor = 'rgba(255, 255, 255, 0.8)';
+  const cardBgColor = 'rgba(255, 255, 255, 0.15)';
+  const cardBorderColor = 'rgba(255, 255, 255, 0.2)';
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: contentBgColor }]}>
       {/* Page Header */}
-      <View style={styles.pageHeader}>
+      <View style={[styles.pageHeader, { backgroundColor: headerBgColor, borderBottomWidth: 1, borderBottomColor: cardBorderColor }]}>
         <View>
-          <Text style={[styles.pageTitle, { color: theme.primary }]}>{title || 'Dashboard'}</Text>
-          <Text style={styles.pageSubtitle}>{subtitle || `An easy way to manage ${theme.tagline.toLowerCase()} with care and precision`}</Text>
+          <Text style={[styles.pageTitle, { color: textColor }]}>{title || 'Dashboard'}</Text>
+          <Text style={[styles.pageSubtitle, { color: subtextColor }]}>{subtitle || `An easy way to manage ${theme.tagline.toLowerCase()} with care and precision`}</Text>
         </View>
         <View style={styles.headerActions}>
           <TouchableOpacity style={styles.dateRangePicker}>
@@ -494,7 +503,6 @@ const ProductDashboard: React.FC<ProductDashboardProps> = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
   },
   pageHeader: {
     flexDirection: 'row',
@@ -502,9 +510,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 24,
     paddingVertical: 20,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
   },
   pageTitle: {
     fontSize: 24,
