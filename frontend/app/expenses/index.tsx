@@ -1,22 +1,95 @@
-import React from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Platform,
+  useWindowDimensions,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useBusinessStore } from '../../src/store/businessStore';
+import { ProductDashboard, PRODUCT_THEMES } from '../../src/components/dashboard';
+import { Advert } from '../../src/components/AdvertCarousel';
 
 export default function ExpensesHome() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const isWeb = Platform.OS === 'web' && width > 768;
+  const { formatCurrency, formatNumber } = useBusinessStore();
+  
+  const [refreshing, setRefreshing] = useState(false);
+  const [adverts, setAdverts] = useState<Advert[]>([]);
 
+  // Fetch adverts
+  const fetchAdverts = async () => {
+    try {
+      const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
+      const response = await fetch(`${API_URL}/api/adverts/public?product=expenses&language=en`);
+      if (response.ok) {
+        const data = await response.json();
+        setAdverts(data);
+      }
+    } catch (error) {
+      console.log('Failed to fetch adverts:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchAdverts();
+  }, []);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchAdverts().finally(() => setRefreshing(false));
+  }, []);
+
+  // Web: Use the new ProductDashboard
+  if (isWeb) {
+    return (
+      <ProductDashboard
+        productId="expenses"
+        subtitle="Track and manage all your business costs with precision"
+        onNewAction={() => router.push('/expenses/new')}
+        newActionLabel="Add Expense"
+        statsRow={[
+          { label: "Today's Expenses", value: formatCurrency(1250.00), icon: 'wallet', iconBg: '#FEE2E2', iconColor: '#DC2626' },
+          { label: 'Pending Approval', value: '12', icon: 'time', iconBg: '#FEF3C7', iconColor: '#F59E0B' },
+          { label: 'This Month', value: formatCurrency(15840.00), icon: 'calendar', iconBg: '#FEE2E2', iconColor: '#EF4444' },
+          { label: 'Categories', value: '8', icon: 'folder', iconBg: '#DBEAFE', iconColor: '#2563EB' },
+        ]}
+        netIncome={{ value: 15840, trend: -12 }}
+        totalReturn={{ value: 2340, trend: 8 }}
+        revenueTotal={48500}
+        revenueTrend={-8}
+        adverts={adverts}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        onTransactionViewMore={() => router.push('/expenses/list')}
+        onSalesReportViewMore={() => router.push('/expenses/reports')}
+        onPromoPress={() => router.push('/expenses/settings')}
+        promoTitle="Automate your expense tracking today."
+        promoSubtitle="Upload receipts, categorize costs, and generate reports effortlessly."
+        promoButtonText="Enable Auto-Scan"
+        formatCurrency={formatCurrency}
+      />
+    );
+  }
+
+  // Mobile: Keep original coming soon layout
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         {/* Header */}
         <LinearGradient
           colors={['#DC2626', '#EF4444']}

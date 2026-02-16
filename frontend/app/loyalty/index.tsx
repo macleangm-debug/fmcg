@@ -1,22 +1,95 @@
-import React from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Platform,
+  useWindowDimensions,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useBusinessStore } from '../../src/store/businessStore';
+import { ProductDashboard, PRODUCT_THEMES } from '../../src/components/dashboard';
+import { Advert } from '../../src/components/AdvertCarousel';
 
 export default function LoyaltyHome() {
   const router = useRouter();
+  const { width } = useWindowDimensions();
+  const isWeb = Platform.OS === 'web' && width > 768;
+  const { formatCurrency, formatNumber } = useBusinessStore();
+  
+  const [refreshing, setRefreshing] = useState(false);
+  const [adverts, setAdverts] = useState<Advert[]>([]);
 
+  // Fetch adverts
+  const fetchAdverts = async () => {
+    try {
+      const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
+      const response = await fetch(`${API_URL}/api/adverts/public?product=loyalty&language=en`);
+      if (response.ok) {
+        const data = await response.json();
+        setAdverts(data);
+      }
+    } catch (error) {
+      console.log('Failed to fetch adverts:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchAdverts();
+  }, []);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchAdverts().finally(() => setRefreshing(false));
+  }, []);
+
+  // Web: Use the new ProductDashboard
+  if (isWeb) {
+    return (
+      <ProductDashboard
+        productId="loyalty"
+        subtitle="Build customer relationships with rewards and engagement programs"
+        onNewAction={() => router.push('/loyalty/members/new')}
+        newActionLabel="Add Member"
+        statsRow={[
+          { label: 'Active Members', value: '482', icon: 'people', iconBg: '#FCE7F3', iconColor: '#DB2777' },
+          { label: 'Points Issued', value: '23,400', icon: 'star', iconBg: '#FEF3C7', iconColor: '#F59E0B' },
+          { label: 'Rewards Redeemed', value: '156', icon: 'gift', iconBg: '#D1FAE5', iconColor: '#10B981' },
+          { label: 'VIP Members', value: '24', icon: 'trophy', iconBg: '#FCE7F3', iconColor: '#EC4899' },
+        ]}
+        netIncome={{ value: 23400, trend: 28 }}
+        totalReturn={{ value: 4560, trend: 15 }}
+        revenueTotal={87500}
+        revenueTrend={22}
+        adverts={adverts}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        onTransactionViewMore={() => router.push('/loyalty/members')}
+        onSalesReportViewMore={() => router.push('/loyalty/reports')}
+        onPromoPress={() => router.push('/loyalty/settings')}
+        promoTitle="Grow customer loyalty with smart rewards."
+        promoSubtitle="Create tiers, automate rewards, and track engagement metrics."
+        promoButtonText="Configure Rewards"
+        formatCurrency={formatCurrency}
+      />
+    );
+  }
+
+  // Mobile: Keep original coming soon layout
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         {/* Header */}
         <LinearGradient
           colors={['#DB2777', '#EC4899']}
