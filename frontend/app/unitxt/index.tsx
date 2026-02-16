@@ -138,6 +138,7 @@ export default function UnitxtDashboard() {
 
   useEffect(() => {
     fetchDashboardData();
+    fetchAdverts();
   }, [fetchDashboardData]);
 
   const onRefresh = () => {
