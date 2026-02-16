@@ -8,6 +8,8 @@ interface RevenueChartProps {
   percentageChange?: number;
   monthlyData?: Array<{ income: number; expenses: number; month: string }>;
   formatCurrency?: (amount: number) => string;
+  themeColor?: string;
+  themeColorLight?: string;
 }
 
 const defaultMonthlyData = [
@@ -25,11 +27,13 @@ const RevenueChart: React.FC<RevenueChartProps> = ({
   percentageChange = 35,
   monthlyData = defaultMonthlyData,
   formatCurrency = (amount) => `$${amount.toLocaleString()}`,
+  themeColor = '#1B4332',
+  themeColorLight = '#95D5B2',
 }) => {
-  // Prepare data for grouped bar chart
+  // Prepare data for grouped bar chart - using theme colors
   const barData = monthlyData.flatMap((item) => [
-    { value: item.income / 1000, frontColor: '#1B4332', spacing: 4, label: item.month },
-    { value: item.expenses / 1000, frontColor: '#95D5B2', spacing: 20 },
+    { value: item.income / 1000, frontColor: themeColor, spacing: 4, label: item.month },
+    { value: item.expenses / 1000, frontColor: themeColorLight, spacing: 20 },
   ]);
 
   return (
@@ -38,18 +42,18 @@ const RevenueChart: React.FC<RevenueChartProps> = ({
         <Text style={styles.title}>Revenue</Text>
         <View style={styles.legend}>
           <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: '#1B4332' }]} />
+            <View style={[styles.legendDot, { backgroundColor: themeColor }]} />
             <Text style={styles.legendText}>Income</Text>
           </View>
           <View style={styles.legendItem}>
-            <View style={[styles.legendDot, { backgroundColor: '#95D5B2' }]} />
+            <View style={[styles.legendDot, { backgroundColor: themeColorLight }]} />
             <Text style={styles.legendText}>Expenses</Text>
           </View>
         </View>
       </View>
       
       <View style={styles.amountRow}>
-        <Text style={styles.amount}>{formatCurrency(totalRevenue)}</Text>
+        <Text style={[styles.amount, { color: themeColor }]}>{formatCurrency(totalRevenue)}</Text>
         <View style={styles.changeContainer}>
           <Icon name="trending-up" size={14} color="#059669" />
           <Text style={styles.changeText}>+{percentageChange}%</Text>
