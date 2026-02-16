@@ -335,15 +335,15 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
 
       {/* Main Body with Sidebar + Content */}
       <View style={styles.bodyContainer}>
-        {/* Sidebar - Dynamic Theme */}
-        <View style={[styles.sidebar, { backgroundColor: dynamicSidebarBg }]}>
+        {/* Sidebar - Light background with themed accents */}
+        <View style={[styles.sidebar, { backgroundColor: dynamicSidebarBg, borderRightWidth: 1, borderRightColor: '#E5E7EB' }]}>
           {/* Main Navigation */}
           <ScrollView style={styles.navSection} showsVerticalScrollIndicator={false}>
-            <Text style={[styles.navSectionTitle, { color: dynamicSidebarText }]}>SALES</Text>
+            <Text style={[styles.navSectionTitle, { color: '#9CA3AF' }]}>SALES</Text>
             {navItems.map((item) => (
               <TouchableOpacity
                 key={item.name}
-                style={[styles.navItem, isActive(item.name) && styles.navItemActive]}
+                style={[styles.navItem, isActive(item.name) && { backgroundColor: dynamicSidebarActiveBg }]}
                 onPress={() => handleNavPress(item.name)}
                 activeOpacity={0.7}
               >
@@ -352,7 +352,7 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
                   size={20}
                   color={isActive(item.name) ? dynamicSidebarActiveText : dynamicSidebarText}
                 />
-                <Text style={[styles.navLabel, { color: isActive(item.name) ? dynamicSidebarActiveText : dynamicSidebarText }]}>
+                <Text style={[styles.navLabel, { color: isActive(item.name) ? dynamicSidebarActiveText : dynamicSidebarText, fontWeight: isActive(item.name) ? '600' : '500' }]}>
                   {item.label}
                 </Text>
                 {item.badge && item.badge > 0 && (
@@ -366,11 +366,11 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
             {/* Customers & Catalog Section */}
             {catalogItems.length > 0 && (
               <>
-                <Text style={[styles.navSectionTitle, { marginTop: 24, color: dynamicSidebarText }]}>CATALOG</Text>
+                <Text style={[styles.navSectionTitle, { marginTop: 24, color: '#9CA3AF' }]}>CATALOG</Text>
                 {catalogItems.map((item) => (
               <TouchableOpacity
                 key={item.name}
-                style={[styles.navItem, isActive(item.name) && styles.navItemActive]}
+                style={[styles.navItem, isActive(item.name) && { backgroundColor: dynamicSidebarActiveBg }]}
                 onPress={() => handleNavPress(item.name)}
                 activeOpacity={0.7}
               >
@@ -379,7 +379,7 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
                   size={20}
                   color={isActive(item.name) ? dynamicSidebarActiveText : dynamicSidebarText}
                 />
-                    <Text style={[styles.navLabel, { color: isActive(item.name) ? dynamicSidebarActiveText : dynamicSidebarText }]}>
+                    <Text style={[styles.navLabel, { color: isActive(item.name) ? dynamicSidebarActiveText : dynamicSidebarText, fontWeight: isActive(item.name) ? '600' : '500' }]}>
                       {item.label}
                     </Text>
                   </TouchableOpacity>
@@ -390,11 +390,11 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
             {/* Insights Section - Reports only, Expenses moves to Linked Apps */}
             {financeItems.length > 0 && (
               <>
-                <Text style={[styles.navSectionTitle, { marginTop: 24, color: dynamicSidebarText }]}>INSIGHTS</Text>
+                <Text style={[styles.navSectionTitle, { marginTop: 24, color: '#9CA3AF' }]}>INSIGHTS</Text>
                 {financeItems.filter(item => item.name === '/admin/reports').map((item) => (
               <TouchableOpacity
                 key={item.name}
-                style={[styles.navItem, isActive(item.name) && styles.navItemActive]}
+                style={[styles.navItem, isActive(item.name) && { backgroundColor: dynamicSidebarActiveBg }]}
                 onPress={() => handleNavPress(item.name)}
                 activeOpacity={0.7}
               >
@@ -403,7 +403,7 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
                   size={20}
                   color={isActive(item.name) ? dynamicSidebarActiveText : dynamicSidebarText}
                 />
-                    <Text style={[styles.navLabel, { color: isActive(item.name) ? dynamicSidebarActiveText : dynamicSidebarText }]}>
+                    <Text style={[styles.navLabel, { color: isActive(item.name) ? dynamicSidebarActiveText : dynamicSidebarText, fontWeight: isActive(item.name) ? '600' : '500' }]}>
                       {item.label}
                     </Text>
                   </TouchableOpacity>
@@ -414,11 +414,11 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
             {/* Settings Section */}
             {settingsItems.length > 0 && (
               <>
-                <Text style={[styles.navSectionTitle, { marginTop: 24, color: dynamicSidebarText }]}>SETTINGS</Text>
+                <Text style={[styles.navSectionTitle, { marginTop: 24, color: '#9CA3AF' }]}>SETTINGS</Text>
                 {settingsItems.map((item) => (
               <TouchableOpacity
                 key={item.name}
-                style={[styles.navItem, isActive(item.name) && styles.navItemActive]}
+                style={[styles.navItem, isActive(item.name) && { backgroundColor: dynamicSidebarActiveBg }]}
                 onPress={() => handleNavPress(item.name)}
                 activeOpacity={0.7}
               >
@@ -427,7 +427,7 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
                   size={20}
                   color={isActive(item.name) ? dynamicSidebarActiveText : dynamicSidebarText}
                 />
-                    <Text style={[styles.navLabel, { color: isActive(item.name) ? dynamicSidebarActiveText : dynamicSidebarText }]}>
+                    <Text style={[styles.navLabel, { color: isActive(item.name) ? dynamicSidebarActiveText : dynamicSidebarText, fontWeight: isActive(item.name) ? '600' : '500' }]}>
                       {item.label}
                     </Text>
                   </TouchableOpacity>
@@ -438,19 +438,19 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
             {/* Refer & Earn Section - Highlighted for visibility */}
             <View style={styles.referralSection}>
               <TouchableOpacity
-                style={[styles.referralButton, isActive('/(tabs)/referral') && styles.referralButtonActive]}
+                style={[styles.referralButton, { backgroundColor: productTheme.primaryLight, borderColor: productTheme.primary }, isActive('/(tabs)/referral') && styles.referralButtonActive]}
                 onPress={() => handleNavPress('/(tabs)/referral')}
                 activeOpacity={0.7}
                 data-testid="sidebar-refer-earn-btn"
               >
-                <View style={[styles.referralIconContainer, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
+                <View style={[styles.referralIconContainer, { backgroundColor: productTheme.primary }]}>
                   <Icon name="gift" size={18} color="#FFFFFF" />
                 </View>
                 <View style={styles.referralTextContainer}>
-                  <Text style={styles.referralButtonText}>Refer & Earn</Text>
-                  <Text style={[styles.referralSubtext, { color: dynamicSidebarText }]}>Get $10 per referral</Text>
+                  <Text style={[styles.referralButtonText, { color: productTheme.primary }]}>Refer & Earn</Text>
+                  <Text style={[styles.referralSubtext, { color: productTheme.primary }]}>Get $10 per referral</Text>
                 </View>
-                <Icon name="chevron-forward" size={18} color={dynamicSidebarText} />
+                <Icon name="chevron-forward" size={18} color={productTheme.primary} />
               </TouchableOpacity>
               
               {/* Affiliate Partner Dashboard Link */}
@@ -465,7 +465,7 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
                 </View>
                 <View style={styles.referralTextContainer}>
                   <Text style={styles.affiliateButtonText}>Affiliate Program</Text>
-                  <Text style={[styles.referralSubtext, { color: dynamicSidebarText }]}>Become a partner</Text>
+                  <Text style={[styles.referralSubtext, { color: '#6B7280' }]}>Become a partner</Text>
                 </View>
                 <Icon name="chevron-forward" size={18} color="#E9A319" />
               </TouchableOpacity>
@@ -481,14 +481,14 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
             )}
             
             {/* Help Section */}
-            <View style={styles.helpSection}>
+            <View style={[styles.helpSection, { borderTopColor: '#E5E7EB' }]}>
               <TouchableOpacity
-                style={styles.helpButton}
+                style={[styles.helpButton, { backgroundColor: '#F3F4F6' }]}
                 onPress={handleOpenHelp}
                 activeOpacity={0.7}
               >
-                <Icon name="help-circle-outline" size={20} color={dynamicSidebarText} />
-                <Text style={[styles.helpButtonText, { color: dynamicSidebarText }]}>Help & Support</Text>
+                <Icon name="help-circle-outline" size={20} color="#6B7280" />
+                <Text style={[styles.helpButtonText, { color: '#6B7280' }]}>Help & Support</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
