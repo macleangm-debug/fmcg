@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
   amount: {
     fontSize: 28,
     fontWeight: '700',
-    color: '#1B4332',
+    color: '#111827',
   },
   changeContainer: {
     flexDirection: 'row',
