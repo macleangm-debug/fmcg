@@ -497,6 +497,7 @@ const ProductDashboard: React.FC<ProductDashboardProps> = ({
               percentageChange={revenueTrend}
               formatCurrency={formatCurrency}
               themeColor={theme.primary}
+              themeColorLight={theme.primaryLight}
             />
             
             <SalesReport 
