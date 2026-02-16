@@ -86,6 +86,21 @@ export default function UnitxtDashboard() {
     scheduled_messages: 0,
   });
   const [recentCampaigns, setRecentCampaigns] = useState<RecentCampaign[]>([]);
+  const [adverts, setAdverts] = useState<Advert[]>([]);
+
+  // Fetch adverts
+  const fetchAdverts = async () => {
+    try {
+      const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
+      const response = await fetch(`${API_URL}/api/adverts/public?product=unitxt&language=en`);
+      if (response.ok) {
+        const data = await response.json();
+        setAdverts(data);
+      }
+    } catch (error) {
+      console.log('Failed to fetch adverts:', error);
+    }
+  };
 
   const fetchDashboardData = useCallback(async () => {
     try {
