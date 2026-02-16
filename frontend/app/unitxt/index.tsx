@@ -16,6 +16,8 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '../../src/store/authStore';
 import { useBusinessStore } from '../../src/store/businessStore';
+import { ProductDashboard } from '../../src/components/dashboard';
+import { Advert } from '../../src/components/AdvertCarousel';
 import api from '../../src/api/client';
 
 const COLORS = {
