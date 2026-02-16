@@ -5,7 +5,7 @@ import { Platform, View, StyleSheet, useWindowDimensions, TouchableOpacity, Text
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../src/store/authStore';
 import { subscriptionApi } from '../../src/api/client';
-import KwikPaySidebarLayout from '../../src/components/KwikPaySidebarLayout';
+import WebSidebarLayout from '../../src/components/WebSidebarLayout';
 import FloatingHelpButton from '../../src/components/FloatingHelpButton';
 import ContextSwitcher from '../../src/components/ContextSwitcher';
 
