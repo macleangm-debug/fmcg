@@ -102,9 +102,11 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
   
   // Get dynamic product theme based on current route
   const productTheme = getProductTheme(segments);
-  const dynamicSidebarBg = productTheme.primaryDark;
-  const dynamicSidebarText = 'rgba(255, 255, 255, 0.75)';
-  const dynamicSidebarActiveText = '#FFFFFF';
+  // Sidebar stays light with themed accents - NOT full colored
+  const dynamicSidebarBg = '#FFFFFF';
+  const dynamicSidebarText = '#6B7280';
+  const dynamicSidebarActiveText = productTheme.primary;
+  const dynamicSidebarActiveBg = productTheme.primaryLight;
   const dynamicHeaderBg = productTheme.primary;
   
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
