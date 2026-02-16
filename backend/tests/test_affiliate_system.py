@@ -8,7 +8,7 @@ import os
 import uuid
 from datetime import datetime
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://sso-soko-ui.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://soko-ui-refresh.preview.emergentagent.com').rstrip('/')
 
 # Test credentials
 SUPERADMIN_EMAIL = "superadmin@softwaregalaxy.com"

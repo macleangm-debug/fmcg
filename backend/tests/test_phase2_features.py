@@ -7,7 +7,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://sso-soko-ui.preview.emergentagent.com')
+BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://soko-ui-refresh.preview.emergentagent.com')
 
 class TestHealthAndAuth:
     """Basic health and authentication tests"""
