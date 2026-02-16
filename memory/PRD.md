@@ -176,8 +176,12 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 
 ---
 
-## Updated Files (February 16, 2026)
+## Updated Files (February 16, 2026 - Full-Bleed Theming)
+- `/app/frontend/src/components/WebSidebarLayout.tsx` - **UPDATED**: Added PRODUCT_THEMES config, getProductTheme() function, dynamic sidebar/header/content theming
+- `/app/frontend/src/components/dashboard/ProductDashboard.tsx` - **UPDATED**: Full-bleed background with glass-morphism cards, white text for contrast
 - `/app/frontend/app/expenses/index.tsx` - Uses ProductDashboard with red theme
+- `/app/frontend/app/loyalty/index.tsx` - Uses ProductDashboard with pink theme
+- `/app/frontend/app/unitxt/index.tsx` - Uses ProductDashboard with amber theme
 - `/app/frontend/app/loyalty/index.tsx` - Uses ProductDashboard with pink theme
 - `/app/frontend/app/unitxt/index.tsx` - Uses ProductDashboard with amber theme
 - `/app/frontend/src/components/dashboard/index.ts` - Exports ProductDashboard
