@@ -24,8 +24,32 @@ interface WebSidebarLayoutProps {
   children: React.ReactNode;
 }
 
-// Inline theme colors - Dark green modern theme
-const theme = {
+// Product-specific theme configurations
+const PRODUCT_THEMES: Record<string, { 
+  primary: string; 
+  primaryDark: string; 
+  primaryLight: string;
+  name: string;
+}> = {
+  // RetailPro - Default green theme
+  dashboard: { primary: '#1B4332', primaryDark: '#0F2D21', primaryLight: '#D8F3DC', name: 'RetailPro' },
+  retailpro: { primary: '#1B4332', primaryDark: '#0F2D21', primaryLight: '#D8F3DC', name: 'RetailPro' },
+  // Inventory - Blue theme
+  inventory: { primary: '#1E40AF', primaryDark: '#1E3A8A', primaryLight: '#DBEAFE', name: 'Inventory' },
+  // Invoicing - Indigo theme
+  invoicing: { primary: '#4F46E5', primaryDark: '#3730A3', primaryLight: '#E0E7FF', name: 'Invoicing' },
+  // KwikPay - Emerald theme
+  kwikpay: { primary: '#047857', primaryDark: '#065F46', primaryLight: '#D1FAE5', name: 'KwikPay' },
+  // UniTxt - Amber theme
+  unitxt: { primary: '#D97706', primaryDark: '#B45309', primaryLight: '#FEF3C7', name: 'UniTxt' },
+  // Expenses - Red theme
+  expenses: { primary: '#DC2626', primaryDark: '#B91C1C', primaryLight: '#FEE2E2', name: 'Expenses' },
+  // Loyalty - Pink theme
+  loyalty: { primary: '#DB2777', primaryDark: '#BE185D', primaryLight: '#FCE7F3', name: 'Loyalty' },
+};
+
+// Base theme colors
+const baseTheme = {
   background: '#F5F5F0',
   surface: '#FFFFFF',
   surfaceSecondary: '#F3F4F6',
@@ -40,7 +64,7 @@ const theme = {
   warning: '#F59E0B',
   error: '#DC2626',
   accent: '#E9A319',
-  // New sidebar theme - Dark Green
+  // Default sidebar theme - Dark Green
   sidebarBg: '#1B4332',
   sidebarText: '#95D5B2',
   sidebarActiveText: '#FFFFFF',
@@ -48,6 +72,24 @@ const theme = {
   sidebarHover: 'rgba(255, 255, 255, 0.08)',
   sidebarDivider: 'rgba(255, 255, 255, 0.1)',
 };
+
+// Helper to get current product theme based on route
+const getProductTheme = (segments: string[]) => {
+  const productSegment = segments.find(seg => 
+    Object.keys(PRODUCT_THEMES).includes(seg.toLowerCase())
+  )?.toLowerCase();
+  
+  // Check if we're on a product-specific route
+  if (productSegment && PRODUCT_THEMES[productSegment]) {
+    return PRODUCT_THEMES[productSegment];
+  }
+  
+  // Default to RetailPro/dashboard theme
+  return PRODUCT_THEMES.dashboard;
+};
+
+// Use a static reference for the StyleSheet (base styles)
+const theme = baseTheme;
 
 export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
   const router = useRouter();
