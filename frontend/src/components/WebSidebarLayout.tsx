@@ -333,11 +333,11 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
 
       {/* Main Body with Sidebar + Content */}
       <View style={styles.bodyContainer}>
-        {/* Sidebar */}
-        <View style={styles.sidebar}>
+        {/* Sidebar - Dynamic Theme */}
+        <View style={[styles.sidebar, { backgroundColor: dynamicSidebarBg }]}>
           {/* Main Navigation */}
           <ScrollView style={styles.navSection} showsVerticalScrollIndicator={false}>
-            <Text style={styles.navSectionTitle}>SALES</Text>
+            <Text style={[styles.navSectionTitle, { color: dynamicSidebarText }]}>SALES</Text>
             {navItems.map((item) => (
               <TouchableOpacity
                 key={item.name}
@@ -348,9 +348,9 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
                 <Icon
                   name={item.icon}
                   size={20}
-                  color={isActive(item.name) ? theme.sidebarActiveText : theme.sidebarText}
+                  color={isActive(item.name) ? dynamicSidebarActiveText : dynamicSidebarText}
                 />
-                <Text style={[styles.navLabel, isActive(item.name) && styles.navLabelActive]}>
+                <Text style={[styles.navLabel, { color: isActive(item.name) ? dynamicSidebarActiveText : dynamicSidebarText }]}>
                   {item.label}
                 </Text>
                 {item.badge && item.badge > 0 && (
@@ -364,7 +364,7 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
             {/* Customers & Catalog Section */}
             {catalogItems.length > 0 && (
               <>
-                <Text style={[styles.navSectionTitle, { marginTop: 24 }]}>CATALOG</Text>
+                <Text style={[styles.navSectionTitle, { marginTop: 24, color: dynamicSidebarText }]}>CATALOG</Text>
                 {catalogItems.map((item) => (
               <TouchableOpacity
                 key={item.name}
@@ -375,9 +375,9 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
                 <Icon
                   name={item.icon}
                   size={20}
-                  color={isActive(item.name) ? theme.sidebarActiveText : theme.sidebarText}
+                  color={isActive(item.name) ? dynamicSidebarActiveText : dynamicSidebarText}
                 />
-                    <Text style={[styles.navLabel, isActive(item.name) && styles.navLabelActive]}>
+                    <Text style={[styles.navLabel, { color: isActive(item.name) ? dynamicSidebarActiveText : dynamicSidebarText }]}>
                       {item.label}
                     </Text>
                   </TouchableOpacity>
@@ -388,7 +388,7 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
             {/* Insights Section - Reports only, Expenses moves to Linked Apps */}
             {financeItems.length > 0 && (
               <>
-                <Text style={[styles.navSectionTitle, { marginTop: 24 }]}>INSIGHTS</Text>
+                <Text style={[styles.navSectionTitle, { marginTop: 24, color: dynamicSidebarText }]}>INSIGHTS</Text>
                 {financeItems.filter(item => item.name === '/admin/reports').map((item) => (
               <TouchableOpacity
                 key={item.name}
@@ -399,9 +399,9 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
                 <Icon
                   name={item.icon}
                   size={20}
-                  color={isActive(item.name) ? theme.sidebarActiveText : theme.sidebarText}
+                  color={isActive(item.name) ? dynamicSidebarActiveText : dynamicSidebarText}
                 />
-                    <Text style={[styles.navLabel, isActive(item.name) && styles.navLabelActive]}>
+                    <Text style={[styles.navLabel, { color: isActive(item.name) ? dynamicSidebarActiveText : dynamicSidebarText }]}>
                       {item.label}
                     </Text>
                   </TouchableOpacity>
@@ -412,7 +412,7 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
             {/* Settings Section */}
             {settingsItems.length > 0 && (
               <>
-                <Text style={[styles.navSectionTitle, { marginTop: 24 }]}>SETTINGS</Text>
+                <Text style={[styles.navSectionTitle, { marginTop: 24, color: dynamicSidebarText }]}>SETTINGS</Text>
                 {settingsItems.map((item) => (
               <TouchableOpacity
                 key={item.name}
@@ -423,9 +423,9 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
                 <Icon
                   name={item.icon}
                   size={20}
-                  color={isActive(item.name) ? theme.sidebarActiveText : theme.sidebarText}
+                  color={isActive(item.name) ? dynamicSidebarActiveText : dynamicSidebarText}
                 />
-                    <Text style={[styles.navLabel, isActive(item.name) && styles.navLabelActive]}>
+                    <Text style={[styles.navLabel, { color: isActive(item.name) ? dynamicSidebarActiveText : dynamicSidebarText }]}>
                       {item.label}
                     </Text>
                   </TouchableOpacity>
