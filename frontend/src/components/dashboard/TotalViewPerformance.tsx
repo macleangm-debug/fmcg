@@ -7,6 +7,8 @@ interface TotalViewPerformanceProps {
   viewCount?: number; // percentage
   percentage?: number; // percentage
   sales?: number; // percentage
+  themeColor?: string;
+  themeColorLight?: string;
 }
 
 const TotalViewPerformance: React.FC<TotalViewPerformanceProps> = ({
@@ -14,6 +16,8 @@ const TotalViewPerformance: React.FC<TotalViewPerformanceProps> = ({
   viewCount = 68,
   percentage = 16,
   sales = 23,
+  themeColor = '#40916C',
+  themeColorLight = '#95D5B2',
 }) => {
   // Format large numbers (e.g., 565000 -> 565K)
   const formatCount = (num: number) => {
@@ -23,8 +27,8 @@ const TotalViewPerformance: React.FC<TotalViewPerformanceProps> = ({
   };
 
   const pieData = [
-    { value: viewCount, color: '#40916C', text: `${viewCount}%` },
-    { value: percentage, color: '#95D5B2', text: `${percentage}%` },
+    { value: viewCount, color: themeColor, text: `${viewCount}%` },
+    { value: percentage, color: themeColorLight, text: `${percentage}%` },
     { value: sales, color: '#E9A319', text: `${sales}%` },
   ];
 
@@ -41,8 +45,8 @@ const TotalViewPerformance: React.FC<TotalViewPerformanceProps> = ({
             innerRadius={55}
             centerLabelComponent={() => (
               <View style={styles.centerLabel}>
-                <Text style={styles.centerLabelSmall}>Total Count</Text>
-                <Text style={styles.centerLabelValue}>{formatCount(totalCount)}</Text>
+                <Text style={[styles.centerLabelSmall, { color: themeColor }]}>Total Count</Text>
+                <Text style={[styles.centerLabelValue, { color: themeColor }]}>{formatCount(totalCount)}</Text>
               </View>
             )}
           />
@@ -66,11 +70,11 @@ const TotalViewPerformance: React.FC<TotalViewPerformanceProps> = ({
       {/* Legend */}
       <View style={styles.legend}>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: '#40916C' }]} />
+          <View style={[styles.legendDot, { backgroundColor: themeColor }]} />
           <Text style={styles.legendText}>View Count</Text>
         </View>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: '#95D5B2' }]} />
+          <View style={[styles.legendDot, { backgroundColor: themeColorLight }]} />
           <Text style={styles.legendText}>Percentage</Text>
         </View>
         <View style={styles.legendItem}>
