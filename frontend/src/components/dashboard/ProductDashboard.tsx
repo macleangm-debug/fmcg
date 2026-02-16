@@ -515,6 +515,7 @@ const ProductDashboard: React.FC<ProductDashboardProps> = ({
               percentage={performanceData?.percentage || 16}
               sales={performanceData?.sales || 23}
               themeColor={theme.primary}
+              themeColorLight={theme.primaryLight}
             />
             
             <PromotionalCard 
