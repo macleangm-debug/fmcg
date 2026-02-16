@@ -69,9 +69,9 @@ export default function KwikPayLayout() {
   if (isWebDesktop) {
     return (
       <View style={styles.webContainer}>
-        <KwikPaySidebarLayout>
+        <WebSidebarLayout>
           <Slot />
-        </KwikPaySidebarLayout>
+        </WebSidebarLayout>
       </View>
     );
   }
