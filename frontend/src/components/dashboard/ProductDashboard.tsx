@@ -318,14 +318,13 @@ const ProductDashboard: React.FC<ProductDashboardProps> = ({
     },
   };
 
-  // Determine if we should use light text (when background is dark/saturated)
-  const useLightText = true; // Full-bleed theme means we use light text on colored backgrounds
-  const headerBgColor = theme.primary;
-  const contentBgColor = theme.primaryDark;
-  const textColor = '#FFFFFF';
-  const subtextColor = 'rgba(255, 255, 255, 0.8)';
-  const cardBgColor = 'rgba(255, 255, 255, 0.15)';
-  const cardBorderColor = 'rgba(255, 255, 255, 0.2)';
+  // Use light background with themed accents (NOT full-bleed colored backgrounds)
+  const headerBgColor = '#FFFFFF';
+  const contentBgColor = '#F5F5F0';
+  const textColor = '#111827';
+  const subtextColor = '#6B7280';
+  const cardBgColor = '#FFFFFF';
+  const cardBorderColor = '#E5E7EB';
 
   return (
     <View style={[styles.container, { backgroundColor: contentBgColor }]}>
