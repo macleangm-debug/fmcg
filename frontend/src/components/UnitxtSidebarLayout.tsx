@@ -71,13 +71,13 @@ export default function UnitxtSidebarLayout({ children }: UnitxtSidebarLayoutPro
 
   return (
     <View style={styles.container}>
-      {/* Top Header */}
-      <View style={styles.topHeader}>
+      {/* Top Header - Themed Color */}
+      <View style={[styles.topHeader, { backgroundColor: COLORS.primary, borderBottomColor: 'rgba(255,255,255,0.1)' }]}>
         <View style={styles.headerLeft}>
-          <View style={styles.logoContainer}>
+          <View style={[styles.logoContainer, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
             <Ionicons name="chatbubbles" size={22} color={COLORS.white} />
           </View>
-          <Text style={styles.brandName}>Unitxt</Text>
+          <Text style={[styles.brandName, { color: COLORS.white }]}>Unitxt</Text>
         </View>
         <View style={styles.headerRight}>
           {/* Context Switcher - Business & Location (no add buttons - linked app) */}
@@ -88,15 +88,15 @@ export default function UnitxtSidebarLayout({ children }: UnitxtSidebarLayoutPro
             onLocationSwitch={() => {}}
           />
           <ProductSwitcher currentProductId="unitxt" />
-          <View style={styles.userInfo}>
-            <View style={styles.userAvatar}>
+          <View style={[styles.userInfo, { borderLeftColor: 'rgba(255,255,255,0.2)' }]}>
+            <View style={[styles.userAvatar, { backgroundColor: 'rgba(255, 255, 255, 0.2)' }]}>
               <Text style={styles.userAvatarText}>
                 {user?.name?.charAt(0)?.toUpperCase() || 'U'}
               </Text>
             </View>
             <View style={styles.userDetails}>
-              <Text style={styles.userName} numberOfLines={1}>{user?.name || 'User'}</Text>
-              <Text style={styles.userRole}>{user?.role?.replace('_', ' ').toUpperCase() || 'USER'}</Text>
+              <Text style={[styles.userName, { color: COLORS.white }]} numberOfLines={1}>{user?.name || 'User'}</Text>
+              <Text style={[styles.userRole, { color: 'rgba(255, 255, 255, 0.7)' }]}>{user?.role?.replace('_', ' ').toUpperCase() || 'USER'}</Text>
             </View>
           </View>
         </View>
