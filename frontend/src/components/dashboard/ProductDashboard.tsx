@@ -182,8 +182,33 @@ const ProductDashboard: React.FC<ProductDashboardProps> = ({
 }) => {
   const router = useRouter();
   const theme = PRODUCT_THEMES[productId] || PRODUCT_THEMES.retailpro;
+  
+  // State for product-specific adverts fetched from API
+  const [fetchedAdverts, setFetchedAdverts] = useState<Advert[]>([]);
+  const [advertsLoading, setAdvertsLoading] = useState(false);
 
-  // Default adverts with theme color - "Refer & Earn" banner
+  // Fetch product-specific adverts from API
+  useEffect(() => {
+    const fetchProductAdverts = async () => {
+      setAdvertsLoading(true);
+      try {
+        const response = await axios.get(`${API_URL}/api/adverts/public`, {
+          params: { product: productId, language: 'en' }
+        });
+        if (response.data && response.data.length > 0) {
+          setFetchedAdverts(response.data);
+        }
+      } catch (error) {
+        console.log('Using default adverts for', productId);
+      } finally {
+        setAdvertsLoading(false);
+      }
+    };
+    
+    fetchProductAdverts();
+  }, [productId]);
+
+  // Default adverts with theme color - "Refer & Earn" banner (fallback)
   const defaultAdverts: Advert[] = [
     {
       id: 'refer-earn',
@@ -207,13 +232,14 @@ const ProductDashboard: React.FC<ProductDashboardProps> = ({
     },
   ];
 
-  // Always use theme colors for adverts - override any passed adverts with theme colors
-  const finalAdverts = adverts.length > 0 
-    ? adverts.map((ad, index) => ({
-        ...ad,
-        background_color: index === 0 ? theme.primary : theme.primaryDark,
-      }))
-    : defaultAdverts;
+  // Use fetched adverts if available, else passed adverts, else defaults
+  // Apply theme colors to maintain visual consistency
+  const baseAdverts = fetchedAdverts.length > 0 ? fetchedAdverts : (adverts.length > 0 ? adverts : defaultAdverts);
+  const finalAdverts = baseAdverts.map((ad, index) => ({
+    ...ad,
+    // Alternate between primary and primaryDark for visual variety
+    background_color: index % 2 === 0 ? theme.primary : theme.primaryDark,
+  }));
 
   // Default update card content based on product
   const defaultUpdateCard: UpdateCardContent = {
