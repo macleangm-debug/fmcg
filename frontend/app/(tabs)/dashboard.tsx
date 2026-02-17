@@ -221,6 +221,12 @@ export default function Dashboard() {
   // Check if any app has expiring trial (for warning banner)
   const expiringApps = appsWithStatus.filter(a => a.status === 'expiring_soon' || a.status === 'expired');
 
+  // RetailPro theme colors
+  const RETAILPRO_THEME = {
+    primary: '#1B4332',
+    primaryDark: '#0F2D21',
+  };
+
   // Fetch adverts from backend
   const fetchAdverts = async () => {
     try {
@@ -228,7 +234,12 @@ export default function Dashboard() {
       const response = await fetch(`${API_URL}/api/adverts/public?product=retailpro&language=en`);
       if (response.ok) {
         const data = await response.json();
-        setAdverts(data);
+        // Apply RetailPro theme colors to adverts
+        const themedAdverts = data.map((ad: Advert, index: number) => ({
+          ...ad,
+          background_color: index === 0 ? RETAILPRO_THEME.primary : RETAILPRO_THEME.primaryDark,
+        }));
+        setAdverts(themedAdverts);
       }
     } catch (error) {
       console.log('Failed to fetch adverts:', error);
