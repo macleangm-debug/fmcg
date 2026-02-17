@@ -204,7 +204,13 @@ const ProductDashboard: React.FC<ProductDashboardProps> = ({
     },
   ];
 
-  const finalAdverts = adverts.length > 0 ? adverts : defaultAdverts;
+  // Always use theme colors for adverts - override any passed adverts with theme colors
+  const finalAdverts = adverts.length > 0 
+    ? adverts.map((ad, index) => ({
+        ...ad,
+        background_color: index === 0 ? theme.primary : theme.primaryDark,
+      }))
+    : defaultAdverts;
 
   // Default update card content based on product
   const defaultUpdateCard: UpdateCardContent = {
