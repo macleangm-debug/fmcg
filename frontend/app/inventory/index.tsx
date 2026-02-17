@@ -1101,22 +1101,34 @@ export default function InventoryManagement() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* WEB DASHBOARD */}
+      {/* WEB DASHBOARD - Using ProductDashboard Component */}
       {isWeb ? (
-        <>
-          {/* Web Page Header */}
-          <View style={webStyles.pageHeader}>
-            <View>
-              <Text style={webStyles.pageTitle}>Dashboard</Text>
-              <Text style={webStyles.pageSubtitle}>Inventory management overview</Text>
-            </View>
-            <TouchableOpacity style={webStyles.addBtn} onPress={openAddStockModal}>
-              <Ionicons name="add" size={20} color="#FFFFFF" />
-              <Text style={webStyles.addBtnText}>Add Stock</Text>
-            </TouchableOpacity>
-          </View>
-          {renderWebDashboard()}
-        </>
+        <ProductDashboard
+          productId="inventory"
+          subtitle="Inventory management overview"
+          onNewAction={openAddStockModal}
+          newActionLabel="Add Stock"
+          statsRow={[
+            { label: 'Total Items', value: formatNumber(summary?.total_items || 0), icon: 'cube', iconBg: '#D1FAE5', iconColor: '#059669' },
+            { label: 'Total Quantity', value: formatNumber(summary?.total_quantity || 0), icon: 'layers', iconBg: '#DBEAFE', iconColor: '#2563EB' },
+            { label: 'Low Stock', value: summary?.low_stock_count || 0, icon: 'alert-circle', iconBg: '#FEF3C7', iconColor: '#F59E0B' },
+            { label: 'Out of Stock', value: summary?.out_of_stock_count || 0, icon: 'close-circle', iconBg: '#FEE2E2', iconColor: '#EF4444' },
+          ]}
+          netIncome={{ value: summary?.total_items || 0, trend: 15 }}
+          totalReturn={{ value: summary?.out_of_stock_count || 0, trend: -8 }}
+          revenueTotal={summary?.total_value || 0}
+          revenueTrend={12}
+          adverts={adverts}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          onTransactionViewMore={() => router.push('/inventory/products')}
+          onSalesReportViewMore={() => router.push('/inventory/reports')}
+          onPromoPress={() => router.push('/inventory/products')}
+          promoTitle="Manage your inventory efficiently."
+          promoSubtitle="Track stock levels, manage products, and get low stock alerts."
+          promoButtonText="Manage Products"
+          formatCurrency={formatCurrency}
+        />
       ) : (
         /* MOBILE LAYOUT */
         <ScrollView
