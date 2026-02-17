@@ -23,6 +23,8 @@ import WebModal from '../../src/components/WebModal';
 import ImportExportModal from '../../src/components/ImportExportModal';
 import ProductSwitcher from '../../src/components/ProductSwitcher';
 import ConfirmationModal from '../../src/components/ConfirmationModal';
+import { ProductDashboard } from '../../src/components/dashboard';
+import { Advert } from '../../src/components/AdvertCarousel';
 import api from '../../src/api/client';
 import { PieChart, BarChart, LineChart } from 'react-native-gifted-charts';
 
