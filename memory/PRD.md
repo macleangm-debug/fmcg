@@ -134,6 +134,7 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 - [x] **RETAILPRO COMPREHENSIVE TESTING (COMPLETED Feb 17, 2026)** - Backend APIs 100% pass, Frontend 95% pass, 9 test orders created, pytest suite at `/app/backend/tests/test_retailpro_apis.py`
 
 ### P1 - Upcoming
+- [ ] **Tigo SMS Testing** - User deferred ("We will test later"), requires VPN access
 - [ ] Language Selector integration (blocked - `import.meta` bundler error)
 - [ ] Product-specific content for the advertisement carousel on each dashboard
 - [ ] UniTxt admin dashboard for SMS campaigns
