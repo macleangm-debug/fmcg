@@ -152,8 +152,11 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 
 ## Known Issues
 1. **Language Selector Bundler Error**: Importing `useLanguageStore` causes "Cannot use 'import.meta' outside a module" - requires metro.config.js investigation
-2. **Pre-existing**: Console warning about deprecated shadow style props
-3. **Pre-existing**: Some sidebar icons may appear as empty boxes (font loading issue)
+2. **Minor - `/api/locations` API**: Returns 400 error in console - non-critical
+3. **Minor - subscriptionApi.getCurrent**: Console error "is not a function" - non-critical
+4. **TransactionList Mock Data**: Component uses hardcoded mock data for demonstration
+5. **Pre-existing**: Console warning about deprecated shadow style props
+6. **Pre-existing**: Some sidebar icons may appear as empty boxes (font loading issue)
 
 ---
 
