@@ -221,10 +221,10 @@ export default function Dashboard() {
   // Check if any app has expiring trial (for warning banner)
   const expiringApps = appsWithStatus.filter(a => a.status === 'expiring_soon' || a.status === 'expired');
 
-  // RetailPro theme colors
+  // RetailPro theme colors - using brighter greens for visibility
   const RETAILPRO_THEME = {
-    primary: '#1B4332',
-    primaryDark: '#0F2D21',
+    primary: '#2D6A4F',  // Brighter green for main advert banner
+    primaryDark: '#1B4332',  // Dark green accent
   };
 
   // Fetch adverts from backend
