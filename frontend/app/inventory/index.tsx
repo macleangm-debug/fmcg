@@ -109,6 +109,7 @@ export default function InventoryManagement() {
   const [items, setItems] = useState<InventoryItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [movements, setMovements] = useState<Movement[]>([]);
+  const [adverts, setAdverts] = useState<Advert[]>([]);
   
   // Chart data state
   const [chartData, setChartData] = useState<{
