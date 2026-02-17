@@ -137,7 +137,6 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 ### P1 - Upcoming
 - [ ] **Tigo SMS Testing** - User deferred ("We will test later"), requires VPN access
 - [ ] Language Selector integration (blocked - `import.meta` bundler error)
-- [ ] Product-specific content for the advertisement carousel on each dashboard
 - [ ] UniTxt admin dashboard for SMS campaigns
 
 ### P2 - Future/Backlog
