@@ -241,24 +241,30 @@ class TestOrders:
         
         product = products[0]
         price = product.get("unit_price") or product.get("price") or 10.0
+        quantity = 2
+        subtotal = price * quantity
         
-        # Create order with the correct format per OrderCreate model in routes/orders.py
+        # Create order with the correct format per OrderCreate model in server.py
+        # Needs: items with subtotal, and payments array
         order_data = {
             "customer_name": "TEST_Order_Customer",
-            "customer_phone": "+255700000001",
             "items": [
                 {
                     "product_id": product.get("id"),
                     "product_name": product.get("name"),
-                    "quantity": 2,
+                    "quantity": quantity,
                     "unit_price": price,
                     "discount": 0,
-                    "tax_rate": 0
+                    "tax_amount": 0,
+                    "subtotal": subtotal
                 }
             ],
-            "payment_method": "cash",
-            "discount_amount": 0,
-            "status": "pending",
+            "payments": [
+                {
+                    "method": "cash",
+                    "amount": subtotal
+                }
+            ],
             "notes": "Test order created by automated testing"
         }
         
