@@ -23,8 +23,8 @@ export interface ProductTheme {
 
 export const PRODUCT_THEMES: Record<string, ProductTheme> = {
   retailpro: {
-    primary: '#1B4332',
-    primaryDark: '#0D2818',
+    primary: '#2D6A4F',  // Brighter forest green for banner visibility
+    primaryDark: '#1B4332',
     primaryLight: '#D8F3DC',
     accent: '#E9A319',
     name: 'RetailPro',
