@@ -364,13 +364,15 @@ class TestOrderFlow:
         # 1. Get products
         products_resp = requests.get(f"{BASE_URL}/api/products", headers=auth_headers)
         assert products_resp.status_code == 200
-        products = products_resp.json().get("products", [])
+        products_data = products_resp.json()
+        products = products_data if isinstance(products_data, list) else products_data.get("products", [])
         
         if not products:
             print("⚠ No products available for order flow test")
             return
         
         product = products[0]
+        price = product.get("unit_price") or product.get("price") or 10.0
         
         # 2. Create order
         order_data = {
@@ -380,7 +382,7 @@ class TestOrderFlow:
                     "product_id": product.get("id"),
                     "product_name": product.get("name"),
                     "quantity": 1,
-                    "unit_price": product.get("unit_price", product.get("price", 10.0)),
+                    "unit_price": price,
                     "discount": 0,
                     "tax_rate": 0
                 }
