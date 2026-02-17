@@ -87,6 +87,7 @@ export default function KwikPayDashboard() {
   const [recentTransactions, setRecentTransactions] = useState<RecentTransaction[]>([]);
   const [statusFilter, setStatusFilter] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [adverts, setAdverts] = useState<Advert[]>([]);
 
   const fetchDashboardData = useCallback(async () => {
     try {
