@@ -106,6 +106,7 @@ export default function InvoicingDashboard() {
   const [chartData, setChartData] = useState<{
     monthly_revenue: Array<{ month: string; invoiced: number; paid: number }>;
   } | null>(null);
+  const [adverts, setAdverts] = useState<Advert[]>([]);
   
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
   const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null);
