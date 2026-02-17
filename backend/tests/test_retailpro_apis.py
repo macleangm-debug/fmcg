@@ -180,10 +180,11 @@ class TestCustomers:
     
     def test_create_customer(self, auth_headers):
         """Test customer creation"""
+        unique_id = uuid.uuid4().hex[:8]
         test_customer = {
-            "name": f"TEST_Customer_{uuid.uuid4().hex[:6]}",
-            "phone": "+255123456789",
-            "email": f"test_{uuid.uuid4().hex[:6]}@example.com",
+            "name": f"TEST_Customer_{unique_id}",
+            "phone": f"+2557{unique_id}",  # Unique phone number
+            "email": f"test_{unique_id}@example.com",
             "country": "TZ"
         }
         
