@@ -20,6 +20,8 @@ import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import { useBusinessStore } from '../../src/store/businessStore';
 import ProductSwitcher from '../../src/components/ProductSwitcher';
+import { ProductDashboard } from '../../src/components/dashboard';
+import { Advert } from '../../src/components/AdvertCarousel';
 import api from '../../src/api/client';
 import ConfirmationModal from '../../src/components/ConfirmationModal';
 import WebModal from '../../src/components/WebModal';
