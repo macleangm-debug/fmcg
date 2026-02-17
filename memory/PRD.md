@@ -132,6 +132,7 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 - [x] **FULL DASHBOARD REDESIGN (COMPLETED)** - All components matching reference
 - [x] **FULL-BLEED THEMING (COMPLETED)** - Theme color covers entire sidebar, header, and dashboard background for all 7 products
 - [x] **RETAILPRO COMPREHENSIVE TESTING (COMPLETED Feb 17, 2026)** - Backend APIs 100% pass, Frontend 95% pass, 9 test orders created, pytest suite at `/app/backend/tests/test_retailpro_apis.py`
+- [x] **PRODUCT-SPECIFIC CAROUSEL CONTENT (COMPLETED Feb 17, 2026)** - 16 adverts seeded with product-specific content for all 7 products, auto-fetch from API with theme color override
 
 ### P1 - Upcoming
 - [ ] **Tigo SMS Testing** - User deferred ("We will test later"), requires VPN access
