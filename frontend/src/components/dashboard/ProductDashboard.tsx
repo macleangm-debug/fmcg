@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import Icon from '../Icon';
@@ -9,6 +9,9 @@ import RevenueChart from './RevenueChart';
 import SalesReport from './SalesReport';
 import PromotionalCard from './PromotionalCard';
 import AdvertCarousel, { Advert } from '../AdvertCarousel';
+import axios from 'axios';
+
+const API_URL = process.env.EXPO_PUBLIC_BACKEND_URL || '';
 
 // Product-specific theme configurations
 export interface ProductTheme {
