@@ -16,6 +16,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '../../src/store/authStore';
 import { useBusinessStore } from '../../src/store/businessStore';
+import { ProductDashboard } from '../../src/components/dashboard';
+import { Advert } from '../../src/components/AdvertCarousel';
 import api from '../../src/api/client';
 import ProductSwitcher from '../../src/components/ProductSwitcher';
 
