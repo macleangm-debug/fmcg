@@ -295,254 +295,37 @@ export default function KwikPayDashboard() {
     );
   }
 
-  // ============ WEB/DESKTOP LAYOUT - Original Dashboard ============
+
+  // ============ WEB/DESKTOP LAYOUT - Using ProductDashboard Component ============
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />
-        }
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Page Header */}
-        <View style={styles.pageHeader}>
-          <View>
-            <Text style={styles.pageTitle}>Dashboard</Text>
-            <Text style={styles.pageSubtitle}>Overview of your payment activity</Text>
-          </View>
-          <TouchableOpacity style={styles.primaryButton} onPress={() => router.push('/kwikpay/collect')}>
-            <Ionicons name="cash" size={18} color={COLORS.white} />
-            <Text style={styles.primaryButtonText}>Collect Payment</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Stats Row */}
-        <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <View style={[styles.statIconContainer, { backgroundColor: COLORS.blueLight }]}>
-              <Ionicons name="swap-horizontal" size={20} color={COLORS.blue} />
-            </View>
-            <View style={styles.statInfo}>
-              <Text style={styles.statValue}>{formatNumber(stats.total_transactions)}</Text>
-              <Text style={styles.statLabel}>Total Transactions</Text>
-            </View>
-          </View>
-          <View style={styles.statCard}>
-            <View style={[styles.statIconContainer, { backgroundColor: COLORS.successLight }]}>
-              <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
-            </View>
-            <View style={styles.statInfo}>
-              <Text style={styles.statValue}>{formatAmount(stats.total_volume)}</Text>
-              <Text style={styles.statLabel}>Total Volume</Text>
-            </View>
-          </View>
-          <View style={styles.statCard}>
-            <View style={[styles.statIconContainer, { backgroundColor: COLORS.warningLight }]}>
-              <Ionicons name="time" size={20} color={COLORS.warning} />
-            </View>
-            <View style={styles.statInfo}>
-              <Text style={styles.statValue}>{formatAmount(stats.pending_payouts)}</Text>
-              <Text style={styles.statLabel}>Pending Payouts</Text>
-            </View>
-          </View>
-          <View style={styles.statCard}>
-            <View style={[styles.statIconContainer, { backgroundColor: COLORS.dangerLight }]}>
-              <Ionicons name="alert-circle" size={20} color={COLORS.danger} />
-            </View>
-            <View style={styles.statInfo}>
-              <Text style={styles.statValue}>{Math.round(100 - stats.successful_rate)}%</Text>
-              <Text style={styles.statLabel}>Failed Rate</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Charts Row */}
-        <View style={styles.chartsRow}>
-          <View style={[styles.chartCard, { flex: 1 }]}>
-            <Text style={styles.chartTitle}>Transaction Status</Text>
-            <View style={styles.donutContainer}>
-              <View style={styles.donutChart}>
-                <View style={styles.donutCenter}>
-                  <Text style={styles.donutCenterValue}>{formatNumber(stats.total_transactions)}</Text>
-                  <Text style={styles.donutCenterLabel}>Total</Text>
-                </View>
-              </View>
-            </View>
-            <View style={styles.legendContainer}>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: COLORS.success }]} />
-                <Text style={styles.legendText}>Succeeded ({stats.successful_rate}%)</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: COLORS.blue }]} />
-                <Text style={styles.legendText}>Pending (3%)</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: COLORS.gray }]} />
-                <Text style={styles.legendText}>Refunded (1%)</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: COLORS.danger }]} />
-                <Text style={styles.legendText}>Failed ({Math.round(100 - stats.successful_rate)}%)</Text>
-              </View>
-            </View>
-          </View>
-
-          <View style={[styles.chartCard, { flex: 1 }]}>
-            <Text style={styles.chartTitle}>Monthly Volume</Text>
-            <View style={styles.lineChartContainer}>
-              <View style={styles.yAxis}>
-                {['10M', '7.5M', '5M', '2.5M', '0'].map((label, idx) => (
-                  <Text key={idx} style={styles.yAxisLabel}>{label}</Text>
-                ))}
-              </View>
-              <View style={styles.chartArea}>
-                <View style={styles.chartLine}>
-                  {[30, 45, 40, 55, 50, 65].map((height, idx) => (
-                    <View key={idx} style={styles.chartBarContainer}>
-                      <View style={[styles.chartDot, { bottom: `${height}%` }]} />
-                    </View>
-                  ))}
-                </View>
-                <View style={styles.xAxis}>
-                  {['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan'].map((label, idx) => (
-                    <Text key={idx} style={styles.xAxisLabel}>{label}</Text>
-                  ))}
-                </View>
-              </View>
-            </View>
-          </View>
-
-          <View style={[styles.chartCard, { flex: 1 }]}>
-            <Text style={styles.chartTitle}>Payment Trend</Text>
-            <View style={styles.lineChartContainer}>
-              <View style={styles.yAxis}>
-                {['10.0', '7.5', '5.0', '2.5', '0.0'].map((label, idx) => (
-                  <Text key={idx} style={styles.yAxisLabel}>{label}</Text>
-                ))}
-              </View>
-              <View style={styles.chartArea}>
-                <View style={styles.chartLine}>
-                  {[20, 35, 30, 45, 50, 60].map((height, idx) => (
-                    <View key={idx} style={styles.chartBarContainer}>
-                      <View style={[styles.chartDotPurple, { bottom: `${height}%` }]} />
-                      <View style={[styles.chartDotGreen, { bottom: `${height - 5}%` }]} />
-                    </View>
-                  ))}
-                </View>
-                <View style={styles.xAxis}>
-                  {['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan'].map((label, idx) => (
-                    <Text key={idx} style={styles.xAxisLabel}>{label}</Text>
-                  ))}
-                </View>
-              </View>
-            </View>
-            <View style={styles.trendLegend}>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: COLORS.purple }]} />
-                <Text style={styles.legendText}>Received</Text>
-              </View>
-              <View style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: COLORS.success }]} />
-                <Text style={styles.legendText}>Paid Out</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Recent Transactions + Quick Actions */}
-        <View style={styles.bottomRow}>
-          <View style={[styles.transactionsCard, { flex: 2 }]}>
-            <View style={styles.transactionsHeader}>
-              <Text style={styles.chartTitle}>Recent Transactions</Text>
-              <TouchableOpacity onPress={() => router.push('/kwikpay/transactions')}>
-                <Text style={styles.viewAllLink}>View All →</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.filterRow}>
-              <View style={styles.filterTabs}>
-                {['All', 'Succeeded', 'Pending', 'Failed'].map((tab) => (
-                  <TouchableOpacity
-                    key={tab}
-                    style={[styles.filterTab, statusFilter === tab && styles.filterTabActive]}
-                    onPress={() => setStatusFilter(tab)}
-                  >
-                    <Text style={[styles.filterTabText, statusFilter === tab && styles.filterTabTextActive]}>{tab}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-              <View style={styles.searchContainer}>
-                <Ionicons name="search" size={16} color={COLORS.gray} />
-                <TextInput
-                  style={styles.searchInput}
-                  placeholder="Search transactions..."
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  placeholderTextColor={COLORS.gray}
-                />
-              </View>
-            </View>
-            <View style={styles.tableHeader}>
-              <Text style={[styles.tableHeaderCell, { flex: 1.5 }]}>Reference</Text>
-              <Text style={[styles.tableHeaderCell, { flex: 1.5 }]}>Customer</Text>
-              <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Method</Text>
-              <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Amount</Text>
-              <Text style={[styles.tableHeaderCell, { flex: 1 }]}>Status</Text>
-            </View>
-            {recentTransactions.slice(0, 5).map((txn) => (
-              <View key={txn.id} style={styles.tableRow}>
-                <Text style={[styles.tableCell, { flex: 1.5, fontWeight: '500' }]}>{txn.reference}</Text>
-                <Text style={[styles.tableCell, { flex: 1.5 }]}>{txn.customer_email}</Text>
-                <Text style={[styles.tableCell, { flex: 1 }]}>{txn.method}</Text>
-                <Text style={[styles.tableCell, { flex: 1 }]}>{formatAmount(txn.amount, txn.currency)}</Text>
-                <View style={{ flex: 1 }}>
-                  <View style={[styles.statusBadge, { backgroundColor: getStatusBg(txn.status) }]}>
-                    <Text style={[styles.statusText, { color: getStatusColor(txn.status) }]}>
-                      {txn.status.charAt(0).toUpperCase() + txn.status.slice(1)}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            ))}
-          </View>
-
-          <View style={[styles.quickActionsCard, { flex: 1 }]}>
-            <Text style={styles.chartTitle}>Quick Actions</Text>
-            <TouchableOpacity style={styles.quickActionItem} onPress={() => router.push('/kwikpay/collect')}>
-              <View style={[styles.quickActionIcon, { backgroundColor: COLORS.primaryLight }]}>
-                <Ionicons name="cash" size={20} color={COLORS.primary} />
-              </View>
-              <Text style={styles.quickActionText}>Collect Payment</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.quickActionItem} onPress={() => router.push('/kwikpay/checkout')}>
-              <View style={[styles.quickActionIcon, { backgroundColor: COLORS.blueLight }]}>
-                <Ionicons name="link" size={20} color={COLORS.blue} />
-              </View>
-              <Text style={styles.quickActionText}>Create Checkout Link</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.quickActionItem} onPress={() => router.push('/kwikpay/payouts')}>
-              <View style={[styles.quickActionIcon, { backgroundColor: COLORS.purpleLight }]}>
-                <Ionicons name="wallet" size={20} color={COLORS.purple} />
-              </View>
-              <Text style={styles.quickActionText}>Send Payout</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.quickActionItem} onPress={() => router.push('/kwikpay/developers')}>
-              <View style={[styles.quickActionIcon, { backgroundColor: COLORS.warningLight }]}>
-                <Ionicons name="code-slash" size={20} color={COLORS.warning} />
-              </View>
-              <Text style={styles.quickActionText}>View API Keys</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        <View style={{ height: 40 }} />
-      </ScrollView>
-    </SafeAreaView>
+    <ProductDashboard
+      productId="kwikpay"
+      subtitle="Overview of your payment activity"
+      onNewAction={() => router.push('/kwikpay/collect')}
+      newActionLabel="Collect Payment"
+      statsRow={[
+        { label: 'Total Transactions', value: formatNumber(stats.total_transactions), icon: 'swap-horizontal', iconBg: '#DBEAFE', iconColor: '#2563EB' },
+        { label: 'Total Volume', value: formatAmount(stats.total_volume), icon: 'checkmark-circle', iconBg: '#D1FAE5', iconColor: '#10B981' },
+        { label: 'Pending Payouts', value: formatAmount(stats.pending_payouts), icon: 'time', iconBg: '#FEF3C7', iconColor: '#F59E0B' },
+        { label: 'Failed Rate', value: `${((1 - stats.successful_rate / 100) * 100).toFixed(0)}%`, icon: 'alert-circle', iconBg: '#FEE2E2', iconColor: '#EF4444' },
+      ]}
+      netIncome={{ value: stats.total_volume || 0, trend: 15 }}
+      totalReturn={{ value: stats.pending_payouts || 0, trend: -8 }}
+      revenueTotal={stats.total_volume || 0}
+      revenueTrend={stats.successful_rate || 0}
+      adverts={adverts}
+      refreshing={refreshing}
+      onRefresh={onRefresh}
+      onTransactionViewMore={() => router.push('/kwikpay/transactions')}
+      onSalesReportViewMore={() => router.push('/kwikpay/analytics')}
+      onPromoPress={() => router.push('/kwikpay/collect')}
+      promoTitle="Accept payments from anywhere."
+      promoSubtitle="Collect payments via mobile money, cards, and bank transfers."
+      promoButtonText="Collect Payment"
+      formatCurrency={(amount) => formatAmount(amount)}
+    />
   );
 }
-
 const styles = StyleSheet.create({
   // ============ WEB STYLES ============
   container: { flex: 1, backgroundColor: COLORS.lightGray },
