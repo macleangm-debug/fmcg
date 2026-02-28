@@ -313,21 +313,21 @@ const BulkProductImportModal: React.FC<BulkProductImportModalProps> = ({
 
   const validRowsCount = rows.filter(r => r.name.trim() && r.price.trim() && r.category_id).length;
 
-  return (
-    <Modal
-      visible={visible}
-      transparent={true}
-      animationType="fade"
-      onRequestClose={handleClose}
-    >
-      <View style={styles.overlay}>
-        <View style={styles.container}>
-          {/* Header */}
-          <View style={styles.header}>
-            <View style={styles.headerTitleRow}>
-              <View style={styles.headerIcon}>
-                <Ionicons name="cloud-upload-outline" size={24} color="#2563EB" />
-              </View>
+  // Don't render anything if not visible
+  if (!visible) {
+    return null;
+  }
+
+  // Modal content that will be shown in both native Modal and web portal
+  const modalContent = (
+    <View style={styles.overlay}>
+      <View style={styles.container}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerTitleRow}>
+            <View style={styles.headerIcon}>
+              <Ionicons name="cloud-upload-outline" size={24} color="#2563EB" />
+            </View>
               <Text style={styles.title}>Bulk Product Import</Text>
             </View>
             <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
