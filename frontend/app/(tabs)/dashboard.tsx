@@ -41,6 +41,7 @@ import {
   LowStockAlert,
   RecentActivityFeed,
   TopSellingProducts,
+  EcosystemUpsellBanner,
 } from '../../src/components/dashboard';
 import type { Activity } from '../../src/components/dashboard';
 
