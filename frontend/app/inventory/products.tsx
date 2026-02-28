@@ -928,30 +928,34 @@ export default function ProductManagement() {
         <View style={styles.webPageHeader}>
           <View>
             <Text style={styles.webPageTitle}>Products</Text>
-            <Text style={styles.webPageSubtitle}>{products.length} product(s) • {categories.length} categories</Text>
+            {products.length > 0 && (
+              <Text style={styles.webPageSubtitle}>{products.length} product(s) • {categories.length} categories</Text>
+            )}
           </View>
-          <View style={styles.headerActions}>
-            <ViewToggle
-              currentView={productsView}
-              onToggle={setProductsView}
-            />
-            <TouchableOpacity 
-              style={styles.importExportButton}
-              onPress={() => setShowImportExportModal(true)}
-            >
-              <Ionicons name="swap-vertical-outline" size={20} color="#6B7280" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.webCreateBtn}
-              onPress={async () => {
-                await fetchCategories();
-                openAddForm();
-              }}
-            >
-              <Ionicons name="add" size={20} color="#FFFFFF" />
-              <Text style={styles.webCreateBtnText}>Add Product</Text>
-            </TouchableOpacity>
-          </View>
+          {products.length > 0 && (
+            <View style={styles.headerActions}>
+              <ViewToggle
+                currentView={productsView}
+                onToggle={setProductsView}
+              />
+              <TouchableOpacity 
+                style={styles.importExportButton}
+                onPress={() => setShowImportExportModal(true)}
+              >
+                <Ionicons name="swap-vertical-outline" size={20} color="#6B7280" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.webCreateBtn}
+                onPress={async () => {
+                  await fetchCategories();
+                  openAddForm();
+                }}
+              >
+                <Ionicons name="add" size={20} color="#FFFFFF" />
+                <Text style={styles.webCreateBtnText}>Add Product</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       )}
 
@@ -959,29 +963,31 @@ export default function ProductManagement() {
       {!isWeb && (
         <View style={styles.header}>
           <Text style={styles.title}>Products</Text>
-          <View style={styles.headerActions}>
-            <TouchableOpacity 
-              style={styles.importExportButton}
-              onPress={() => setShowImportExportModal(true)}
-            >
-              <Ionicons name="swap-vertical-outline" size={20} color="#6B7280" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.addButton, styles.addButtonInner]}
-              onPress={async () => {
-                await fetchCategories();
-                openAddForm();
-              }}
-              activeOpacity={0.7}
-            >
-              <Ionicons name="add" size={24} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
+          {products.length > 0 && (
+            <View style={styles.headerActions}>
+              <TouchableOpacity 
+                style={styles.importExportButton}
+                onPress={() => setShowImportExportModal(true)}
+              >
+                <Ionicons name="swap-vertical-outline" size={20} color="#6B7280" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.addButton, styles.addButtonInner]}
+                onPress={async () => {
+                  await fetchCategories();
+                  openAddForm();
+                }}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="add" size={24} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       )}
 
       {/* Category Filter Banner */}
-      {selectedCategoryFilter && (
+      {selectedCategoryFilter && products.length > 0 && (
         <View style={styles.filterBanner}>
           <View style={styles.filterBannerContent}>
             <Ionicons name="filter" size={16} color="#F59E0B" />
