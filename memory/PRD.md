@@ -215,13 +215,12 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 ---
 
 ## Known Issues
-1. **BulkProductImportModal Rendering (NEW)**: Modal component doesn't render on React Native Web - button click works and state is set but Modal doesn't appear. Backend API works correctly.
-2. **Language Selector Bundler Error**: Importing `useLanguageStore` causes "Cannot use 'import.meta' outside a module" - requires metro.config.js investigation
-3. **Minor - `/api/locations` API**: Returns 400 error in console - non-critical
-4. **Minor - subscriptionApi.getCurrent**: Console error "is not a function" - non-critical
-5. **TransactionList Mock Data**: Component uses hardcoded mock data for demonstration
-6. **Pre-existing**: Console warning about deprecated shadow style props
-7. **Pre-existing**: Some sidebar icons may appear as empty boxes (font loading issue)
+1. **Language Selector Bundler Error**: Importing `useLanguageStore` causes "Cannot use 'import.meta' outside a module" - requires metro.config.js investigation
+2. **Minor - `/api/locations` API**: Returns 400 error in console - non-critical
+3. **Minor - subscriptionApi.getCurrent**: Console error "is not a function" - non-critical
+4. **TransactionList Mock Data**: Component uses hardcoded mock data for demonstration
+5. **Pre-existing**: Console warning about deprecated shadow style props
+6. **Pre-existing**: Some sidebar icons may appear as empty boxes (font loading issue)
 
 ---
 
