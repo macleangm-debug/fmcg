@@ -196,7 +196,6 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 - [x] **CUSTOMER API ENDPOINTS (COMPLETED Feb 28, 2026)** - GET/PUT /api/customers/{id} for progressive profiling
 
 ### P1 - In Progress
-- [ ] **BulkProductImportModal Rendering** - Modal not rendering on React Native Web (button works, state sets, but Modal doesn't appear)
 - [ ] **Product Switcher Bug** - 9-dot grid click not triggering "Start Free Trial" modal for unsubscribed apps
 - [ ] **Tigo SMS Testing** - User deferred ("We will test later"), requires VPN access
 - [ ] Language Selector integration (blocked - `import.meta` bundler error)
