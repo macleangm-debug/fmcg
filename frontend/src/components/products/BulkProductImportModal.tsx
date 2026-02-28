@@ -62,11 +62,148 @@ const BulkProductImportModal: React.FC<BulkProductImportModalProps> = ({
   const [rows, setRows] = useState<BulkProductRow[]>([createEmptyRow()]);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ success: number; failed: number } | null>(null);
-  const [activeTab, setActiveTab] = useState<'manual' | 'csv'>('manual');
+  const [activeTab, setActiveTab] = useState<'manual' | 'file'>('manual');
   const [csvContent, setCsvContent] = useState('');
   const [showCategoryPicker, setShowCategoryPicker] = useState<string | null>(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isWeb = Platform.OS === 'web';
+
+  // Handle Excel/CSV file upload
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploadingFile(true);
+    
+    try {
+      const fileExtension = file.name.split('.').pop()?.toLowerCase();
+      
+      if (fileExtension === 'xlsx' || fileExtension === 'xls') {
+        // Handle Excel file
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data);
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as string[][];
+        
+        if (jsonData.length < 2) {
+          Alert.alert('Error', 'Excel file must have a header row and at least one data row');
+          return;
+        }
+        
+        parseSpreadsheetData(jsonData);
+      } else if (fileExtension === 'csv') {
+        // Handle CSV file
+        const text = await file.text();
+        setCsvContent(text);
+        handleParseCsvContent(text);
+      } else {
+        Alert.alert('Error', 'Please upload an Excel (.xlsx, .xls) or CSV file');
+      }
+    } catch (error: any) {
+      Alert.alert('Error', 'Failed to read file: ' + error.message);
+    } finally {
+      setUploadingFile(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  // Parse spreadsheet data (works for both Excel and CSV)
+  const parseSpreadsheetData = (data: string[][]) => {
+    const headers = data[0].map(h => String(h).toLowerCase().trim());
+    
+    // Map header names to indices
+    const nameIdx = headers.findIndex(h => h.includes('name') || h === 'product');
+    const skuIdx = headers.findIndex(h => h.includes('sku') || h === 'code' || h === 'barcode');
+    const priceIdx = headers.findIndex(h => h.includes('price') || h === 'cost');
+    const stockIdx = headers.findIndex(h => h.includes('stock') || h.includes('quantity') || h === 'qty');
+    const categoryIdx = headers.findIndex(h => h.includes('category') || h === 'cat');
+
+    if (nameIdx === -1) {
+      Alert.alert('Error', 'File must have a "name" or "product" column');
+      return;
+    }
+    if (priceIdx === -1) {
+      Alert.alert('Error', 'File must have a "price" column');
+      return;
+    }
+
+    const parsedRows: BulkProductRow[] = [];
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      if (!row || row.length < 2) continue;
+      
+      const name = nameIdx >= 0 ? String(row[nameIdx] || '').trim() : '';
+      if (!name) continue;
+      
+      // Try to match category by name
+      let categoryId = '';
+      let categoryName = '';
+      if (categoryIdx >= 0 && row[categoryIdx]) {
+        const catName = String(row[categoryIdx]).toLowerCase().trim();
+        const matchedCat = categories.find(c => 
+          c.name.toLowerCase() === catName || 
+          c.name.toLowerCase().includes(catName) ||
+          catName.includes(c.name.toLowerCase())
+        );
+        if (matchedCat) {
+          categoryId = matchedCat.id;
+          categoryName = matchedCat.name;
+        }
+      }
+      
+      parsedRows.push({
+        id: generateRowId(),
+        name,
+        sku: skuIdx >= 0 ? String(row[skuIdx] || '').trim() : '',
+        price: priceIdx >= 0 ? String(row[priceIdx] || '').replace(/[^0-9.]/g, '') : '',
+        stock: stockIdx >= 0 ? String(row[stockIdx] || '').replace(/[^0-9]/g, '') : '',
+        category_id: categoryId,
+        category_name: categoryName,
+        status: 'pending',
+      });
+    }
+
+    if (parsedRows.length === 0) {
+      Alert.alert('Error', 'No valid product rows found in file');
+      return;
+    }
+
+    setRows(parsedRows);
+    setActiveTab('manual'); // Switch to manual tab to review
+    Alert.alert('File Imported', `${parsedRows.length} products imported. Please review and set categories if needed.`);
+  };
+
+  // Parse CSV content from text
+  const handleParseCsvContent = (content: string) => {
+    const lines = content.trim().split('\n');
+    const data = lines.map(line => line.split(',').map(cell => cell.trim().replace(/^["']|["']$/g, '')));
+    parseSpreadsheetData(data);
+  };
+
+  // Download Excel template
+  const handleDownloadTemplate = () => {
+    if (isWeb) {
+      // Create Excel template
+      const templateData = [
+        ['name', 'sku', 'price', 'stock', 'category'],
+        ['Sample Product', 'SKU001', '5000', '100', 'General'],
+        ['Another Product', 'SKU002', '7500', '50', 'Electronics']
+      ];
+      
+      const ws = XLSX.utils.aoa_to_sheet(templateData);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Products');
+      XLSX.writeFile(wb, 'product_import_template.xlsx');
+    } else {
+      Alert.alert('Template', 'Excel Format:\nColumns: name, sku, price, stock, category\n\nExample:\nSample Product, SKU001, 5000, 100, General');
+    }
+  };
 
   // Add a new empty row
   const handleAddRow = () => {
