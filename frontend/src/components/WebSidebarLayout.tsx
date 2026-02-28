@@ -363,6 +363,7 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
   
   // Get dynamic product theme based on current route
   const productTheme = getProductTheme(segments);
+  const currentProductId = getCurrentProductId(segments);
   // Sidebar stays light with themed accents - NOT full colored
   const dynamicSidebarBg = '#FFFFFF';
   const dynamicSidebarText = '#6B7280';
@@ -378,6 +379,24 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
   
   // Only show sidebar on web with width > 768px
   const isWebDesktop = Platform.OS === 'web' && width > 768;
+  
+  // Get product-specific menu configuration
+  const productMenu = PRODUCT_MENUS[currentProductId] || PRODUCT_MENUS.retailpro;
+  
+  // Add cart badge to New Sale item for RetailPro
+  const getMenuWithBadges = () => {
+    return productMenu.sections.map(section => ({
+      ...section,
+      items: section.items.map(item => {
+        if (item.name === '/(tabs)/cart' && cartCount > 0) {
+          return { ...item, badge: cartCount };
+        }
+        return item;
+      })
+    }));
+  };
+  
+  const menuSections = getMenuWithBadges();
   
   // Fetch subscription status
   useEffect(() => {
