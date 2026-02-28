@@ -3597,7 +3597,7 @@ async def create_product(product: ProductCreate, current_user: dict = Depends(ge
 
 @api_router.post("/products/bulk", response_model=dict)
 async def bulk_import_products(
-    products: List[ProductCreate],
+    products: List[BulkProductCreate],
     current_user: dict = Depends(get_current_user)
 ):
     """Bulk import multiple products at once"""
@@ -3616,6 +3616,12 @@ async def bulk_import_products(
             prod_dict = product.dict()
             prod_dict["business_id"] = business_id
             prod_dict["created_at"] = datetime.utcnow()
+            
+            # Auto-generate SKU if not provided
+            if not prod_dict.get("sku"):
+                import random
+                import string
+                prod_dict["sku"] = f"SKU-{datetime.utcnow().strftime('%y%m%d')}-{''.join(random.choices(string.ascii_uppercase + string.digits, k=4))}"
             
             result = await db.products.insert_one(prod_dict)
             created_ids.append(str(result.inserted_id))
