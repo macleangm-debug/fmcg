@@ -1012,64 +1012,75 @@ export default function ProductManagement() {
       {isWeb ? (
         <View style={styles.webContentWrapper}>
           <View style={styles.webWhiteCard}>
-            {/* Filter and Search Row */}
-            <View style={styles.webCardHeader}>
-              <View style={styles.webTabs}>
-                <TouchableOpacity
-                  style={[styles.webTab, !selectedCategoryFilter && styles.webTabActive]}
-                  onPress={() => {
-                    setSelectedCategoryFilter(null);
-                    router.setParams({ category: undefined });
-                  }}
-                >
-                  <Text style={[styles.webTabText, !selectedCategoryFilter && styles.webTabTextActive]}>All</Text>
-                </TouchableOpacity>
-                {categories.slice(0, 5).map((cat) => (
+            {/* Filter and Search Row - Only show when there are products */}
+            {products.length > 0 && (
+              <View style={styles.webCardHeader}>
+                <View style={styles.webTabs}>
                   <TouchableOpacity
-                    key={cat.id}
-                    style={[styles.webTab, selectedCategoryFilter === cat.id && styles.webTabActive]}
+                    style={[styles.webTab, !selectedCategoryFilter && styles.webTabActive]}
                     onPress={() => {
-                      setSelectedCategoryFilter(cat.id);
-                      router.setParams({ category: cat.id });
+                      setSelectedCategoryFilter(null);
+                      router.setParams({ category: undefined });
                     }}
                   >
-                    <Text style={[styles.webTabText, selectedCategoryFilter === cat.id && styles.webTabTextActive]}>
-                      {cat.name}
-                    </Text>
+                    <Text style={[styles.webTabText, !selectedCategoryFilter && styles.webTabTextActive]}>All</Text>
                   </TouchableOpacity>
-                ))}
+                  {categories.slice(0, 5).map((cat) => (
+                    <TouchableOpacity
+                      key={cat.id}
+                      style={[styles.webTab, selectedCategoryFilter === cat.id && styles.webTabActive]}
+                      onPress={() => {
+                        setSelectedCategoryFilter(cat.id);
+                        router.setParams({ category: cat.id });
+                      }}
+                    >
+                      <Text style={[styles.webTabText, selectedCategoryFilter === cat.id && styles.webTabTextActive]}>
+                        {cat.name}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+                
+                <View style={styles.webSearchBox}>
+                  <Ionicons name="search" size={18} color="#6B7280" />
+                  <TextInput
+                    style={styles.webSearchInput}
+                    placeholder="Search products..."
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    placeholderTextColor="#6B7280"
+                  />
+                  {searchQuery.length > 0 && (
+                    <TouchableOpacity onPress={() => setSearchQuery('')}>
+                      <Ionicons name="close-circle" size={18} color="#6B7280" />
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
-              
-              <View style={styles.webSearchBox}>
-                <Ionicons name="search" size={18} color="#6B7280" />
-                <TextInput
-                  style={styles.webSearchInput}
-                  placeholder="Search products..."
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  placeholderTextColor="#6B7280"
-                />
-                {searchQuery.length > 0 && (
-                  <TouchableOpacity onPress={() => setSearchQuery('')}>
-                    <Ionicons name="close-circle" size={18} color="#6B7280" />
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
+            )}
 
             {/* Product List */}
             <ScrollView
               style={styles.webListContainer}
+              contentContainerStyle={products.length === 0 ? styles.webEmptyListContainer : undefined}
               showsVerticalScrollIndicator={false}
               refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#059669" />}
             >
               {filteredProducts.length === 0 ? (
                 <View style={styles.webEmptyState}>
-                  <Ionicons name="cube-outline" size={64} color="#6B7280" />
-                  <Text style={styles.webEmptyText}>No products found</Text>
-                  <TouchableOpacity style={styles.webEmptyBtn} onPress={openAddForm}>
-                    <Text style={styles.webEmptyBtnText}>Add First Product</Text>
-                  </TouchableOpacity>
+                  <Ionicons name="cube-outline" size={48} color="#9CA3AF" />
+                  <Text style={styles.webEmptyTitle}>
+                    {searchQuery ? 'No products match your search' : "Your inventory's looking a bit... empty"}
+                  </Text>
+                  <Text style={styles.webEmptySubtext}>
+                    {searchQuery ? 'Try a different search term' : 'Time to stock up! Add your first product to get started.'}
+                  </Text>
+                  {!searchQuery && (
+                    <TouchableOpacity style={styles.webEmptyBtn} onPress={openAddForm}>
+                      <Ionicons name="add" size={20} color="#FFFFFF" />
+                      <Text style={styles.webEmptyBtnText}>Add First Product</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               ) : productsView === 'table' ? (
                 <>
