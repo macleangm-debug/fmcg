@@ -828,28 +828,6 @@ export default function Cart() {
             <Text style={styles.customerFirstButtonText}>Select Customer</Text>
           </TouchableOpacity>
         </View>
-              activeOpacity={0.8}
-            >
-              <Ionicons name="grid-outline" size={20} color="#2563EB" />
-              <Text style={styles.customerFirstBrowseText}>Browse Products</Text>
-            </TouchableOpacity>
-          )}
-          
-          {/* Barcode Scanner Option */}
-          {customer_name && (
-            <TouchableOpacity
-              style={styles.customerFirstScanButton}
-              onPress={() => {
-                loadProducts();
-                openBarcodeScanner(handleBarcodeScan);
-              }}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="barcode-outline" size={20} color="#F59E0B" />
-              <Text style={styles.customerFirstScanText}>Scan Barcode</Text>
-            </TouchableOpacity>
-          )}
-        </View>
 
         {/* Customer Selection Modal - Reusable Component */}
         <CustomerSelectionModal
