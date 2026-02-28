@@ -26,12 +26,12 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
   - `GET /api/customers/{id}` - Fetch single customer by ID
   - `PUT /api/customers/{id}` - Update customer details (for progressive profiling)
 - ✅ **P0 COMPLETED: Bulk Import UI Button** - Green "Bulk Import" button on New Sale page
-- ✅ **NEW: BulkProductImportModal Component** - Created at `/app/frontend/src/components/products/BulkProductImportModal.jsx`
+- ✅ **NEW: BulkProductImportModal Component** - Created at `/app/frontend/src/components/products/BulkProductImportModal.tsx`
   - "Add Manually" tab with row-based product entry
   - "Import CSV" tab with paste area and template download
   - Category dropdown for each product row
   - Validation and error display
-  - **KNOWN ISSUE**: Modal has rendering issues on React Native Web platform
+  - **FIXED**: Modal now renders correctly on React Native Web (was missing from correct return branch)
 - ✅ **CLEAN EMPTY STATES**: Updated Products pages to hide search/stats when empty
   - Admin products page (`/admin/products`) - clean empty state
   - Inventory products page (`/inventory/products`) - clean empty state
