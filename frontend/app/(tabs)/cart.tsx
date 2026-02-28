@@ -1894,6 +1894,72 @@ export default function Cart() {
         </View>
       </Modal>
 
+      {/* Complete Profile Prompt Modal */}
+      <Modal
+        visible={showCompleteProfileModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowCompleteProfileModal(false)}
+      >
+        <View style={styles.profileModalOverlay}>
+          <View style={styles.profileModalContent}>
+            <View style={styles.profileModalHeader}>
+              <View style={styles.profileModalIconBg}>
+                <Ionicons name="person-circle-outline" size={32} color="#F59E0B" />
+              </View>
+              <Text style={styles.profileModalTitle}>Complete Customer Profile?</Text>
+              <Text style={styles.profileModalSubtitle}>
+                {customer_name}'s profile is missing an email address
+              </Text>
+            </View>
+
+            <View style={styles.profileModalBanner}>
+              <Ionicons name="mail-outline" size={18} color="#0891B2" />
+              <Text style={styles.profileModalBannerText}>
+                Adding email enables digital receipts & promotions
+              </Text>
+            </View>
+
+            <View style={styles.profileModalField}>
+              <Text style={styles.profileModalLabel}>Email Address</Text>
+              <TextInput
+                style={styles.profileModalInput}
+                placeholder="customer@email.com"
+                value={profileEmail}
+                onChangeText={setProfileEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+                placeholderTextColor="#9CA3AF"
+                autoFocus
+              />
+            </View>
+
+            <View style={styles.profileModalButtons}>
+              <TouchableOpacity
+                style={styles.profileModalSkipBtn}
+                onPress={handleSkipProfile}
+              >
+                <Text style={styles.profileModalSkipText}>Skip for Now</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.profileModalSaveBtn, !profileEmail.trim() && styles.profileModalSaveBtnDisabled]}
+                onPress={handleSaveProfile}
+                disabled={savingProfile}
+              >
+                {savingProfile ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark" size={18} color="#FFFFFF" />
+                    <Text style={styles.profileModalSaveText}>Save & Continue</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Confirm Sale Modal */}
       <Modal
         visible={showConfirmModal}
