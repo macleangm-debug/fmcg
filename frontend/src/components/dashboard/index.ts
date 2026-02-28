@@ -9,5 +9,6 @@ export { default as TodaySummaryCard } from './TodaySummaryCard';
 export { default as LowStockAlert } from './LowStockAlert';
 export { default as RecentActivityFeed } from './RecentActivityFeed';
 export { default as TopSellingProducts } from './TopSellingProducts';
+export { default as EcosystemUpsellBanner } from './EcosystemUpsellBanner';
 export type { ProductTheme, ProductDashboardProps, MetricCard, UpdateCardContent } from './ProductDashboard';
 export type { Activity } from './RecentActivityFeed';
