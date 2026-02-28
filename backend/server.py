@@ -3748,6 +3748,40 @@ async def create_customer(customer: CustomerCreate, current_user: dict = Depends
         **customer.dict()
     )
 
+@api_router.get("/customers/{customer_id}", response_model=CustomerResponse)
+async def get_customer_by_id(
+    customer_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get a single customer by ID"""
+    business_id = current_user.get("business_id")
+    
+    query = {"_id": ObjectId(customer_id)}
+    if business_id and current_user["role"] != "superadmin":
+        query["business_id"] = business_id
+    
+    customer = await db.customers.find_one(query)
+    if not customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    
+    return CustomerResponse(
+        id=str(customer["_id"]),
+        name=customer.get("name", ""),
+        phone=customer.get("phone", ""),
+        email=customer.get("email"),
+        address=customer.get("address"),
+        birthday=customer.get("birthday"),
+        customer_type=customer.get("customer_type"),
+        company_name=customer.get("company_name"),
+        company_id=customer.get("company_id"),
+        tax_id=customer.get("tax_id"),
+        payment_terms=customer.get("payment_terms"),
+        total_purchases=customer.get("total_purchases", 0),
+        total_orders=customer.get("total_orders", 0),
+        created_at=customer.get("created_at", datetime.utcnow()),
+        business_id=customer.get("business_id")
+    )
+
 @api_router.put("/customers/{customer_id}", response_model=CustomerResponse)
 async def update_customer(
     customer_id: str,
