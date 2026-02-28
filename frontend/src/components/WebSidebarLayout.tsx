@@ -580,7 +580,7 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
           )}
           
           {/* Apps Grid with Popup - using ProductSwitcher */}
-          <ProductSwitcher currentProductId="retail_pro" />
+          <ProductSwitcher currentProductId={getAppIdFromRoute(segments)} />
           
           {/* User Info */}
           <View style={[styles.userInfo, { borderLeftColor: 'rgba(255,255,255,0.2)' }]}>
