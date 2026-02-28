@@ -1213,11 +1213,14 @@ export default function Dashboard() {
               sales={23}
             />
             
-            <PromotionalCard 
-              title="Level up your sales managing to the next level."
-              subtitle="An any way to manage sales with care and precision."
-              buttonText="Update to Siohioma+"
-              onPress={() => router.push('/admin/settings')}
+            {/* Dynamic Ecosystem Upsell Banners */}
+            <EcosystemUpsellBanner
+              subscribedProducts={linkedAppIds}
+              currentProduct="retailpro"
+              onStartTrial={(productId) => {
+                const app = ALL_GALAXY_APPS.find(a => a.id === productId);
+                if (app) handleLinkApp(app);
+              }}
             />
           </View>
         </View>
