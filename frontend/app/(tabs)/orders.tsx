@@ -580,22 +580,24 @@ export default function Orders() {
       {isWeb ? (
         <View style={styles.webContentWrapper}>
           <View style={styles.webWhiteCard}>
-            {/* Filter Tabs */}
-            <View style={styles.webFilterContainer}>
-              <View style={styles.webTabs}>
-                {DATE_FILTERS.map((filter) => (
-                  <TouchableOpacity
-                    key={filter.key}
-                    style={[styles.webTab, dateFilter === filter.key && styles.webTabActive]}
-                    onPress={() => setDateFilter(filter.key)}
-                  >
-                    <Text style={[styles.webTabText, dateFilter === filter.key && styles.webTabTextActive]}>
-                      {filter.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+            {/* Filter Tabs - Only show when there are orders */}
+            {orders.length > 0 && (
+              <View style={styles.webFilterContainer}>
+                <View style={styles.webTabs}>
+                  {DATE_FILTERS.map((filter) => (
+                    <TouchableOpacity
+                      key={filter.key}
+                      style={[styles.webTab, dateFilter === filter.key && styles.webTabActive]}
+                      onPress={() => setDateFilter(filter.key)}
+                    >
+                      <Text style={[styles.webTabText, dateFilter === filter.key && styles.webTabTextActive]}>
+                        {filter.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
               </View>
-            </View>
+            )}
 
             {/* Table Header for table view */}
             {ordersView === 'table' && orders.length > 0 && <TableHeader />}
