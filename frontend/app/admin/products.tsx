@@ -872,43 +872,47 @@ export default function ProductManagement() {
       {isWeb ? (
         <View style={styles.webContentWrapper}>
           <View style={styles.webWhiteCard}>
-            {/* Search Row */}
-            <View style={styles.webCardHeader}>
-              <Text style={styles.webCardTitle}>{filteredProducts.length} Products</Text>
-              <View style={styles.webSearchBox}>
-                <Ionicons name="search" size={18} color="#6B7280" />
-                <TextInput
-                  style={styles.webSearchInput}
-                  placeholder="Search products..."
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  placeholderTextColor="#6B7280"
-                />
-                {searchQuery.length > 0 && (
-                  <TouchableOpacity onPress={() => setSearchQuery('')}>
-                    <Ionicons name="close-circle" size={18} color="#6B7280" />
-                  </TouchableOpacity>
-                )}
+            {/* Search Row - Only show when there are products */}
+            {products.length > 0 && (
+              <View style={styles.webCardHeader}>
+                <Text style={styles.webCardTitle}>{filteredProducts.length} Products</Text>
+                <View style={styles.webSearchBox}>
+                  <Ionicons name="search" size={18} color="#6B7280" />
+                  <TextInput
+                    style={styles.webSearchInput}
+                    placeholder="Search products..."
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    placeholderTextColor="#6B7280"
+                  />
+                  {searchQuery.length > 0 && (
+                    <TouchableOpacity onPress={() => setSearchQuery('')}>
+                      <Ionicons name="close-circle" size={18} color="#6B7280" />
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
-            </View>
+            )}
 
-            {/* Stats Row */}
-            <View style={styles.webStatsRow}>
-              <View style={styles.webStatItem}>
-                <Text style={styles.webStatValue}>{formatNumber(products.length)}</Text>
-                <Text style={styles.webStatLabel}>Total Products</Text>
+            {/* Stats Row - Only show when there are products */}
+            {products.length > 0 && (
+              <View style={styles.webStatsRow}>
+                <View style={styles.webStatItem}>
+                  <Text style={styles.webStatValue}>{formatNumber(products.length)}</Text>
+                  <Text style={styles.webStatLabel}>Total Products</Text>
+                </View>
+                <View style={styles.webStatItem}>
+                  <Text style={[styles.webStatValue, { color: '#F59E0B' }]}>
+                    {formatNumber(products.filter(p => p.stock_quantity <= p.low_stock_threshold).length)}
+                  </Text>
+                  <Text style={styles.webStatLabel}>Low Stock</Text>
+                </View>
+                <View style={styles.webStatItem}>
+                  <Text style={styles.webStatValue}>{formatNumber(categories.length)}</Text>
+                  <Text style={styles.webStatLabel}>Categories</Text>
+                </View>
               </View>
-              <View style={styles.webStatItem}>
-                <Text style={[styles.webStatValue, { color: '#F59E0B' }]}>
-                  {formatNumber(products.filter(p => p.stock_quantity <= p.low_stock_threshold).length)}
-                </Text>
-                <Text style={styles.webStatLabel}>Low Stock</Text>
-              </View>
-              <View style={styles.webStatItem}>
-                <Text style={styles.webStatValue}>{formatNumber(categories.length)}</Text>
-                <Text style={styles.webStatLabel}>Categories</Text>
-              </View>
-            </View>
+            )}
 
             {/* Table Header for table view */}
             {productsView === 'table' && filteredProducts.length > 0 && <TableHeader />}
@@ -921,7 +925,7 @@ export default function ProductManagement() {
               refreshControl={
                 <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
               }
-              contentContainerStyle={productsView === 'table' ? styles.webTableList : styles.webGridList}
+              contentContainerStyle={products.length === 0 ? styles.webEmptyList : (productsView === 'table' ? styles.webTableList : styles.webGridList)}
               showsVerticalScrollIndicator={false}
               onEndReached={loadMore}
               onEndReachedThreshold={0.5}
@@ -935,12 +939,16 @@ export default function ProductManagement() {
               }
               ListEmptyComponent={
                 <View style={styles.webEmptyState}>
-                  <Ionicons name="cube-outline" size={64} color="#6B7280" />
+                  <Ionicons name="cube-outline" size={48} color="#9CA3AF" />
+                  <Text style={styles.webEmptyTitle}>
+                    {searchQuery ? 'No products match your search' : "Your inventory's looking a bit... empty"}
+                  </Text>
                   <Text style={styles.webEmptyText}>
-                    {searchQuery ? 'No products match your search' : 'No Products'}
+                    {searchQuery ? 'Try a different search term' : 'Time to stock up! Add your first product to get started.'}
                   </Text>
                   {!searchQuery && (
                     <TouchableOpacity style={styles.webEmptyBtn} onPress={() => { resetForm(); setShowAddModal(true); }}>
+                      <Ionicons name="add" size={20} color="#FFFFFF" />
                       <Text style={styles.webEmptyBtnText}>Add First Product</Text>
                     </TouchableOpacity>
                   )}
