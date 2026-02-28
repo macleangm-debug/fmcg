@@ -194,6 +194,8 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 ---
 
 ## Test Reports
+- `/app/test_reports/iteration_10.json` - **Dashboard & New Sale UI/UX Testing (Feb 28, 2026)** - Quick Actions, Recent Activity, Customer-First flow verified (admin works, sales_staff blocked by permissions)
+- `/app/test_reports/iteration_9.json` - **Product-Specific Carousel Testing** - 16 adverts seeded for all 7 products
 - `/app/test_reports/iteration_8.json` - **RetailPro Comprehensive Testing (100% backend, 95% frontend pass)** - Auth, Products, Categories, Customers, Orders, Dashboard all verified
 - `/app/test_reports/iteration_7.json` - **UI Standardization tests (100% pass)** - All 7 products verified with WebSidebarLayout
 - `/app/test_reports/iteration_6.json` - Full-bleed product theming tests (100% pass)
