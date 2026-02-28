@@ -428,9 +428,8 @@ export default function ProductSwitcher({ currentProductId }: ProductSwitcherPro
         animationType="fade"
         onRequestClose={() => setShowDropdown(false)}
       >
-        <TouchableOpacity 
+        <Pressable 
           style={styles.overlay}
-          activeOpacity={1}
           onPress={() => {
             // Only close if waitlist modal is not showing and in compact mode
             if (menuMode === 'compact' && !showWaitlistModal) {
@@ -440,10 +439,9 @@ export default function ProductSwitcher({ currentProductId }: ProductSwitcherPro
         >
           {menuMode === 'compact' ? (
             /* COMPACT MODE - Quick Switcher */
-            <TouchableOpacity 
-              activeOpacity={1}
+            <Pressable 
               style={[styles.dropdown, isMobile && styles.dropdownMobile]}
-              onPress={(e) => e.stopPropagation()}
+              onPress={() => {/* Prevent closing when clicking inside dropdown */}}
             >
               {/* Space Background */}
               <LinearGradient
@@ -471,19 +469,20 @@ export default function ProductSwitcher({ currentProductId }: ProductSwitcherPro
                   const hasAccess = isSubscribed(app.id);
                   
                   return (
-                    <TouchableOpacity
+                    <Pressable
                       key={app.id}
-                      style={[
+                      style={({ pressed }) => [
                         styles.appItem,
-                        isCurrent && styles.appItemActiveSpace
+                        isCurrent && styles.appItemActiveSpace,
+                        pressed && !isCurrent && { opacity: 0.7 }
                       ]}
                       onPress={() => {
+                        console.log('App pressed:', app.name, 'isCurrent:', isCurrent);
                         if (!isCurrent) {
                           handleAppSelect(app);
                         }
                       }}
                       disabled={isCurrent}
-                      activeOpacity={0.7}
                     >
                       <View style={[styles.appIconSpace, { backgroundColor: app.bgColor }]}>
                         <Ionicons name={app.icon as any} size={22} color={app.color} />
@@ -503,7 +502,7 @@ export default function ProductSwitcher({ currentProductId }: ProductSwitcherPro
                       ]} numberOfLines={1}>
                         {app.name}
                       </Text>
-                    </TouchableOpacity>
+                    </Pressable>
                   );
                 })}
               </View>
