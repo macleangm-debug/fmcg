@@ -2149,28 +2149,29 @@ export default function Cart() {
       />
       
       {/* Bulk Product Import Modal */}
-      {showBulkImportModal && (
-        <Modal
-          visible={showBulkImportModal}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={() => setShowBulkImportModal(false)}
-        >
-          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
-            <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, padding: 24, width: '90%', maxWidth: 500 }}>
-              <Text style={{ fontSize: 20, fontWeight: '700', marginBottom: 16 }}>Bulk Product Import - TEST</Text>
-              <Text style={{ marginBottom: 16 }}>This is a test modal to verify Modal rendering works.</Text>
-              <TouchableOpacity 
-                style={{ backgroundColor: '#2563EB', padding: 14, borderRadius: 10 }}
-                onPress={() => setShowBulkImportModal(false)}
-              >
-                <Text style={{ color: '#FFFFFF', textAlign: 'center', fontWeight: '600' }}>Close</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-      )}
     </SafeAreaView>
+    {showBulkImportModal && (
+      <Modal
+        visible={showBulkImportModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowBulkImportModal(false)}
+      >
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, padding: 24, width: '90%', maxWidth: 500 }}>
+            <Text style={{ fontSize: 20, fontWeight: '700', marginBottom: 16 }}>Bulk Product Import - TEST</Text>
+            <Text style={{ marginBottom: 16 }}>This is a test modal to verify Modal rendering works.</Text>
+            <TouchableOpacity 
+              style={{ backgroundColor: '#2563EB', padding: 14, borderRadius: 10 }}
+              onPress={() => setShowBulkImportModal(false)}
+            >
+              <Text style={{ color: '#FFFFFF', textAlign: 'center', fontWeight: '600' }}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    )}
+  </>
   );
 }
 
