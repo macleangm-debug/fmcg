@@ -437,6 +437,24 @@ export default function Products() {
         </View>
       </View>
 
+      {/* Product Action Buttons */}
+      <View style={styles.productActions}>
+        <TouchableOpacity 
+          style={styles.productActionBtn}
+          onPress={() => setShowAddProductModal(true)}
+        >
+          <Ionicons name="add-circle-outline" size={18} color="#2563EB" />
+          <Text style={styles.productActionBtnText}>Add Product</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.productActionBtn, styles.productActionBtnAlt]}
+          onPress={() => setShowBulkImportModal(true)}
+        >
+          <Ionicons name="cloud-upload-outline" size={18} color="#10B981" />
+          <Text style={[styles.productActionBtnText, styles.productActionBtnTextAlt]}>Bulk Import</Text>
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.categoriesContainer}>
         <FlatList
           horizontal
