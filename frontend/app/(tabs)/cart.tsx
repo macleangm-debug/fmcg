@@ -2693,6 +2693,27 @@ const styles = StyleSheet.create({
   categoryChipTextActive: {
     color: '#FFFFFF',
   },
+  // Product Action Bar
+  productActionBar: {
+    flexDirection: 'row',
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+    gap: 10,
+  },
+  productActionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#D1FAE5',
+    gap: 6,
+  },
+  productActionButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#059669',
+  },
   // Product Grid Styles
   productsGridContainer: {
     flex: 1,
