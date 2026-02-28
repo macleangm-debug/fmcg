@@ -1099,22 +1099,24 @@ export default function ProductManagement() {
       ) : (
         /* Mobile Layout */
         <>
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{formatNumber(products.length)}</Text>
-              <Text style={styles.statLabel}>Total</Text>
+          {products.length > 0 && (
+            <View style={styles.statsRow}>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{formatNumber(products.length)}</Text>
+                <Text style={styles.statLabel}>Total</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={[styles.statValue, { color: '#F59E0B' }]}>
+                  {formatNumber(products.filter(p => p.stock_quantity <= p.low_stock_threshold).length)}
+                </Text>
+                <Text style={styles.statLabel}>Low Stock</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{formatNumber(categories.length)}</Text>
+                <Text style={styles.statLabel}>Categories</Text>
+              </View>
             </View>
-            <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: '#F59E0B' }]}>
-                {formatNumber(products.filter(p => p.stock_quantity <= p.low_stock_threshold).length)}
-              </Text>
-              <Text style={styles.statLabel}>Low Stock</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{formatNumber(categories.length)}</Text>
-              <Text style={styles.statLabel}>Categories</Text>
-            </View>
-          </View>
+          )}
           <View style={styles.content}>
             <View style={styles.mobileCardContainer}>
               <FlatList
@@ -1125,7 +1127,7 @@ export default function ProductManagement() {
                 renderItem={renderProductGrid}
                 keyExtractor={(item) => item.id}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-                contentContainerStyle={styles.mobileListContent}
+                contentContainerStyle={products.length === 0 ? styles.mobileEmptyContent : styles.mobileListContent}
                 showsVerticalScrollIndicator={false}
                 onEndReached={loadMore}
                 onEndReachedThreshold={0.5}
@@ -1140,10 +1142,10 @@ export default function ProductManagement() {
                 ListEmptyComponent={
                   <EmptyState
                     icon="cube-outline"
-                    title={selectedCategoryFilter ? "No Products in This Category" : "No Products"}
+                    title={selectedCategoryFilter ? "No Products in This Category" : "Your inventory's looking a bit... empty"}
                     message={selectedCategoryFilter 
                       ? "Move products to another category or delete them to remove this category"
-                      : "Add your first product to get started"
+                      : "Time to stock up! Add your first product to get started."
                     }
                     actionLabel={selectedCategoryFilter ? "Clear Filter" : "Add Product"}
                     onAction={() => {
