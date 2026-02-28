@@ -52,8 +52,6 @@ const createEmptyRow = (): BulkProductRow => ({
   status: 'pending',
 });
 
-console.log('BulkProductImportModal module loaded successfully');
-
 const BulkProductImportModal: React.FC<BulkProductImportModalProps> = ({
   visible,
   onClose,
