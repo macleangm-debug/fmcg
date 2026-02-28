@@ -215,6 +215,12 @@ export default function Dashboard() {
   // Adverts Carousel State
   const [adverts, setAdverts] = useState<Advert[]>([]);
 
+  // Recent Activity State - Generate from recent orders
+  const [recentActivities, setRecentActivities] = useState<Activity[]>([]);
+
+  // Check if inventory is linked
+  const isInventoryLinked = linkedAppIds.includes('inventory');
+
   // Get linked and available apps with trial status
   const linkedApps = ALL_GALAXY_APPS.filter(app => linkedAppIds.includes(app.id));
   const availableApps = ALL_GALAXY_APPS.filter(app => !linkedAppIds.includes(app.id));
