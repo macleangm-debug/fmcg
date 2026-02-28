@@ -80,6 +80,57 @@ export default function Products() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
 
+  // Quick Add Product modal
+  const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [newProductName, setNewProductName] = useState('');
+  const [newProductPrice, setNewProductPrice] = useState('');
+  const [newProductStock, setNewProductStock] = useState('');
+  const [newProductCategory, setNewProductCategory] = useState<string | null>(null);
+  const [savingProduct, setSavingProduct] = useState(false);
+  const [productFormError, setProductFormError] = useState('');
+
+  const resetProductForm = () => {
+    setNewProductName('');
+    setNewProductPrice('');
+    setNewProductStock('');
+    setNewProductCategory(null);
+    setProductFormError('');
+  };
+
+  const handleQuickAddProduct = async () => {
+    if (!newProductName.trim()) {
+      setProductFormError('Product name is required');
+      return;
+    }
+    if (!newProductPrice || parseFloat(newProductPrice) <= 0) {
+      setProductFormError('Valid price is required');
+      return;
+    }
+
+    setSavingProduct(true);
+    setProductFormError('');
+
+    try {
+      await productsApi.create({
+        name: newProductName.trim(),
+        price: parseFloat(newProductPrice),
+        stock_quantity: parseInt(newProductStock) || 0,
+        category_id: newProductCategory,
+        tax_rate: 0,
+      });
+      
+      setShowAddProductModal(false);
+      resetProductForm();
+      loadProducts(); // Refresh products list
+      setSuccessMessage('Product added successfully!');
+      setShowSuccessModal(true);
+    } catch (error: any) {
+      setProductFormError(error?.message || 'Failed to add product');
+    } finally {
+      setSavingProduct(false);
+    }
+  };
+
   // Customer search functions
   const openCustomerModal = () => {
     setPhoneSearch('');
