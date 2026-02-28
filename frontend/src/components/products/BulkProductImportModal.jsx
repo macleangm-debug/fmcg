@@ -95,7 +95,7 @@ export default function BulkProductImportModal({
     const validatedRows = rows.map(row => {
       if (!row.name.trim() && !row.price.trim() && !row.sku.trim()) {
         // Empty row, skip validation but mark as pending
-        return { ...row, status: 'pending' as const };
+        return { ...row, status: 'pending' };
       }
       const validation = validateRow(row);
       return {
