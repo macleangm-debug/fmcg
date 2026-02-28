@@ -117,7 +117,14 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 ---
 
 ## Key Files
-### Dashboard Components (NEW)
+### Dashboard Components (NEW - Feb 28, 2026)
+- `/app/frontend/src/components/dashboard/QuickActions.tsx` - Quick action buttons
+- `/app/frontend/src/components/dashboard/TodaySummaryCard.tsx` - Today's performance card
+- `/app/frontend/src/components/dashboard/LowStockAlert.tsx` - Enhanced low stock alert with inventory CTA
+- `/app/frontend/src/components/dashboard/RecentActivityFeed.tsx` - Activity timeline
+- `/app/frontend/src/components/dashboard/TopSellingProducts.tsx` - Top products with period toggle
+
+### Dashboard Components (EXISTING)
 - `/app/frontend/src/components/dashboard/TotalViewPerformance.tsx`
 - `/app/frontend/src/components/dashboard/TransactionList.tsx`
 - `/app/frontend/src/components/dashboard/RevenueChart.tsx`
@@ -129,6 +136,7 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 - `/app/frontend/src/components/Icon.tsx` - Unified icon component (lucide-react)
 - `/app/frontend/src/components/WebSidebarLayout.tsx` - Dark green sidebar
 - `/app/frontend/app/(tabs)/dashboard.tsx` - Main dashboard with WebDashboard component (line 931)
+- `/app/frontend/app/(tabs)/cart.tsx` - New Sale page with customer-first flow
 - `/app/frontend/app/(auth)/login.tsx` - Login page
 
 ---
