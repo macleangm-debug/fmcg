@@ -1201,6 +1201,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     borderRadius: 16,
+    pointerEvents: 'none',
   },
   starsContainer: {
     position: 'absolute',
@@ -1208,6 +1209,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
+    pointerEvents: 'none',
   },
   galaxyLogo: {
     width: 36,
