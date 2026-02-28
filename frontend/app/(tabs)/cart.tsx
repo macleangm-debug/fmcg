@@ -184,6 +184,9 @@ export default function Cart() {
   const [showVariantModal, setShowVariantModal] = useState(false);
   const [selectedProductForVariant, setSelectedProductForVariant] = useState<any>(null);
 
+  // Bulk Import modal state
+  const [showBulkImportModal, setShowBulkImportModal] = useState(false);
+
   // Barcode scanner state - using global modal context
   const { openBarcodeScanner } = useModal();
   
