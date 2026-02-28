@@ -524,6 +524,21 @@ export default function ProductManagement() {
     setShowAddModal(true);
   };
 
+  // Bulk Import handler
+  const handleBulkImport = async (productsToImport: any[]): Promise<{ success: number; failed: number }> => {
+    try {
+      const response = await productsApi.bulkImport(productsToImport);
+      // Refresh the product list after import
+      await fetchData();
+      return {
+        success: response.data.success,
+        failed: response.data.failed,
+      };
+    } catch (error: any) {
+      throw new Error(error.response?.data?.detail || 'Failed to import products');
+    }
+  };
+
   const handleSaveProduct = async () => {
     // Collect all missing required fields
     const missingFields: string[] = [];
