@@ -48,7 +48,7 @@ export default function BulkProductImportModal({
   };
 
   // Remove a row
-  const handleRemoveRow = (rowId: string) => {
+  const handleRemoveRow = (rowId) => {
     if (rows.length === 1) {
       // Don't remove the last row, just clear it
       setRows([createEmptyRow()]);
