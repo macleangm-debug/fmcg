@@ -19,12 +19,16 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 - ✅ **P0 COMPLETED: New Sale Customer-First Flow** - Products only appear AFTER customer is selected (no walk-ins)
 - ✅ **P0 COMPLETED: Customer Selection Modal** - Phone search with country code (+255), Add New Customer option
 - ✅ **P0 COMPLETED: Browse Products & Scan Barcode** - Buttons appear after customer is selected
+- ✅ **P0 COMPLETED: Ecosystem Upsell Banner** - Dynamic carousel showing unsubscribed SSO Soko products (UniTxt, Expenses, Loyalty)
+- ✅ **P0 COMPLETED: Reusable CustomerSelectionModal Component** - Minimal fields (Name + Phone), progressive profiling support
 - ✅ **New Dashboard Components Created**:
   - `QuickActions.tsx` - 3-button row for common tasks
   - `TodaySummaryCard.tsx` - Today vs yesterday comparison with goal progress
   - `LowStockAlert.tsx` - Enhanced alert with inventory CTA
   - `RecentActivityFeed.tsx` - Timeline of recent activities
   - `TopSellingProducts.tsx` - Period toggle (today/week/month) with product rankings
+  - `EcosystemUpsellBanner.tsx` - Cross-sell carousel for unsubscribed products
+  - `CustomerSelectionModal.tsx` - Reusable customer search/add modal
 - ✅ **Testing Agent Validation** - iteration_10.json (70% pass - blocked by sales_staff permissions, admin flow works)
 - ✅ **P0 COMPLETED: UI Unification** - All 7 product pages now use the shared `WebSidebarLayout` component
 - ✅ **Layout Migration**:
