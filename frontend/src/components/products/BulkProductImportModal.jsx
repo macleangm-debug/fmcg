@@ -74,7 +74,7 @@ export default function BulkProductImportModal({
   };
 
   // Validate a single row
-  const validateRow = (row: BulkProductRow): { valid: boolean; error?: string } => {
+  const validateRow = (row) => {
     if (!row.name.trim()) {
       return { valid: false, error: 'Product name is required' };
     }
