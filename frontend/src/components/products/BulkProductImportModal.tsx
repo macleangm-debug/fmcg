@@ -83,10 +83,10 @@ const BulkProductImportModal: React.FC<BulkProductImportModalProps> = ({
   };
 
   // Update a field in a row
-  const handleUpdateRow = (rowId, field, value) => {
+  const handleUpdateRow = (rowId: string, field: keyof BulkProductRow, value: string) => {
     setRows(rows.map(row => {
       if (row.id === rowId) {
-        const updated = { ...row, [field]: value, status: 'pending' };
+        const updated = { ...row, [field]: value, status: 'pending' as const };
         // If updating category_id, also update category_name
         if (field === 'category_id') {
           const cat = categories.find(c => c.id === value);
