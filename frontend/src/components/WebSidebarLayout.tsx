@@ -102,6 +102,33 @@ const getCurrentProductId = (segments: string[]): string => {
   return 'retailpro';
 };
 
+// Map route segment to ProductSwitcher app.id
+const ROUTE_TO_APP_ID: Record<string, string> = {
+  'retailpro': 'retail_pro',
+  'dashboard': 'retail_pro',
+  '(tabs)': 'retail_pro',
+  'inventory': 'inventory',
+  'invoicing': 'invoicing',
+  'kwikpay': 'kwikpay',
+  'unitxt': 'bulk_sms',
+  'expenses': 'expenses',
+  'loyalty': 'loyalty',
+};
+
+// Helper to get ProductSwitcher app.id from route
+const getAppIdFromRoute = (segments: string[]): string => {
+  const productSegment = segments.find(seg => 
+    ROUTE_TO_APP_ID[seg.toLowerCase()]
+  )?.toLowerCase();
+  
+  if (productSegment) {
+    return ROUTE_TO_APP_ID[productSegment];
+  }
+  
+  // Default to retail_pro
+  return 'retail_pro';
+};
+
 // Product-specific sidebar menu configurations
 interface NavItem {
   name: string;
