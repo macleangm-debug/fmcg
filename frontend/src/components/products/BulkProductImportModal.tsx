@@ -68,18 +68,6 @@ const BulkProductImportModal: React.FC<BulkProductImportModalProps> = ({
 
   const isWeb = Platform.OS === 'web';
 
-  // Clean up portal on unmount (web only)
-  useEffect(() => {
-    return () => {
-      if (isWeb) {
-        const portalRoot = document.getElementById('bulk-import-portal');
-        if (portalRoot && !visible) {
-          portalRoot.remove();
-        }
-      }
-    };
-  }, [isWeb, visible]);
-
   // Add a new empty row
   const handleAddRow = () => {
     setRows([...rows, createEmptyRow()]);
