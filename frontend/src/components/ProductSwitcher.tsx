@@ -428,22 +428,22 @@ export default function ProductSwitcher({ currentProductId }: ProductSwitcherPro
         animationType="fade"
         onRequestClose={() => setShowDropdown(false)}
       >
-        <View 
+        <TouchableOpacity 
           style={styles.overlay}
+          activeOpacity={1}
+          onPress={() => {
+            // Only close if waitlist modal is not showing and in compact mode
+            if (menuMode === 'compact' && !showWaitlistModal) {
+              setShowDropdown(false);
+            }
+          }}
         >
-          <Pressable
-            style={StyleSheet.absoluteFill}
-            onPress={() => {
-              // Only close if waitlist modal is not showing
-              if (menuMode === 'compact' && !showWaitlistModal) {
-                setShowDropdown(false);
-              }
-            }}
-          />
           {menuMode === 'compact' ? (
             /* COMPACT MODE - Quick Switcher */
-            <View 
+            <TouchableOpacity 
+              activeOpacity={1}
               style={[styles.dropdown, isMobile && styles.dropdownMobile]}
+              onPress={(e) => e.stopPropagation()}
             >
               {/* Space Background */}
               <LinearGradient
