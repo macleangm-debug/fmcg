@@ -2710,20 +2710,39 @@ const styles = StyleSheet.create({
     gap: 16,
     justifyContent: 'flex-start',
   },
+  webEmptyList: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
   webEmptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 80,
+    paddingVertical: 100,
   },
-  webEmptyText: { fontSize: 16, color: '#6B7280', marginTop: 16 },
-  webEmptyBtn: {
+  webEmptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#374151',
     marginTop: 20,
+    textAlign: 'center',
+  },
+  webEmptyText: { 
+    fontSize: 14, 
+    color: '#9CA3AF', 
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  webEmptyBtn: {
+    marginTop: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     paddingHorizontal: 24,
     paddingVertical: 14,
     backgroundColor: '#2563EB',
     borderRadius: 12,
   },
-  webEmptyBtnText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
+  webEmptyBtnText: { fontSize: 15, fontWeight: '600', color: '#FFFFFF' },
   webCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
