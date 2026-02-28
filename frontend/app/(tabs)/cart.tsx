@@ -2143,6 +2143,15 @@ export default function Cart() {
         onClose={() => setShowReferralPopup(false)}
         orderTotal={lastOrderTotal}
       />
+      
+      {/* Bulk Product Import Modal */}
+      <BulkProductImportModal
+        visible={showBulkImportModal}
+        onClose={() => setShowBulkImportModal(false)}
+        categories={categories}
+        onImport={handleBulkImport}
+        formatCurrency={formatCurrency}
+      />
     </SafeAreaView>
   );
 }
