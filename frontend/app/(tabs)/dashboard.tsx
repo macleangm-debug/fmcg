@@ -1158,6 +1158,18 @@ export default function Dashboard() {
           </View>
         )}
 
+        {/* Ecosystem Upsell Banners - Cross-sell other SSO Soko products */}
+        <View style={{ marginBottom: 20 }}>
+          <EcosystemUpsellBanner
+            subscribedProducts={linkedAppIds}
+            currentProduct="retailpro"
+            onStartTrial={(productId) => {
+              const app = ALL_GALAXY_APPS.find(a => a.id === productId);
+              if (app) handleLinkApp(app);
+            }}
+          />
+        </View>
+
         {/* Main Dashboard Grid - Matches Reference Design */}
         <View style={webDashStyles.dashboardGrid}>
           {/* Left Column: Transaction List */}
