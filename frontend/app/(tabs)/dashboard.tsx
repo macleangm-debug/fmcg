@@ -1112,6 +1112,51 @@ export default function Dashboard() {
           </View>
         </View>
 
+        {/* Quick Actions Row */}
+        <View style={{ marginBottom: 20 }}>
+          <QuickActions
+            actions={[
+              {
+                id: 'new-sale',
+                label: 'New Sale',
+                icon: 'cart-outline',
+                color: '#10B981',
+                onPress: () => router.push('/(tabs)/cart'),
+              },
+              {
+                id: 'add-product',
+                label: 'Add Product',
+                icon: 'cube-outline',
+                color: '#2563EB',
+                onPress: () => router.push('/(tabs)/products'),
+              },
+              {
+                id: 'new-customer',
+                label: 'New Customer',
+                icon: 'person-add-outline',
+                color: '#8B5CF6',
+                onPress: () => router.push('/(tabs)/customers'),
+              },
+            ]}
+          />
+        </View>
+
+        {/* Low Stock Alert */}
+        {(stats?.low_stock_products || 0) > 0 && (
+          <View style={{ marginBottom: 20 }}>
+            <LowStockAlert
+              lowStockCount={stats?.low_stock_products || 0}
+              lowStockProducts={[]}
+              isInventoryLinked={isInventoryLinked}
+              onViewAll={() => router.push('/inventory')}
+              onLinkInventory={() => {
+                const inventoryApp = ALL_GALAXY_APPS.find(a => a.id === 'inventory');
+                if (inventoryApp) handleLinkApp(inventoryApp);
+              }}
+            />
+          </View>
+        )}
+
         {/* Main Dashboard Grid - Matches Reference Design */}
         <View style={webDashStyles.dashboardGrid}>
           {/* Left Column: Transaction List */}
