@@ -648,6 +648,120 @@ export default function Products() {
         </View>
       </Modal>
 
+      {/* Quick Add Product Modal */}
+      <Modal
+        visible={showAddProductModal}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowAddProductModal(false)}
+      >
+        <View style={styles.productModalOverlay}>
+          <View style={styles.productModalContent}>
+            <View style={styles.productModalHeader}>
+              <Text style={styles.productModalTitle}>Quick Add Product</Text>
+              <TouchableOpacity onPress={() => { setShowAddProductModal(false); resetProductForm(); }}>
+                <Ionicons name="close" size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.productModalBanner}>
+              <Ionicons name="flash" size={16} color="#F59E0B" />
+              <Text style={styles.productModalBannerText}>Add product with minimal info. Edit details later.</Text>
+            </View>
+
+            {productFormError ? (
+              <View style={styles.productModalError}>
+                <Ionicons name="alert-circle" size={16} color="#DC2626" />
+                <Text style={styles.productModalErrorText}>{productFormError}</Text>
+              </View>
+            ) : null}
+
+            <View style={styles.productModalField}>
+              <Text style={styles.productModalLabel}>Product Name *</Text>
+              <TextInput
+                style={styles.productModalInput}
+                placeholder="e.g., Coca Cola 500ml"
+                value={newProductName}
+                onChangeText={setNewProductName}
+                placeholderTextColor="#9CA3AF"
+                autoFocus
+              />
+            </View>
+
+            <View style={styles.productModalRow}>
+              <View style={[styles.productModalField, { flex: 1 }]}>
+                <Text style={styles.productModalLabel}>Price (TSh) *</Text>
+                <TextInput
+                  style={styles.productModalInput}
+                  placeholder="0.00"
+                  value={newProductPrice}
+                  onChangeText={setNewProductPrice}
+                  keyboardType="numeric"
+                  placeholderTextColor="#9CA3AF"
+                />
+              </View>
+              <View style={[styles.productModalField, { flex: 1, marginLeft: 12 }]}>
+                <Text style={styles.productModalLabel}>Stock Qty</Text>
+                <TextInput
+                  style={styles.productModalInput}
+                  placeholder="0"
+                  value={newProductStock}
+                  onChangeText={setNewProductStock}
+                  keyboardType="numeric"
+                  placeholderTextColor="#9CA3AF"
+                />
+              </View>
+            </View>
+
+            {categories.length > 0 && (
+              <View style={styles.productModalField}>
+                <Text style={styles.productModalLabel}>Category</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
+                  <TouchableOpacity
+                    style={[styles.productModalChip, !newProductCategory && styles.productModalChipActive]}
+                    onPress={() => setNewProductCategory(null)}
+                  >
+                    <Text style={[styles.productModalChipText, !newProductCategory && styles.productModalChipTextActive]}>None</Text>
+                  </TouchableOpacity>
+                  {categories.map((cat) => (
+                    <TouchableOpacity
+                      key={cat.id}
+                      style={[styles.productModalChip, newProductCategory === cat.id && styles.productModalChipActive]}
+                      onPress={() => setNewProductCategory(cat.id)}
+                    >
+                      <Text style={[styles.productModalChipText, newProductCategory === cat.id && styles.productModalChipTextActive]}>{cat.name}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+
+            <View style={styles.productModalActions}>
+              <TouchableOpacity
+                style={styles.productModalCancelBtn}
+                onPress={() => { setShowAddProductModal(false); resetProductForm(); }}
+              >
+                <Text style={styles.productModalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.productModalSaveBtn, (!newProductName.trim() || !newProductPrice) && styles.productModalSaveBtnDisabled]}
+                onPress={handleQuickAddProduct}
+                disabled={!newProductName.trim() || !newProductPrice || savingProduct}
+              >
+                {savingProduct ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Ionicons name="checkmark" size={18} color="#FFFFFF" />
+                    <Text style={styles.productModalSaveText}>Add Product</Text>
+                  </>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Floating Cart Summary Bar */}
       {items.length > 0 && (
         <View style={styles.cartSummaryBar}>
