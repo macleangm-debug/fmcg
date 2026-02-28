@@ -537,19 +537,61 @@ const BulkProductImportModal: React.FC<BulkProductImportModalProps> = ({
               </>
             ) : (
               <>
-                {/* CSV Import Tab */}
-                <View style={styles.csvSection}>
-                  <View style={styles.csvInfo}>
+                {/* File Import Tab */}
+                <View style={styles.fileImportSection}>
+                  <View style={styles.fileImportInfo}>
                     <Ionicons name="information-circle" size={20} color="#3B82F6" />
-                    <Text style={styles.csvInfoText}>
-                      Paste CSV content with columns: name, sku, price, stock, category
+                    <Text style={styles.fileImportInfoText}>
+                      Upload an Excel (.xlsx) or CSV file with columns: name, sku, price, stock, category
                     </Text>
                   </View>
                   
                   <TouchableOpacity style={styles.downloadTemplateBtn} onPress={handleDownloadTemplate}>
                     <Ionicons name="download-outline" size={18} color="#2563EB" />
-                    <Text style={styles.downloadTemplateBtnText}>Download CSV Template</Text>
+                    <Text style={styles.downloadTemplateBtnText}>Download Excel Template</Text>
                   </TouchableOpacity>
+
+                  {/* Hidden file input for web */}
+                  {isWeb && (
+                    <input
+                      ref={fileInputRef as any}
+                      type="file"
+                      accept=".xlsx,.xls,.csv"
+                      onChange={handleFileUpload as any}
+                      style={{ display: 'none' }}
+                    />
+                  )}
+                  
+                  <TouchableOpacity 
+                    style={styles.uploadFileBtn}
+                    onPress={() => {
+                      if (isWeb && fileInputRef.current) {
+                        fileInputRef.current.click();
+                      } else {
+                        Alert.alert('File Upload', 'File upload is only available on web platform');
+                      }
+                    }}
+                    disabled={uploadingFile}
+                  >
+                    {uploadingFile ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <>
+                        <Ionicons name="cloud-upload" size={24} color="#FFFFFF" />
+                        <Text style={styles.uploadFileBtnText}>Choose Excel or CSV File</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                  
+                  <Text style={styles.fileImportHint}>
+                    Supported formats: .xlsx, .xls, .csv
+                  </Text>
+
+                  <View style={styles.dividerContainer}>
+                    <View style={styles.dividerLine} />
+                    <Text style={styles.dividerText}>OR</Text>
+                    <View style={styles.dividerLine} />
+                  </View>
                   
                   <Text style={styles.csvLabel}>Paste CSV Content:</Text>
                   <TextInput
@@ -558,18 +600,18 @@ const BulkProductImportModal: React.FC<BulkProductImportModalProps> = ({
                     value={csvContent}
                     onChangeText={setCsvContent}
                     multiline
-                    numberOfLines={10}
+                    numberOfLines={6}
                     placeholderTextColor="#9CA3AF"
                     textAlignVertical="top"
                   />
                   
                   <TouchableOpacity 
                     style={[styles.parseCsvBtn, !csvContent.trim() && styles.parseCsvBtnDisabled]} 
-                    onPress={handleParseCsv}
+                    onPress={() => handleParseCsvContent(csvContent)}
                     disabled={!csvContent.trim()}
                   >
                     <Ionicons name="scan-outline" size={18} color="#FFFFFF" />
-                    <Text style={styles.parseCsvBtnText}>Parse CSV & Review</Text>
+                    <Text style={styles.parseCsvBtnText}>Parse & Review</Text>
                   </TouchableOpacity>
                 </View>
               </>
