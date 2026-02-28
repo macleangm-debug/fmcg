@@ -794,15 +794,215 @@ export default function Cart() {
             </WebPressable>
           )}
         </View>
-        <EmptyState
-          icon="cart-outline"
-          title="Your Cart is Empty"
-          message="Add products to start a new sale"
-          actionLabel="Browse Products"
-          onAction={() => {
-            loadProducts();
-            setShowProductsModal(true);
-          }}
+        
+        {/* Customer Selection Required - Empty Cart View */}
+        <View style={styles.customerFirstContainer}>
+          <View style={styles.customerFirstIcon}>
+            <Ionicons name="person-add" size={48} color="#2563EB" />
+          </View>
+          <Text style={styles.customerFirstTitle}>Select a Customer First</Text>
+          <Text style={styles.customerFirstSubtitle}>
+            Choose or add a customer to start the sale
+          </Text>
+          
+          {/* Customer Selection Button */}
+          <TouchableOpacity
+            style={styles.customerFirstButton}
+            onPress={() => {
+              setShowCustomerModal(true);
+            }}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="person-add-outline" size={20} color="#FFFFFF" />
+            <Text style={styles.customerFirstButtonText}>
+              {customer_name ? `Selected: ${customer_name}` : 'Select Customer'}
+            </Text>
+          </TouchableOpacity>
+          
+          {/* Show Browse Products only when customer is selected */}
+          {customer_name && (
+            <TouchableOpacity
+              style={styles.customerFirstBrowseButton}
+              onPress={() => {
+                loadProducts();
+                setShowProductsModal(true);
+              }}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="grid-outline" size={20} color="#2563EB" />
+              <Text style={styles.customerFirstBrowseText}>Browse Products</Text>
+            </TouchableOpacity>
+          )}
+          
+          {/* Barcode Scanner Option */}
+          {customer_name && (
+            <TouchableOpacity
+              style={styles.customerFirstScanButton}
+              onPress={() => {
+                loadProducts();
+                openBarcodeScanner(handleBarcodeScan);
+              }}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="barcode-outline" size={20} color="#F59E0B" />
+              <Text style={styles.customerFirstScanText}>Scan Barcode</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Customer Selection Modal */}
+        <Modal
+          visible={showCustomerModal}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setShowCustomerModal(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>
+                  {showAddCustomerForm ? 'Add Customer' : 'Select Customer'}
+                </Text>
+                <TouchableOpacity onPress={() => { setShowCustomerModal(false); setShowAddCustomerForm(false); resetNewCustomerForm(); }}>
+                  <Ionicons name="close" size={24} color="#6B7280" />
+                </TouchableOpacity>
+              </View>
+              
+              {!showAddCustomerForm ? (
+                <>
+                  {/* Phone Search */}
+                  <View style={styles.popupSearchRow}>
+                    <View style={styles.popupCountryCode}>
+                      <Text style={styles.popupCountryCodeText}>{settings.countryCode}</Text>
+                    </View>
+                    <TextInput
+                      style={styles.popupSearchInput}
+                      placeholder="Enter phone number"
+                      value={phoneSearch}
+                      onChangeText={searchByPhone}
+                      keyboardType="phone-pad"
+                      autoFocus
+                      placeholderTextColor="#9CA3AF"
+                    />
+                    {searching && <ActivityIndicator size="small" color="#3B82F6" />}
+                  </View>
+                  
+                  {/* Search Result */}
+                  {searchResult && (
+                    <TouchableOpacity
+                      style={styles.popupResultItem}
+                      onPress={() => {
+                        setCustomer(searchResult.id, searchResult.name);
+                        setShowCustomerModal(false);
+                        setPhoneSearch('');
+                        setSearchResult(null);
+                      }}
+                    >
+                      <View style={styles.popupResultIcon}>
+                        <Ionicons name="person" size={20} color="#3B82F6" />
+                      </View>
+                      <View style={styles.popupResultInfo}>
+                        <Text style={styles.popupResultName}>{searchResult.name}</Text>
+                        <Text style={styles.popupResultPhone}>{searchResult.phone}</Text>
+                      </View>
+                      <View style={styles.popupSelectBtn}>
+                        <Text style={styles.popupSelectBtnText}>Select</Text>
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                  
+                  {/* No Result - Add New */}
+                  {phoneSearch.length >= 3 && !searchResult && !searching && (
+                    <View style={styles.popupNoResult}>
+                      <Text style={styles.popupNoResultText}>No customer found</Text>
+                      <TouchableOpacity
+                        style={styles.popupAddBtn}
+                        onPress={() => {
+                          setNewCustomerPhone(phoneSearch);
+                          setShowAddCustomerForm(true);
+                        }}
+                      >
+                        <Ionicons name="add" size={18} color="#FFFFFF" />
+                        <Text style={styles.popupAddBtnText}>Add New Customer</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </>
+              ) : (
+                /* Add Customer Form */
+                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+                  <ScrollView showsVerticalScrollIndicator={false}>
+                    <View style={styles.popupFormField}>
+                      <Text style={styles.popupFormLabel}>Name *</Text>
+                      <TextInput
+                        style={styles.popupFormInput}
+                        placeholder="Customer name"
+                        value={newCustomerName}
+                        onChangeText={setNewCustomerName}
+                        placeholderTextColor="#9CA3AF"
+                      />
+                    </View>
+                    <View style={styles.popupFormField}>
+                      <Text style={styles.popupFormLabel}>Phone *</Text>
+                      <View style={styles.popupSearchRow}>
+                        <View style={styles.popupCountryCode}>
+                          <Text style={styles.popupCountryCodeText}>{settings.countryCode}</Text>
+                        </View>
+                        <TextInput
+                          style={[styles.popupFormInput, { flex: 1 }]}
+                          placeholder="Phone number"
+                          value={newCustomerPhone}
+                          onChangeText={setNewCustomerPhone}
+                          keyboardType="phone-pad"
+                          placeholderTextColor="#9CA3AF"
+                        />
+                      </View>
+                    </View>
+                    <View style={styles.popupFormField}>
+                      <Text style={styles.popupFormLabel}>Email</Text>
+                      <TextInput
+                        style={styles.popupFormInput}
+                        placeholder="Email (optional)"
+                        value={newCustomerEmail}
+                        onChangeText={setNewCustomerEmail}
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                        placeholderTextColor="#9CA3AF"
+                      />
+                    </View>
+                    <View style={styles.popupFormActions}>
+                      <TouchableOpacity
+                        style={styles.popupCancelBtn}
+                        onPress={() => { setShowAddCustomerForm(false); resetNewCustomerForm(); }}
+                      >
+                        <Text style={styles.popupCancelBtnText}>Cancel</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.popupSaveBtn, (!newCustomerName || !newCustomerPhone) && styles.popupSaveBtnDisabled]}
+                        onPress={createAndSelectCustomer}
+                        disabled={!newCustomerName || !newCustomerPhone}
+                      >
+                        <Text style={styles.popupSaveBtnText}>Save & Select</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </ScrollView>
+                </KeyboardAvoidingView>
+              )}
+            </View>
+          </View>
+        </Modal>
+
+        {/* Logout Confirmation Modal */}
+        <ConfirmationModal
+          visible={showLogoutModal}
+          title="Logout"
+          message="Are you sure you want to logout?"
+          confirmLabel="Logout"
+          cancelLabel="Cancel"
+          onConfirm={confirmLogout}
+          onCancel={() => setShowLogoutModal(false)}
+          variant="danger"
+          icon="log-out-outline"
         />
       </SafeAreaView>
     );
