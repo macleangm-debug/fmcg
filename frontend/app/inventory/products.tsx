@@ -3198,20 +3198,45 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 16,
   },
+  webEmptyListContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    minHeight: 400,
+  },
   webEmptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 80,
+    paddingVertical: 100,
   },
-  webEmptyText: { fontSize: 16, color: '#6B7280', marginTop: 16 },
-  webEmptyBtn: {
+  webEmptyTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#374151',
     marginTop: 20,
+    textAlign: 'center',
+  },
+  webEmptySubtext: {
+    fontSize: 14,
+    color: '#9CA3AF',
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  webEmptyText: { fontSize: 14, color: '#9CA3AF', marginTop: 8, textAlign: 'center' },
+  webEmptyBtn: {
+    marginTop: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     paddingHorizontal: 24,
     paddingVertical: 14,
     backgroundColor: '#059669',
     borderRadius: 12,
   },
-  webEmptyBtnText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
+  webEmptyBtnText: { fontSize: 15, fontWeight: '600', color: '#FFFFFF' },
+  mobileEmptyContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
 
   // Web Card Header with Tabs and Search
   webCardHeader: {
