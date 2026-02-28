@@ -823,6 +823,15 @@ export default function ProductManagement() {
                 onToggle={setProductsView}
               />
               <Pressable
+                style={styles.bulkImportBtn}
+                onPress={() => setShowBulkImportModal(true)}
+                accessibilityRole="button"
+                accessibilityLabel="Bulk Import"
+              >
+                <Ionicons name="cloud-upload-outline" size={20} color="#10B981" />
+                <Text style={styles.bulkImportBtnText}>Bulk Import</Text>
+              </Pressable>
+              <Pressable
                 style={styles.webCreateBtn}
                 onPress={() => {
                   resetForm();
