@@ -799,14 +799,19 @@ export default function Cart() {
         {/* Customer Selection Required - Empty Cart View */}
         <View style={styles.customerFirstContainer}>
           <View style={styles.customerFirstIcon}>
-            <Ionicons name="person-add" size={48} color="#2563EB" />
+            <View style={styles.customerFirstIconInner}>
+              <Ionicons name="person" size={40} color="#2563EB" />
+              <View style={styles.customerFirstIconBadge}>
+                <Ionicons name="add" size={12} color="#2563EB" />
+              </View>
+            </View>
           </View>
           <Text style={styles.customerFirstTitle}>Select a Customer First</Text>
           <Text style={styles.customerFirstSubtitle}>
             Choose or add a customer to start the sale
           </Text>
           
-          {/* Customer Selection Button */}
+          {/* Customer Selection Button - Clean Style */}
           <TouchableOpacity
             style={styles.customerFirstButton}
             onPress={() => {
@@ -814,20 +819,15 @@ export default function Cart() {
             }}
             activeOpacity={0.8}
           >
-            <Ionicons name="person-add-outline" size={20} color="#FFFFFF" />
-            <Text style={styles.customerFirstButtonText}>
-              {customer_name ? `Selected: ${customer_name}` : 'Select Customer'}
-            </Text>
+            <View style={styles.customerFirstBtnIcon}>
+              <Ionicons name="person" size={16} color="#FFFFFF" />
+              <View style={styles.customerFirstBtnBadge}>
+                <Ionicons name="add" size={8} color="#FFFFFF" />
+              </View>
+            </View>
+            <Text style={styles.customerFirstButtonText}>Select Customer</Text>
           </TouchableOpacity>
-          
-          {/* Show Browse Products only when customer is selected */}
-          {customer_name && (
-            <TouchableOpacity
-              style={styles.customerFirstBrowseButton}
-              onPress={() => {
-                loadProducts();
-                setShowProductsModal(true);
-              }}
+        </View>
               activeOpacity={0.8}
             >
               <Ionicons name="grid-outline" size={20} color="#2563EB" />
