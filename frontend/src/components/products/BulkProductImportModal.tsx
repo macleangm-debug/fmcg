@@ -570,6 +570,22 @@ const BulkProductImportModal: React.FC<BulkProductImportModalProps> = ({
           </View>
         </View>
       </View>
+  );
+
+  // For web, use a Portal-like fixed position overlay
+  // For native, use the Modal component
+  if (isWeb) {
+    return modalContent;
+  }
+
+  return (
+    <Modal
+      visible={visible}
+      transparent={true}
+      animationType="fade"
+      onRequestClose={handleClose}
+    >
+      {modalContent}
     </Modal>
   );
 }
