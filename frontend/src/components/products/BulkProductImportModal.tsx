@@ -295,7 +295,7 @@ const BulkProductImportModal: React.FC<BulkProductImportModalProps> = ({
       } else {
         Alert.alert('Import Failed', `All ${result.failed} products failed to import. Please check the data.`);
       }
-    } catch (error) {
+    } catch (error: any) {
       Alert.alert('Import Error', error.message || 'Failed to import products');
     } finally {
       setImporting(false);
