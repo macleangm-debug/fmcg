@@ -13,34 +13,9 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-interface Category {
-  id: string;
-  name: string;
-}
-
-interface BulkProductRow {
-  id: string;
-  name: string;
-  sku: string;
-  price: string;
-  stock: string;
-  category_id: string;
-  category_name: string;
-  status: 'pending' | 'valid' | 'invalid';
-  error?: string;
-}
-
-interface BulkProductImportModalProps {
-  visible: boolean;
-  onClose: () => void;
-  categories: Category[];
-  onImport: (products: any[]) => Promise<{ success: number; failed: number }>;
-  formatCurrency: (amount: number) => string;
-}
-
 const generateRowId = () => `row_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-const createEmptyRow = (): BulkProductRow => ({
+const createEmptyRow = () => ({
   id: generateRowId(),
   name: '',
   sku: '',
@@ -57,7 +32,7 @@ export default function BulkProductImportModal({
   categories,
   onImport,
   formatCurrency,
-}: BulkProductImportModalProps) {
+}) {
   const [rows, setRows] = useState<BulkProductRow[]>([createEmptyRow()]);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ success: number; failed: number } | null>(null);
