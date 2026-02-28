@@ -617,103 +617,37 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
       <View style={styles.bodyContainer}>
         {/* Sidebar - Light background with themed accents */}
         <View style={[styles.sidebar, { backgroundColor: dynamicSidebarBg, borderRightWidth: 1, borderRightColor: '#E5E7EB' }]}>
-          {/* Main Navigation */}
+          {/* Main Navigation - Product-Specific Menus */}
           <ScrollView style={styles.navSection} showsVerticalScrollIndicator={false}>
-            <Text style={[styles.navSectionTitle, { color: '#9CA3AF' }]}>SALES</Text>
-            {navItems.map((item) => (
-              <TouchableOpacity
-                key={item.name}
-                style={[styles.navItem, isActive(item.name) && { backgroundColor: dynamicSidebarActiveBg }]}
-                onPress={() => handleNavPress(item.name)}
-                activeOpacity={0.7}
-              >
-                <Icon
-                  name={item.icon}
-                  size={20}
-                  color={isActive(item.name) ? dynamicSidebarActiveText : dynamicSidebarText}
-                />
-                <Text style={[styles.navLabel, { color: isActive(item.name) ? dynamicSidebarActiveText : dynamicSidebarText, fontWeight: isActive(item.name) ? '600' : '500' }]}>
-                  {item.label}
+            {menuSections.map((section, sectionIndex) => (
+              <View key={section.title}>
+                <Text style={[styles.navSectionTitle, { color: '#9CA3AF', marginTop: sectionIndex > 0 ? 24 : 0 }]}>
+                  {section.title}
                 </Text>
-                {item.badge && item.badge > 0 && (
-                  <View style={styles.badge}>
-                    <Text style={styles.badgeText}>{item.badge}</Text>
-                  </View>
-                )}
-              </TouchableOpacity>
+                {section.items.map((item) => (
+                  <TouchableOpacity
+                    key={item.name}
+                    style={[styles.navItem, isActive(item.name) && { backgroundColor: dynamicSidebarActiveBg }]}
+                    onPress={() => handleNavPress(item.name)}
+                    activeOpacity={0.7}
+                  >
+                    <Icon
+                      name={item.icon}
+                      size={20}
+                      color={isActive(item.name) ? dynamicSidebarActiveText : dynamicSidebarText}
+                    />
+                    <Text style={[styles.navLabel, { color: isActive(item.name) ? dynamicSidebarActiveText : dynamicSidebarText, fontWeight: isActive(item.name) ? '600' : '500' }]}>
+                      {item.label}
+                    </Text>
+                    {item.badge && item.badge > 0 && (
+                      <View style={styles.badge}>
+                        <Text style={styles.badgeText}>{item.badge}</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
             ))}
-
-            {/* Customers & Catalog Section */}
-            {catalogItems.length > 0 && (
-              <>
-                <Text style={[styles.navSectionTitle, { marginTop: 24, color: '#9CA3AF' }]}>CATALOG</Text>
-                {catalogItems.map((item) => (
-              <TouchableOpacity
-                key={item.name}
-                style={[styles.navItem, isActive(item.name) && { backgroundColor: dynamicSidebarActiveBg }]}
-                onPress={() => handleNavPress(item.name)}
-                activeOpacity={0.7}
-              >
-                <Icon
-                  name={item.icon}
-                  size={20}
-                  color={isActive(item.name) ? dynamicSidebarActiveText : dynamicSidebarText}
-                />
-                    <Text style={[styles.navLabel, { color: isActive(item.name) ? dynamicSidebarActiveText : dynamicSidebarText, fontWeight: isActive(item.name) ? '600' : '500' }]}>
-                      {item.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </>
-            )}
-
-            {/* Insights Section - Reports only, Expenses moves to Linked Apps */}
-            {financeItems.length > 0 && (
-              <>
-                <Text style={[styles.navSectionTitle, { marginTop: 24, color: '#9CA3AF' }]}>INSIGHTS</Text>
-                {financeItems.filter(item => item.name === '/admin/reports').map((item) => (
-              <TouchableOpacity
-                key={item.name}
-                style={[styles.navItem, isActive(item.name) && { backgroundColor: dynamicSidebarActiveBg }]}
-                onPress={() => handleNavPress(item.name)}
-                activeOpacity={0.7}
-              >
-                <Icon
-                  name={item.icon}
-                  size={20}
-                  color={isActive(item.name) ? dynamicSidebarActiveText : dynamicSidebarText}
-                />
-                    <Text style={[styles.navLabel, { color: isActive(item.name) ? dynamicSidebarActiveText : dynamicSidebarText, fontWeight: isActive(item.name) ? '600' : '500' }]}>
-                      {item.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </>
-            )}
-
-            {/* Settings Section */}
-            {settingsItems.length > 0 && (
-              <>
-                <Text style={[styles.navSectionTitle, { marginTop: 24, color: '#9CA3AF' }]}>SETTINGS</Text>
-                {settingsItems.map((item) => (
-              <TouchableOpacity
-                key={item.name}
-                style={[styles.navItem, isActive(item.name) && { backgroundColor: dynamicSidebarActiveBg }]}
-                onPress={() => handleNavPress(item.name)}
-                activeOpacity={0.7}
-              >
-                <Icon
-                  name={item.icon}
-                  size={20}
-                  color={isActive(item.name) ? dynamicSidebarActiveText : dynamicSidebarText}
-                />
-                    <Text style={[styles.navLabel, { color: isActive(item.name) ? dynamicSidebarActiveText : dynamicSidebarText, fontWeight: isActive(item.name) ? '600' : '500' }]}>
-                      {item.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </>
-            )}
 
             {/* Refer & Earn Section - Highlighted for visibility */}
             <View style={styles.referralSection}>
