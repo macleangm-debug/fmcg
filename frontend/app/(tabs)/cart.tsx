@@ -621,8 +621,51 @@ export default function Cart() {
       }
     }
     
+    // Check if customer profile is incomplete (missing email)
+    // Fetch customer data to check if email exists
+    try {
+      const response = await customersApi.getOne(customer_id);
+      const customerData = response.data;
+      setSelectedCustomerData(customerData);
+      
+      if (!customerData.email) {
+        // Show complete profile prompt
+        setShowCompleteProfileModal(true);
+        return;
+      }
+    } catch (error) {
+      console.log('Could not fetch customer details, proceeding with checkout');
+    }
+    
     // Show confirmation modal
     setShowConfirmModal(true);
+  };
+
+  const handleSkipProfile = () => {
+    setShowCompleteProfileModal(false);
+    setShowConfirmModal(true);
+  };
+
+  const handleSaveProfile = async () => {
+    if (!profileEmail.trim()) {
+      setShowCompleteProfileModal(false);
+      setShowConfirmModal(true);
+      return;
+    }
+    
+    setSavingProfile(true);
+    try {
+      await customersApi.update(customer_id!, { email: profileEmail.trim() });
+      setShowCompleteProfileModal(false);
+      setProfileEmail('');
+      setShowConfirmModal(true);
+    } catch (error) {
+      console.error('Failed to update profile:', error);
+      setShowCompleteProfileModal(false);
+      setShowConfirmModal(true);
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
   const processCheckout = async () => {
