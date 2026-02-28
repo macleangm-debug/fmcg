@@ -144,6 +144,7 @@ export const customersApi = {
   create: (data: any) => api.post('/customers', data),
   update: (id: string, data: any) => api.put(`/customers/${id}`, data),
   delete: (id: string) => api.delete(`/customers/${id}`),
+  search: (phone: string) => api.get('/customers', { params: { search: phone, limit: 5 } }),
 };
 
 export const ordersApi = {
