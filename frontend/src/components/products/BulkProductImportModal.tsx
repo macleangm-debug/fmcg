@@ -73,7 +73,7 @@ const BulkProductImportModal: React.FC<BulkProductImportModalProps> = ({
   };
 
   // Remove a row
-  const handleRemoveRow = (rowId) => {
+  const handleRemoveRow = (rowId: string) => {
     if (rows.length === 1) {
       // Don't remove the last row, just clear it
       setRows([createEmptyRow()]);
