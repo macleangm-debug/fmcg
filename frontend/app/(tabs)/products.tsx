@@ -833,6 +833,15 @@ export default function Products() {
           </View>
         </View>
       )}
+
+      {/* Bulk Product Import Modal */}
+      <BulkProductImportModal
+        visible={showBulkImportModal}
+        onClose={() => setShowBulkImportModal(false)}
+        categories={categories}
+        onImport={handleBulkImport}
+        formatCurrency={formatCurrency}
+      />
     </SafeAreaView>
   );
 }
