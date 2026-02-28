@@ -395,8 +395,8 @@ export default function Products() {
         ListEmptyComponent={
           <EmptyState
             icon="cube-outline"
-            title="No Products Found"
-            message={search ? 'Try a different search term' : 'No products available'}
+            title="Your shelves are empty!"
+            message={search ? 'Try a different search term' : "Time to stock up! Add products to start selling."}
           />
         }
       />
