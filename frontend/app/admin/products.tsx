@@ -795,26 +795,30 @@ export default function ProductManagement() {
         <View style={styles.webPageHeader}>
           <View>
             <Text style={styles.webPageTitle}>Products</Text>
-            <Text style={styles.webPageSubtitle}>{products.length} product(s) • {categories.length} categories</Text>
+            {products.length > 0 && (
+              <Text style={styles.webPageSubtitle}>{products.length} product(s) • {categories.length} categories</Text>
+            )}
           </View>
-          <View style={styles.headerActions}>
-            <ViewToggle
-              currentView={productsView}
-              onToggle={setProductsView}
-            />
-            <Pressable
-              style={styles.webCreateBtn}
-              onPress={() => {
-                resetForm();
-                setShowAddModal(true);
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="Add Product"
-            >
-              <Ionicons name="add" size={20} color="#FFFFFF" />
-              <Text style={styles.webCreateBtnText}>Add Product</Text>
-            </Pressable>
-          </View>
+          {products.length > 0 && (
+            <View style={styles.headerActions}>
+              <ViewToggle
+                currentView={productsView}
+                onToggle={setProductsView}
+              />
+              <Pressable
+                style={styles.webCreateBtn}
+                onPress={() => {
+                  resetForm();
+                  setShowAddModal(true);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Add Product"
+              >
+                <Ionicons name="add" size={20} color="#FFFFFF" />
+                <Text style={styles.webCreateBtnText}>Add Product</Text>
+              </Pressable>
+            </View>
+          )}
         </View>
       )}
 
@@ -823,40 +827,44 @@ export default function ProductManagement() {
         <>
           <View style={styles.header}>
             <Text style={styles.title}>Products</Text>
-            <View style={styles.headerActions}>
-              <Pressable
-                style={styles.addButton}
-                onPress={() => {
-                  resetForm();
-                  setShowAddModal(true);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel="Add Product"
-              >
-                {({ pressed }) => (
-                  <View style={[styles.addButtonInner, pressed && styles.addButtonPressed]}>
-                    <Ionicons name="add" size={24} color="#FFFFFF" />
-                  </View>
-                )}
-              </Pressable>
-            </View>
+            {products.length > 0 && (
+              <View style={styles.headerActions}>
+                <Pressable
+                  style={styles.addButton}
+                  onPress={() => {
+                    resetForm();
+                    setShowAddModal(true);
+                  }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Add Product"
+                >
+                  {({ pressed }) => (
+                    <View style={[styles.addButtonInner, pressed && styles.addButtonPressed]}>
+                      <Ionicons name="add" size={24} color="#FFFFFF" />
+                    </View>
+                  )}
+                </Pressable>
+              </View>
+            )}
           </View>
-          <View style={styles.statsRow}>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{formatNumber(products.length)}</Text>
-              <Text style={styles.statLabel}>Total</Text>
+          {products.length > 0 && (
+            <View style={styles.statsRow}>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{formatNumber(products.length)}</Text>
+                <Text style={styles.statLabel}>Total</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={[styles.statValue, { color: '#F59E0B' }]}>
+                  {formatNumber(products.filter(p => p.stock_quantity <= p.low_stock_threshold).length)}
+                </Text>
+                <Text style={styles.statLabel}>Low Stock</Text>
+              </View>
+              <View style={styles.statItem}>
+                <Text style={styles.statValue}>{formatNumber(categories.length)}</Text>
+                <Text style={styles.statLabel}>Categories</Text>
+              </View>
             </View>
-            <View style={styles.statItem}>
-              <Text style={[styles.statValue, { color: '#F59E0B' }]}>
-                {formatNumber(products.filter(p => p.stock_quantity <= p.low_stock_threshold).length)}
-              </Text>
-              <Text style={styles.statLabel}>Low Stock</Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statValue}>{formatNumber(categories.length)}</Text>
-              <Text style={styles.statLabel}>Categories</Text>
-            </View>
-          </View>
+          )}
         </>
       )}
 
