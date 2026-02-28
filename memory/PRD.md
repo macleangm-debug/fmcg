@@ -186,8 +186,12 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 - [x] **PRODUCT-SPECIFIC CAROUSEL CONTENT (COMPLETED Feb 17, 2026)** - 16 adverts seeded with product-specific content for all 7 products, auto-fetch from API with theme color override
 - [x] **DASHBOARD UI/UX IMPROVEMENTS (COMPLETED Feb 28, 2026)** - Quick Actions, Recent Activity, Top Selling Products, Enhanced Low Stock Alert
 - [x] **NEW SALE CUSTOMER-FIRST FLOW (COMPLETED Feb 28, 2026)** - No walk-ins, mandatory customer selection before browsing products
+- [x] **COMPLETE PROFILE PROMPT (COMPLETED Feb 28, 2026)** - Modal during checkout for customers without email, Skip/Save options
+- [x] **BULK IMPORT API (COMPLETED Feb 28, 2026)** - POST /api/products/bulk endpoint with auto-SKU generation
+- [x] **CUSTOMER API ENDPOINTS (COMPLETED Feb 28, 2026)** - GET/PUT /api/customers/{id} for progressive profiling
 
 ### P1 - In Progress
+- [ ] **BulkProductImportModal Rendering** - Modal not rendering on React Native Web (button works, state sets, but Modal doesn't appear)
 - [ ] **Product Switcher Bug** - 9-dot grid click not triggering "Start Free Trial" modal for unsubscribed apps
 - [ ] **Tigo SMS Testing** - User deferred ("We will test later"), requires VPN access
 - [ ] Language Selector integration (blocked - `import.meta` bundler error)
