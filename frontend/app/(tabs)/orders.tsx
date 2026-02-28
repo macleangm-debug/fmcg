@@ -663,8 +663,8 @@ export default function Orders() {
             ListEmptyComponent={
               <EmptyState
                 icon="receipt-outline"
-                title="No Orders Found"
-                message={`No orders for ${DATE_FILTERS.find(f => f.key === dateFilter)?.label.toLowerCase() || 'this period'}`}
+                title="Ka-ching! Oh wait... no sales yet"
+                message={`Your cash register is ready and waiting for ${DATE_FILTERS.find(f => f.key === dateFilter)?.label.toLowerCase() || 'this period'}!`}
               />
             }
           />
