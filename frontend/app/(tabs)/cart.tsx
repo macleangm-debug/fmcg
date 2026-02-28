@@ -851,147 +851,46 @@ export default function Cart() {
           )}
         </View>
 
-        {/* Customer Selection Modal */}
-        <Modal
+        {/* Customer Selection Modal - Reusable Component */}
+        <CustomerSelectionModal
           visible={showCustomerModal}
-          transparent={true}
-          animationType="slide"
-          onRequestClose={() => setShowCustomerModal(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>
-                  {showAddCustomerForm ? 'Add Customer' : 'Select Customer'}
-                </Text>
-                <TouchableOpacity onPress={() => { setShowCustomerModal(false); setShowAddCustomerForm(false); resetNewCustomerForm(); }}>
-                  <Ionicons name="close" size={24} color="#6B7280" />
-                </TouchableOpacity>
-              </View>
-              
-              {!showAddCustomerForm ? (
-                <>
-                  {/* Phone Search */}
-                  <View style={styles.popupSearchRow}>
-                    <View style={styles.popupCountryCode}>
-                      <Text style={styles.popupCountryCodeText}>{settings.countryCode}</Text>
-                    </View>
-                    <TextInput
-                      style={styles.popupSearchInput}
-                      placeholder="Enter phone number"
-                      value={phoneSearch}
-                      onChangeText={searchByPhone}
-                      keyboardType="phone-pad"
-                      autoFocus
-                      placeholderTextColor="#9CA3AF"
-                    />
-                    {searching && <ActivityIndicator size="small" color="#3B82F6" />}
-                  </View>
-                  
-                  {/* Search Result */}
-                  {searchResult && (
-                    <TouchableOpacity
-                      style={styles.popupResultItem}
-                      onPress={() => {
-                        setCustomer(searchResult.id, searchResult.name);
-                        setShowCustomerModal(false);
-                        setPhoneSearch('');
-                        setSearchResult(null);
-                      }}
-                    >
-                      <View style={styles.popupResultIcon}>
-                        <Ionicons name="person" size={20} color="#3B82F6" />
-                      </View>
-                      <View style={styles.popupResultInfo}>
-                        <Text style={styles.popupResultName}>{searchResult.name}</Text>
-                        <Text style={styles.popupResultPhone}>{searchResult.phone}</Text>
-                      </View>
-                      <View style={styles.popupSelectBtn}>
-                        <Text style={styles.popupSelectBtnText}>Select</Text>
-                      </View>
-                    </TouchableOpacity>
-                  )}
-                  
-                  {/* No Result - Add New */}
-                  {phoneSearch.length >= 3 && !searchResult && !searching && (
-                    <View style={styles.popupNoResult}>
-                      <Text style={styles.popupNoResultText}>No customer found</Text>
-                      <TouchableOpacity
-                        style={styles.popupAddBtn}
-                        onPress={() => {
-                          setNewCustomerPhone(phoneSearch);
-                          setShowAddCustomerForm(true);
-                        }}
-                      >
-                        <Ionicons name="add" size={18} color="#FFFFFF" />
-                        <Text style={styles.popupAddBtnText}>Add New Customer</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-                </>
-              ) : (
-                /* Add Customer Form */
-                <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-                  <ScrollView showsVerticalScrollIndicator={false}>
-                    <View style={styles.popupFormField}>
-                      <Text style={styles.popupFormLabel}>Name *</Text>
-                      <TextInput
-                        style={styles.popupFormInput}
-                        placeholder="Customer name"
-                        value={newCustomerName}
-                        onChangeText={setNewCustomerName}
-                        placeholderTextColor="#9CA3AF"
-                      />
-                    </View>
-                    <View style={styles.popupFormField}>
-                      <Text style={styles.popupFormLabel}>Phone *</Text>
-                      <View style={styles.popupSearchRow}>
-                        <View style={styles.popupCountryCode}>
-                          <Text style={styles.popupCountryCodeText}>{settings.countryCode}</Text>
-                        </View>
-                        <TextInput
-                          style={[styles.popupFormInput, { flex: 1 }]}
-                          placeholder="Phone number"
-                          value={newCustomerPhone}
-                          onChangeText={setNewCustomerPhone}
-                          keyboardType="phone-pad"
-                          placeholderTextColor="#9CA3AF"
-                        />
-                      </View>
-                    </View>
-                    <View style={styles.popupFormField}>
-                      <Text style={styles.popupFormLabel}>Email</Text>
-                      <TextInput
-                        style={styles.popupFormInput}
-                        placeholder="Email (optional)"
-                        value={newCustomerEmail}
-                        onChangeText={setNewCustomerEmail}
-                        keyboardType="email-address"
-                        autoCapitalize="none"
-                        placeholderTextColor="#9CA3AF"
-                      />
-                    </View>
-                    <View style={styles.popupFormActions}>
-                      <TouchableOpacity
-                        style={styles.popupCancelBtn}
-                        onPress={() => { setShowAddCustomerForm(false); resetNewCustomerForm(); }}
-                      >
-                        <Text style={styles.popupCancelBtnText}>Cancel</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.popupSaveBtn, (!newCustomerName || !newCustomerPhone) && styles.popupSaveBtnDisabled]}
-                        onPress={createAndSelectCustomer}
-                        disabled={!newCustomerName || !newCustomerPhone}
-                      >
-                        <Text style={styles.popupSaveBtnText}>Save & Select</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </ScrollView>
-                </KeyboardAvoidingView>
-              )}
-            </View>
-          </View>
-        </Modal>
+          onClose={() => setShowCustomerModal(false)}
+          countryCode={settings.countryCode}
+          onSelectCustomer={(customer) => {
+            setCustomer(customer.id, customer.name);
+          }}
+          searchCustomer={async (phone) => {
+            try {
+              const response = await customersApi.search(phone);
+              if (response.data && response.data.length > 0) {
+                const c = response.data[0];
+                return {
+                  id: c.id,
+                  name: c.name,
+                  phone: c.phone,
+                  email: c.email,
+                  total_orders: c.total_orders,
+                  total_purchases: c.total_purchases,
+                };
+              }
+              return null;
+            } catch (error) {
+              console.error('Customer search error:', error);
+              return null;
+            }
+          }}
+          onCreateCustomer={async (customerData) => {
+            const response = await customersApi.create({
+              name: customerData.name,
+              phone: customerData.phone,
+            });
+            return {
+              id: response.data.id,
+              name: response.data.name,
+              phone: response.data.phone,
+            };
+          }}
+        />
 
         {/* Logout Confirmation Modal */}
         <ConfirmationModal
