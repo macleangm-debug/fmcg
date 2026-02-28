@@ -90,6 +90,9 @@ export default function Products() {
   const [savingProduct, setSavingProduct] = useState(false);
   const [productFormError, setProductFormError] = useState('');
 
+  // Bulk Import modal
+  const [showBulkImportModal, setShowBulkImportModal] = useState(false);
+
   const resetProductForm = () => {
     setNewProductName('');
     setNewProductPrice('');
