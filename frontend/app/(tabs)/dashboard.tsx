@@ -519,6 +519,24 @@ export default function Dashboard() {
     try {
       const response = await dashboardApi.getStats(selectedLocationId);
       setStats(response.data);
+      
+      // Generate recent activities from orders
+      if (response.data?.recent_orders) {
+        const activities: Activity[] = response.data.recent_orders.slice(0, 8).map((order: Order, index: number) => ({
+          id: order.id || String(index),
+          type: order.status === 'completed' ? 'payment' : 'order',
+          message: order.status === 'completed' 
+            ? `Order #${order.order_number || order.id?.substring(0, 8)} completed`
+            : `New order from ${order.customer_name || 'Walk-in'}`,
+          timestamp: order.created_at || new Date().toISOString(),
+          metadata: {
+            orderId: order.order_number || order.id,
+            customerName: order.customer_name,
+            amount: order.total,
+          },
+        }));
+        setRecentActivities(activities);
+      }
     } catch (error) {
       console.log('Failed to fetch stats:', error);
     } finally {
