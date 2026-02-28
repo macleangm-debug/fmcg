@@ -1248,6 +1248,23 @@ class ProductBase(BaseModel):
 class ProductCreate(ProductBase):
     pass
 
+class BulkProductCreate(BaseModel):
+    """Model for bulk product import - SKU is optional and will be auto-generated if not provided"""
+    name: str
+    description: Optional[str] = None
+    category_id: str
+    price: float
+    cost_price: Optional[float] = None
+    sku: Optional[str] = None  # Optional - will be auto-generated if not provided
+    barcode: Optional[str] = None
+    stock_quantity: int = 0
+    low_stock_threshold: int = 10
+    tax_rate: float = 0.0
+    image: Optional[str] = None
+    is_active: bool = True
+    track_stock: bool = True
+    unit_of_measure: str = "pcs"
+
 class ProductUpdate(BaseModel):
     name: Optional[str] = None
     description: Optional[str] = None
