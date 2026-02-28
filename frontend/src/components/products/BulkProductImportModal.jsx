@@ -288,11 +288,14 @@ export default function BulkProductImportModal({
 
   const validRowsCount = rows.filter(r => r.name.trim() && r.price.trim() && r.category_id).length;
 
+  // Early return if not visible
+  if (!visible) return null;
+
   return (
     <Modal
       visible={visible}
       transparent={true}
-      animationType="slide"
+      animationType="fade"
       onRequestClose={handleClose}
     >
       <View style={styles.overlay}>
