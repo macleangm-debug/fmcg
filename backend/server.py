@@ -3578,6 +3578,46 @@ async def create_product(product: ProductCreate, current_user: dict = Depends(ge
         **product.dict()
     )
 
+@api_router.post("/products/bulk", response_model=dict)
+async def bulk_import_products(
+    products: List[ProductCreate],
+    current_user: dict = Depends(get_current_user)
+):
+    """Bulk import multiple products at once"""
+    if current_user["role"] not in ["admin", "manager", "superadmin"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    business_id = current_user.get("business_id")
+    
+    success_count = 0
+    failed_count = 0
+    errors = []
+    created_ids = []
+    
+    for idx, product in enumerate(products):
+        try:
+            prod_dict = product.dict()
+            prod_dict["business_id"] = business_id
+            prod_dict["created_at"] = datetime.utcnow()
+            
+            result = await db.products.insert_one(prod_dict)
+            created_ids.append(str(result.inserted_id))
+            success_count += 1
+        except Exception as e:
+            failed_count += 1
+            errors.append({
+                "index": idx,
+                "name": product.name,
+                "error": str(e)
+            })
+    
+    return {
+        "success": success_count,
+        "failed": failed_count,
+        "created_ids": created_ids,
+        "errors": errors if errors else None
+    }
+
 # Categories - Multi-tenant
 @api_router.get("/categories", response_model=List[CategoryResponse])
 async def get_categories(current_user: dict = Depends(get_current_user)):
