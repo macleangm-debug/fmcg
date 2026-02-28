@@ -858,6 +858,9 @@ export default function Cart() {
           countryCode={settings.countryCode}
           onSelectCustomer={(customer) => {
             setCustomer(customer.id, customer.name);
+            // Auto-navigate to products list after customer selection
+            loadProducts();
+            setShowProductsModal(true);
           }}
           searchCustomer={async (phone) => {
             try {
