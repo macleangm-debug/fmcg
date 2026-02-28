@@ -32,6 +32,11 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
   - Category dropdown for each product row
   - Validation and error display
   - **KNOWN ISSUE**: Modal has rendering issues on React Native Web platform
+- ✅ **CLEAN EMPTY STATES**: Updated Products pages to hide search/stats when empty
+  - Admin products page (`/admin/products`) - clean empty state
+  - Inventory products page (`/inventory/products`) - clean empty state
+  - Shows humorous "Your inventory's looking a bit... empty" message
+  - Hides search bar, stats row, and category tabs when no products exist
 - ✅ **Testing Agent Validation** - iteration_11.json (100% backend pass rate)
 
 ### February 28, 2026 (Session 1) - DASHBOARD & NEW SALE UI/UX IMPROVEMENTS ✅
