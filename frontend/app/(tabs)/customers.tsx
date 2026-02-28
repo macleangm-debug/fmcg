@@ -511,27 +511,29 @@ export default function Customers() {
       {isWeb ? (
         <View style={styles.webContentWrapper}>
           <View style={styles.webWhiteCard}>
-            {/* Search Bar */}
-            <View style={styles.webFilterContainer}>
-              <View style={styles.webSearchBox}>
-                <Ionicons name="search" size={18} color="#6B7280" />
-                <TextInput
-                  style={styles.webSearchInput}
-                  placeholder="Search customers..."
-                  value={search}
-                  onChangeText={setSearch}
-                  placeholderTextColor="#6B7280"
-                />
-                {search.length > 0 && (
-                  <TouchableOpacity onPress={() => setSearch('')}>
-                    <Ionicons name="close-circle" size={18} color="#6B7280" />
-                  </TouchableOpacity>
-                )}
+            {/* Search Bar - Only show when there are customers */}
+            {customers.length > 0 && (
+              <View style={styles.webFilterContainer}>
+                <View style={styles.webSearchBox}>
+                  <Ionicons name="search" size={18} color="#6B7280" />
+                  <TextInput
+                    style={styles.webSearchInput}
+                    placeholder="Search customers..."
+                    value={search}
+                    onChangeText={setSearch}
+                    placeholderTextColor="#6B7280"
+                  />
+                  {search.length > 0 && (
+                    <TouchableOpacity onPress={() => setSearch('')}>
+                      <Ionicons name="close-circle" size={18} color="#6B7280" />
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
-            </View>
+            )}
 
             {/* Table/Grid Header for Table View */}
-            {customersView === 'table' && <TableHeader />}
+            {customersView === 'table' && customers.length > 0 && <TableHeader />}
 
             {/* Customer List */}
             <FlatList
