@@ -549,7 +549,7 @@ export default function ProductSwitcher({ currentProductId }: ProductSwitcherPro
                   <Text style={styles.loginTextSpace}>Sign In</Text>
                 </TouchableOpacity>
               )}
-            </TouchableOpacity>
+            </Pressable>
           ) : (
             /* FULL MODE - Full Screen Launcher */
             <View style={styles.fullLauncher}>
