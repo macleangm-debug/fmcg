@@ -187,6 +187,11 @@ export default function Cart() {
 
   // Bulk Import modal state
   const [showBulkImportModal, setShowBulkImportModal] = useState(false);
+  
+  // Debug: Log when showBulkImportModal changes
+  useEffect(() => {
+    console.log('showBulkImportModal state changed to:', showBulkImportModal);
+  }, [showBulkImportModal]);
 
   // Barcode scanner state - using global modal context
   const { openBarcodeScanner } = useModal();
