@@ -609,9 +609,9 @@ export default function Orders() {
               ListHeaderComponent={orders.length > 0 && ordersView !== 'table' ? renderSummary : null}
               ListEmptyComponent={
                 <View style={styles.webEmptyState}>
-                  <Ionicons name="receipt-outline" size={64} color="#6B7280" />
-                  <Text style={styles.webEmptyText}>No orders found</Text>
-                  <Text style={styles.webEmptySubtext}>Orders will appear here once created</Text>
+                  <Ionicons name="receipt-outline" size={48} color="#9CA3AF" />
+                  <Text style={styles.webEmptyTitle}>Ka-ching! Oh wait... no sales yet</Text>
+                  <Text style={styles.webEmptyText}>Your cash register is ready and waiting. Make that first sale!</Text>
                 </View>
               }
             />
