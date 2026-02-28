@@ -61,8 +61,6 @@ const BulkProductImportModal: React.FC<BulkProductImportModalProps> = ({
   onImport,
   formatCurrency,
 }) => {
-  console.log('BulkProductImportModal: visible =', visible);
-  
   const [rows, setRows] = useState<BulkProductRow[]>([createEmptyRow()]);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ success: number; failed: number } | null>(null);
