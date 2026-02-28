@@ -273,6 +273,21 @@ export default function Cart() {
     }
   };
 
+  // Bulk Import handler
+  const handleBulkImport = async (productsToImport: any[]): Promise<{ success: number; failed: number }> => {
+    try {
+      const response = await productsApi.bulkImport(productsToImport);
+      // Refresh the product list after import
+      await loadProducts();
+      return {
+        success: response.data.success,
+        failed: response.data.failed,
+      };
+    } catch (error: any) {
+      throw new Error(error.response?.data?.detail || 'Failed to import products');
+    }
+  };
+
   // Handle adding product - check for variants first
   const handleProductPress = (product: any) => {
     console.log('=== handleProductPress called ===');
