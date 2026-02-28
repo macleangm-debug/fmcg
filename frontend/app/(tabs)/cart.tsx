@@ -1523,6 +1523,7 @@ export default function Cart() {
   }
 
   return (
+    <>
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         {/* Back button for sales staff to return to products */}
