@@ -41,6 +41,7 @@ export const productsApi = {
   create: (data: any) => api.post('/products', data),
   update: (id: string, data: any) => api.put(`/products/${id}`, data),
   delete: (id: string) => api.delete(`/products/${id}`),
+  bulkImport: (products: any[]) => api.post('/products/bulk', products),
 };
 
 // Invoicing products API (separate from retail products)
