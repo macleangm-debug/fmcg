@@ -320,14 +320,21 @@ export default function ProductSwitcher({ currentProductId }: ProductSwitcherPro
       return;
     }
     
-    const subscribed = isSubscribed(app.id);
-    console.log('Is subscribed:', subscribed);
+    // Core apps that should always be accessible without subscription check
+    const coreApps = ['retail_pro', 'inventory', 'invoicing', 'kwikpay', 'bulk_sms', 'expenses', 'loyalty'];
+    const isCoreApp = coreApps.includes(app.id);
     
-    if (subscribed) {
-      // Subscribed - navigate directly to dashboard
+    const subscribed = isSubscribed(app.id);
+    console.log('Is subscribed:', subscribed, 'Is core app:', isCoreApp);
+    
+    if (subscribed || isCoreApp) {
+      // Subscribed or core app - navigate directly to dashboard
       console.log('Navigating to:', app.route);
       setShowDropdown(false);
-      router.push(app.route as any);
+      // Use setTimeout to ensure modal closes before navigation
+      setTimeout(() => {
+        router.push(app.route as any);
+      }, 100);
     } else {
       // Not subscribed - show beautiful trial modal via global context
       console.log('Showing trial modal for:', app.name);
