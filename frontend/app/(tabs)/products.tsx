@@ -23,6 +23,7 @@ import { useCartStore } from '../../src/store/cartStore';
 import { useBusinessStore } from '../../src/store/businessStore';
 import EmptyState from '../../src/components/EmptyState';
 import Input from '../../src/components/Input';
+import BulkProductImportModal from '../../src/components/products/BulkProductImportModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = (SCREEN_WIDTH - 48) / 2;
