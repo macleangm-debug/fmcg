@@ -695,7 +695,7 @@ export default function ProductSwitcher({ currentProductId }: ProductSwitcherPro
               </LinearGradient>
             </View>
           )}
-        </View>
+        </TouchableOpacity>
       </Modal>
       
       {/* Waitlist Modal for Coming Soon Apps */}
