@@ -155,8 +155,11 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 - [x] **FULL-BLEED THEMING (COMPLETED)** - Theme color covers entire sidebar, header, and dashboard background for all 7 products
 - [x] **RETAILPRO COMPREHENSIVE TESTING (COMPLETED Feb 17, 2026)** - Backend APIs 100% pass, Frontend 95% pass, 9 test orders created, pytest suite at `/app/backend/tests/test_retailpro_apis.py`
 - [x] **PRODUCT-SPECIFIC CAROUSEL CONTENT (COMPLETED Feb 17, 2026)** - 16 adverts seeded with product-specific content for all 7 products, auto-fetch from API with theme color override
+- [x] **DASHBOARD UI/UX IMPROVEMENTS (COMPLETED Feb 28, 2026)** - Quick Actions, Recent Activity, Top Selling Products, Enhanced Low Stock Alert
+- [x] **NEW SALE CUSTOMER-FIRST FLOW (COMPLETED Feb 28, 2026)** - No walk-ins, mandatory customer selection before browsing products
 
-### P1 - Upcoming
+### P1 - In Progress
+- [ ] **Product Switcher Bug** - 9-dot grid click not triggering "Start Free Trial" modal for unsubscribed apps
 - [ ] **Tigo SMS Testing** - User deferred ("We will test later"), requires VPN access
 - [ ] Language Selector integration (blocked - `import.meta` bundler error)
 - [ ] UniTxt admin dashboard for SMS campaigns
@@ -164,11 +167,12 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 ### P2 - Future/Backlog
 - [ ] Deploy to VPN-connected server
 - [ ] Test live SMS sending
-- [ ] UniTxt admin dashboard for SMS campaigns
+- [ ] Fix sales_staff/front_desk roles customer permissions
 
 ### P3 - Future/Backlog
 - [ ] Production build for Expo web
 - [ ] Refactor backend routes into separate files
+- [ ] Refactor 4,890-line dashboard.tsx into smaller components
 
 ---
 
