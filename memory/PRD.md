@@ -11,7 +11,30 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 
 ## What's Been Implemented
 
-### February 28, 2026 (Latest Session) - DASHBOARD & NEW SALE UI/UX IMPROVEMENTS ✅
+### February 28, 2026 (Session 2) - PROGRESSIVE PROFILING & BULK IMPORT ✅
+- ✅ **P0 COMPLETED: Complete Profile Prompt** - Modal appears during checkout for customers without email
+  - Shows "Complete Customer Profile?" with email input field
+  - "Skip for Now" button continues checkout without email
+  - "Save & Continue" button updates customer profile with email before checkout
+  - Benefits banner explains value of adding email (digital receipts, promotions)
+- ✅ **P0 COMPLETED: Bulk Product Import API** - Backend endpoint `/api/products/bulk`
+  - Accepts array of products for batch creation
+  - Auto-generates SKU if not provided (format: SKU-YYMMDD-XXXX)
+  - Returns success/failed counts and created IDs
+  - Requires admin/manager role
+- ✅ **P0 COMPLETED: Customer GET/UPDATE Endpoints**
+  - `GET /api/customers/{id}` - Fetch single customer by ID
+  - `PUT /api/customers/{id}` - Update customer details (for progressive profiling)
+- ✅ **P0 COMPLETED: Bulk Import UI Button** - Green "Bulk Import" button on New Sale page
+- ✅ **NEW: BulkProductImportModal Component** - Created at `/app/frontend/src/components/products/BulkProductImportModal.jsx`
+  - "Add Manually" tab with row-based product entry
+  - "Import CSV" tab with paste area and template download
+  - Category dropdown for each product row
+  - Validation and error display
+  - **KNOWN ISSUE**: Modal has rendering issues on React Native Web platform
+- ✅ **Testing Agent Validation** - iteration_11.json (100% backend pass rate)
+
+### February 28, 2026 (Session 1) - DASHBOARD & NEW SALE UI/UX IMPROVEMENTS ✅
 - ✅ **P0 COMPLETED: Dashboard Quick Actions** - Added Quick Actions section with New Sale, Add Product, New Customer buttons
 - ✅ **P0 COMPLETED: Dashboard Recent Activity Feed** - Shows timeline of recent orders with timestamps
 - ✅ **P0 COMPLETED: Dashboard Top Selling Products** - Shows top 5 products with revenue and sales count
