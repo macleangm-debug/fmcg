@@ -32,6 +32,7 @@ import ViewToggle from '../../src/components/ViewToggle';
 import WebModal from '../../src/components/WebModal';
 import ConfirmationModal from '../../src/components/ConfirmationModal';
 import ImportExportModal from '../../src/components/ImportExportModal';
+import BulkProductImportModal from '../../src/components/products/BulkProductImportModal';
 
 interface VariantOption {
   name: string;
