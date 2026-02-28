@@ -322,18 +322,22 @@ export default function Categories() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Web Page Header */}
+      {/* Web Page Header - Hide count when empty */}
       {isWeb && (
         <View style={styles.webPageHeader}>
           <View>
             <Text style={styles.webPageTitle}>Categories</Text>
-            <Text style={styles.webPageSubtitle}>{categories.length} categories</Text>
+            {categories.length > 0 && (
+              <Text style={styles.webPageSubtitle}>{categories.length} categories</Text>
+            )}
           </View>
           <View style={styles.headerActions}>
-            <ViewToggle
-              currentView={categoriesView}
-              onToggle={setCategoriesView}
-            />
+            {categories.length > 0 && (
+              <ViewToggle
+                currentView={categoriesView}
+                onToggle={setCategoriesView}
+              />
+            )}
             <Pressable 
               onPress={() => setShowAddModal(true)} 
               style={styles.webCreateBtn}
