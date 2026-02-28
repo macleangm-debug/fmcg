@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -13,9 +13,34 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+interface Category {
+  id: string;
+  name: string;
+}
+
+interface BulkProductRow {
+  id: string;
+  name: string;
+  sku: string;
+  price: string;
+  stock: string;
+  category_id: string;
+  category_name: string;
+  status: 'pending' | 'valid' | 'invalid';
+  error?: string;
+}
+
+interface BulkProductImportModalProps {
+  visible: boolean;
+  onClose: () => void;
+  categories: Category[];
+  onImport: (products: any[]) => Promise<{ success: number; failed: number }>;
+  formatCurrency: (amount: number) => string;
+}
+
 const generateRowId = () => `row_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-const createEmptyRow = () => ({
+const createEmptyRow = (): BulkProductRow => ({
   id: generateRowId(),
   name: '',
   sku: '',
@@ -26,19 +51,19 @@ const createEmptyRow = () => ({
   status: 'pending',
 });
 
-export default function BulkProductImportModal({
+const BulkProductImportModal: React.FC<BulkProductImportModalProps> = ({
   visible,
   onClose,
   categories,
   onImport,
   formatCurrency,
-}) {
-  const [rows, setRows] = useState([createEmptyRow()]);
+}) => {
+  const [rows, setRows] = useState<BulkProductRow[]>([createEmptyRow()]);
   const [importing, setImporting] = useState(false);
-  const [importResult, setImportResult] = useState(null);
-  const [activeTab, setActiveTab] = useState('manual');
+  const [importResult, setImportResult] = useState<{ success: number; failed: number } | null>(null);
+  const [activeTab, setActiveTab] = useState<'manual' | 'csv'>('manual');
   const [csvContent, setCsvContent] = useState('');
-  const [showCategoryPicker, setShowCategoryPicker] = useState(null);
+  const [showCategoryPicker, setShowCategoryPicker] = useState<string | null>(null);
 
   const isWeb = Platform.OS === 'web';
 
