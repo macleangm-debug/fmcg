@@ -120,7 +120,7 @@ const BulkProductImportModal: React.FC<BulkProductImportModalProps> = ({
     const validatedRows = rows.map(row => {
       if (!row.name.trim() && !row.price.trim() && !row.sku.trim()) {
         // Empty row, skip validation but mark as pending
-        return { ...row, status: 'pending' };
+        return { ...row, status: 'pending' as const };
       }
       const validation = validateRow(row);
       return {
