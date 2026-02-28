@@ -169,6 +169,12 @@ export default function Cart() {
   // Clear cart confirmation modal
   const [showClearModal, setShowClearModal] = useState(false);
   
+  // Complete Profile prompt state
+  const [showCompleteProfileModal, setShowCompleteProfileModal] = useState(false);
+  const [profileEmail, setProfileEmail] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [selectedCustomerData, setSelectedCustomerData] = useState<Customer | null>(null);
+  
   // Promotions state
   const [promotionResult, setPromotionResult] = useState<PromotionResult | null>(null);
   const [loadingPromotions, setLoadingPromotions] = useState(false);
