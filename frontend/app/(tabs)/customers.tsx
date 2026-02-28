@@ -1640,11 +1640,12 @@ const styles = StyleSheet.create({
   webEmptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 80,
+    paddingVertical: 60,
   },
-  webEmptyText: { fontSize: 16, color: '#6B7280', marginTop: 16 },
+  webEmptyTitle: { fontSize: 18, fontWeight: '700', color: '#111827', marginTop: 12 },
+  webEmptyText: { fontSize: 14, color: '#6B7280', marginTop: 4, textAlign: 'center', maxWidth: 280 },
   webEmptyBtn: {
-    marginTop: 20,
+    marginTop: 16,
     paddingHorizontal: 24,
     paddingVertical: 14,
     backgroundColor: '#2563EB',
