@@ -473,18 +473,22 @@ export default function Customers() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Web Page Header */}
+      {/* Web Page Header - Only show count when there are customers */}
       {isWeb && (
         <View style={styles.webPageHeader}>
           <View>
             <Text style={styles.webPageTitle}>Customers</Text>
-            <Text style={styles.webPageSubtitle}>{customers.length} customer(s) found</Text>
+            {customers.length > 0 && (
+              <Text style={styles.webPageSubtitle}>{customers.length} customer(s) found</Text>
+            )}
           </View>
           <View style={styles.headerActions}>
-            <ViewToggle
-              currentView={customersView}
-              onToggle={setCustomersView}
-            />
+            {customers.length > 0 && (
+              <ViewToggle
+                currentView={customersView}
+                onToggle={setCustomersView}
+              />
+            )}
             <TouchableOpacity style={styles.webCreateBtn} onPress={handleOpenAddModal}>
               <Ionicons name="add" size={20} color="#FFFFFF" />
               <Text style={styles.webCreateBtnText}>Add Customer</Text>
