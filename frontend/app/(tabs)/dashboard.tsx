@@ -36,7 +36,13 @@ import {
   RevenueChart,
   SalesReport,
   PromotionalCard,
+  QuickActions,
+  TodaySummaryCard,
+  LowStockAlert,
+  RecentActivityFeed,
+  TopSellingProducts,
 } from '../../src/components/dashboard';
+import type { Activity } from '../../src/components/dashboard';
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
