@@ -1144,10 +1144,7 @@ export default function Cart() {
         <View style={styles.productActionBar}>
           <TouchableOpacity 
             style={styles.productActionButton}
-            onPress={() => {
-              console.log('Bulk Import button pressed, setting showBulkImportModal to true');
-              setShowBulkImportModal(true);
-            }}
+            onPress={() => setShowBulkImportModal(true)}
           >
             <Ionicons name="cloud-upload-outline" size={18} color="#10B981" />
             <Text style={styles.productActionButtonText}>Bulk Import</Text>
