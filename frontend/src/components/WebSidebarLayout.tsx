@@ -88,6 +88,267 @@ const getProductTheme = (segments: string[]) => {
   return PRODUCT_THEMES.dashboard;
 };
 
+// Helper to get current product ID from route
+const getCurrentProductId = (segments: string[]): string => {
+  const productSegment = segments.find(seg => 
+    Object.keys(PRODUCT_THEMES).includes(seg.toLowerCase())
+  )?.toLowerCase();
+  
+  if (productSegment) {
+    return productSegment;
+  }
+  
+  // Default to retailpro for dashboard/tabs routes
+  return 'retailpro';
+};
+
+// Product-specific sidebar menu configurations
+interface NavItem {
+  name: string;
+  label: string;
+  icon: string;
+  badge?: number;
+}
+
+interface ProductMenuConfig {
+  sections: {
+    title: string;
+    items: NavItem[];
+  }[];
+}
+
+const PRODUCT_MENUS: Record<string, ProductMenuConfig> = {
+  retailpro: {
+    sections: [
+      {
+        title: 'SALES',
+        items: [
+          { name: '/(tabs)/dashboard', label: 'Dashboard', icon: 'grid-outline' },
+          { name: '/(tabs)/cart', label: 'New Sale', icon: 'cart-outline' },
+          { name: '/(tabs)/orders', label: 'Orders', icon: 'receipt-outline' },
+        ]
+      },
+      {
+        title: 'CATALOG',
+        items: [
+          { name: '/(tabs)/customers', label: 'Customers', icon: 'people-outline' },
+          { name: '/admin/products', label: 'Products', icon: 'cube-outline' },
+          { name: '/admin/categories', label: 'Categories', icon: 'folder-outline' },
+        ]
+      },
+      {
+        title: 'INSIGHTS',
+        items: [
+          { name: '/admin/reports', label: 'Reports', icon: 'bar-chart-outline' },
+        ]
+      },
+      {
+        title: 'SETTINGS',
+        items: [
+          { name: '/admin/staff', label: 'Staff', icon: 'people-circle-outline' },
+          { name: '/admin/settings', label: 'Settings', icon: 'settings-outline' },
+        ]
+      }
+    ]
+  },
+  unitxt: {
+    sections: [
+      {
+        title: 'SMS',
+        items: [
+          { name: '/unitxt', label: 'Dashboard', icon: 'grid-outline' },
+          { name: '/unitxt/campaign/new', label: 'New Campaign', icon: 'send-outline' },
+          { name: '/unitxt/campaigns', label: 'Campaigns', icon: 'chatbubbles-outline' },
+        ]
+      },
+      {
+        title: 'CONTACTS',
+        items: [
+          { name: '/unitxt/contacts', label: 'Contacts', icon: 'people-outline' },
+          { name: '/unitxt/groups', label: 'Groups', icon: 'folder-outline' },
+          { name: '/unitxt/templates', label: 'Templates', icon: 'document-text-outline' },
+        ]
+      },
+      {
+        title: 'ACCOUNT',
+        items: [
+          { name: '/unitxt/credits', label: 'SMS Credits', icon: 'wallet-outline' },
+          { name: '/unitxt/reports', label: 'Reports', icon: 'bar-chart-outline' },
+        ]
+      },
+      {
+        title: 'SETTINGS',
+        items: [
+          { name: '/unitxt/settings', label: 'Settings', icon: 'settings-outline' },
+        ]
+      }
+    ]
+  },
+  inventory: {
+    sections: [
+      {
+        title: 'STOCK',
+        items: [
+          { name: '/inventory', label: 'Dashboard', icon: 'grid-outline' },
+          { name: '/inventory/stock', label: 'Stock Levels', icon: 'layers-outline' },
+          { name: '/inventory/receive', label: 'Receive Stock', icon: 'arrow-down-outline' },
+        ]
+      },
+      {
+        title: 'MANAGEMENT',
+        items: [
+          { name: '/inventory/warehouses', label: 'Warehouses', icon: 'business-outline' },
+          { name: '/inventory/transfers', label: 'Transfers', icon: 'swap-horizontal-outline' },
+          { name: '/inventory/adjustments', label: 'Adjustments', icon: 'create-outline' },
+        ]
+      },
+      {
+        title: 'ALERTS',
+        items: [
+          { name: '/inventory/alerts', label: 'Low Stock Alerts', icon: 'alert-circle-outline' },
+          { name: '/inventory/reports', label: 'Reports', icon: 'bar-chart-outline' },
+        ]
+      },
+      {
+        title: 'SETTINGS',
+        items: [
+          { name: '/inventory/settings', label: 'Settings', icon: 'settings-outline' },
+        ]
+      }
+    ]
+  },
+  invoicing: {
+    sections: [
+      {
+        title: 'INVOICES',
+        items: [
+          { name: '/invoicing', label: 'Dashboard', icon: 'grid-outline' },
+          { name: '/invoicing/new', label: 'New Invoice', icon: 'add-circle-outline' },
+          { name: '/invoicing/list', label: 'All Invoices', icon: 'document-text-outline' },
+        ]
+      },
+      {
+        title: 'QUOTES',
+        items: [
+          { name: '/invoicing/quotes', label: 'Quotes', icon: 'reader-outline' },
+          { name: '/invoicing/recurring', label: 'Recurring', icon: 'repeat-outline' },
+        ]
+      },
+      {
+        title: 'CLIENTS',
+        items: [
+          { name: '/invoicing/clients', label: 'Clients', icon: 'people-outline' },
+          { name: '/invoicing/reports', label: 'Reports', icon: 'bar-chart-outline' },
+        ]
+      },
+      {
+        title: 'SETTINGS',
+        items: [
+          { name: '/invoicing/settings', label: 'Settings', icon: 'settings-outline' },
+        ]
+      }
+    ]
+  },
+  kwikpay: {
+    sections: [
+      {
+        title: 'PAYMENTS',
+        items: [
+          { name: '/kwikpay', label: 'Dashboard', icon: 'grid-outline' },
+          { name: '/kwikpay/transactions', label: 'Transactions', icon: 'swap-vertical-outline' },
+          { name: '/kwikpay/collect', label: 'Collect Payment', icon: 'card-outline' },
+        ]
+      },
+      {
+        title: 'TOOLS',
+        items: [
+          { name: '/kwikpay/links', label: 'Payment Links', icon: 'link-outline' },
+          { name: '/kwikpay/qr', label: 'QR Codes', icon: 'qr-code-outline' },
+        ]
+      },
+      {
+        title: 'FINANCE',
+        items: [
+          { name: '/kwikpay/settlements', label: 'Settlements', icon: 'wallet-outline' },
+          { name: '/kwikpay/reports', label: 'Reports', icon: 'bar-chart-outline' },
+        ]
+      },
+      {
+        title: 'SETTINGS',
+        items: [
+          { name: '/kwikpay/settings', label: 'Settings', icon: 'settings-outline' },
+        ]
+      }
+    ]
+  },
+  expenses: {
+    sections: [
+      {
+        title: 'EXPENSES',
+        items: [
+          { name: '/expenses', label: 'Dashboard', icon: 'grid-outline' },
+          { name: '/expenses/add', label: 'Add Expense', icon: 'add-circle-outline' },
+          { name: '/expenses/list', label: 'All Expenses', icon: 'list-outline' },
+        ]
+      },
+      {
+        title: 'RECEIPTS',
+        items: [
+          { name: '/expenses/scan', label: 'Scan Receipt', icon: 'camera-outline' },
+          { name: '/expenses/receipts', label: 'Receipts', icon: 'document-attach-outline' },
+        ]
+      },
+      {
+        title: 'BUDGETS',
+        items: [
+          { name: '/expenses/categories', label: 'Categories', icon: 'folder-outline' },
+          { name: '/expenses/budgets', label: 'Budgets', icon: 'pie-chart-outline' },
+          { name: '/expenses/reports', label: 'Reports', icon: 'bar-chart-outline' },
+        ]
+      },
+      {
+        title: 'SETTINGS',
+        items: [
+          { name: '/expenses/settings', label: 'Settings', icon: 'settings-outline' },
+        ]
+      }
+    ]
+  },
+  loyalty: {
+    sections: [
+      {
+        title: 'LOYALTY',
+        items: [
+          { name: '/loyalty', label: 'Dashboard', icon: 'grid-outline' },
+          { name: '/loyalty/programs', label: 'Programs', icon: 'ribbon-outline' },
+          { name: '/loyalty/rewards', label: 'Rewards', icon: 'gift-outline' },
+        ]
+      },
+      {
+        title: 'MEMBERS',
+        items: [
+          { name: '/loyalty/members', label: 'Members', icon: 'people-outline' },
+          { name: '/loyalty/tiers', label: 'Tiers', icon: 'trophy-outline' },
+          { name: '/loyalty/points', label: 'Points History', icon: 'time-outline' },
+        ]
+      },
+      {
+        title: 'CAMPAIGNS',
+        items: [
+          { name: '/loyalty/campaigns', label: 'Campaigns', icon: 'megaphone-outline' },
+          { name: '/loyalty/reports', label: 'Reports', icon: 'bar-chart-outline' },
+        ]
+      },
+      {
+        title: 'SETTINGS',
+        items: [
+          { name: '/loyalty/settings', label: 'Settings', icon: 'settings-outline' },
+        ]
+      }
+    ]
+  },
+};
+
 // Use a static reference for the StyleSheet (base styles)
 const theme = baseTheme;
 
