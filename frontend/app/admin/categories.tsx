@@ -399,9 +399,12 @@ export default function Categories() {
             >
               {filteredCategories.length === 0 ? (
                 <View style={styles.webEmptyState}>
-                  <Ionicons name="folder-outline" size={64} color="#6B7280" />
+                  <Ionicons name="folder-outline" size={48} color="#9CA3AF" />
+                  <Text style={styles.webEmptyTitle}>
+                    {searchQuery ? 'No matches found' : 'Organization is key to success!'}
+                  </Text>
                   <Text style={styles.webEmptyText}>
-                    {searchQuery ? 'No categories match your search' : 'No categories found'}
+                    {searchQuery ? 'Try a different search term' : 'Create categories to organize your products like a pro.'}
                   </Text>
                   {!searchQuery && (
                     <TouchableOpacity style={styles.emptyBtn} onPress={() => setShowAddModal(true)}>
