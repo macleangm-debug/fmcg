@@ -1224,16 +1224,6 @@ export default function Dashboard() {
               percentage={16}
               sales={23}
             />
-            
-            {/* Dynamic Ecosystem Upsell Banners */}
-            <EcosystemUpsellBanner
-              subscribedProducts={linkedAppIds}
-              currentProduct="retailpro"
-              onStartTrial={(productId) => {
-                const app = ALL_GALAXY_APPS.find(a => a.id === productId);
-                if (app) handleLinkApp(app);
-              }}
-            />
           </View>
         </View>
       </ScrollView>
