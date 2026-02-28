@@ -183,7 +183,7 @@ class TestCustomers:
         unique_id = uuid.uuid4().hex[:8]
         test_customer = {
             "name": f"TEST_Customer_{unique_id}",
-            "phone": f"+2557{unique_id}",  # Unique phone number
+            "phone": f"+255712{unique_id[:6]}",  # Unique phone number with at least 9 digits
             "email": f"test_{unique_id}@example.com",
             "country": "TZ"
         }
