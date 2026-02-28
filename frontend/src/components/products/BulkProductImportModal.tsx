@@ -895,6 +895,58 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#2563EB',
   },
+  fileImportSection: {
+    gap: 16,
+  },
+  fileImportInfo: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#EFF6FF',
+    padding: 12,
+    borderRadius: 10,
+    gap: 10,
+  },
+  fileImportInfoText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#1E40AF',
+    lineHeight: 18,
+  },
+  uploadFileBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+    borderRadius: 12,
+    backgroundColor: '#10B981',
+    gap: 10,
+  },
+  uploadFileBtnText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  fileImportHint: {
+    fontSize: 12,
+    color: '#6B7280',
+    textAlign: 'center',
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: 8,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#E5E7EB',
+  },
+  dividerText: {
+    paddingHorizontal: 16,
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#9CA3AF',
+  },
   csvSection: {
     gap: 16,
   },
