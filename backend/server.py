@@ -3748,6 +3748,77 @@ async def create_customer(customer: CustomerCreate, current_user: dict = Depends
         **customer.dict()
     )
 
+@api_router.put("/customers/{customer_id}", response_model=CustomerResponse)
+async def update_customer(
+    customer_id: str,
+    customer_update: CustomerUpdate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update customer details (e.g., adding email during progressive profiling)"""
+    business_id = current_user.get("business_id")
+    
+    # Find existing customer
+    query = {"_id": ObjectId(customer_id)}
+    if business_id and current_user["role"] != "superadmin":
+        query["business_id"] = business_id
+    
+    existing_customer = await db.customers.find_one(query)
+    if not existing_customer:
+        raise HTTPException(status_code=404, detail="Customer not found")
+    
+    # Build update dict with only non-None values
+    update_data = {k: v for k, v in customer_update.dict().items() if v is not None}
+    
+    if not update_data:
+        # No changes, return existing customer
+        return CustomerResponse(
+            id=str(existing_customer["_id"]),
+            name=existing_customer.get("name", ""),
+            phone=existing_customer.get("phone", ""),
+            email=existing_customer.get("email"),
+            address=existing_customer.get("address"),
+            birthday=existing_customer.get("birthday"),
+            customer_type=existing_customer.get("customer_type"),
+            company_name=existing_customer.get("company_name"),
+            company_id=existing_customer.get("company_id"),
+            tax_id=existing_customer.get("tax_id"),
+            payment_terms=existing_customer.get("payment_terms"),
+            total_purchases=existing_customer.get("total_purchases", 0),
+            total_orders=existing_customer.get("total_orders", 0),
+            created_at=existing_customer.get("created_at", datetime.utcnow()),
+            business_id=existing_customer.get("business_id")
+        )
+    
+    # Add updated_at timestamp
+    update_data["updated_at"] = datetime.utcnow()
+    
+    # Perform update
+    await db.customers.update_one(
+        {"_id": ObjectId(customer_id)},
+        {"$set": update_data}
+    )
+    
+    # Fetch updated customer
+    updated_customer = await db.customers.find_one({"_id": ObjectId(customer_id)})
+    
+    return CustomerResponse(
+        id=str(updated_customer["_id"]),
+        name=updated_customer.get("name", ""),
+        phone=updated_customer.get("phone", ""),
+        email=updated_customer.get("email"),
+        address=updated_customer.get("address"),
+        birthday=updated_customer.get("birthday"),
+        customer_type=updated_customer.get("customer_type"),
+        company_name=updated_customer.get("company_name"),
+        company_id=updated_customer.get("company_id"),
+        tax_id=updated_customer.get("tax_id"),
+        payment_terms=updated_customer.get("payment_terms"),
+        total_purchases=updated_customer.get("total_purchases", 0),
+        total_orders=updated_customer.get("total_orders", 0),
+        created_at=updated_customer.get("created_at", datetime.utcnow()),
+        business_id=updated_customer.get("business_id")
+    )
+
 # Orders - Multi-tenant
 @api_router.get("/orders", response_model=List[OrderResponse])
 async def get_orders(
