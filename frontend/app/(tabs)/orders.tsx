@@ -549,19 +549,23 @@ export default function Orders() {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Web Page Header */}
+      {/* Web Page Header - Only show count when there are orders */}
       {isWeb && (
         <View style={styles.webPageHeader}>
           <View>
             <Text style={styles.webPageTitle}>Orders</Text>
-            <Text style={styles.webPageSubtitle}>{orders.length} order(s) found</Text>
+            {orders.length > 0 && (
+              <Text style={styles.webPageSubtitle}>{orders.length} order(s) found</Text>
+            )}
           </View>
-          <View style={styles.headerActions}>
-            <ViewToggle
-              currentView={ordersView}
-              onToggle={setOrdersView}
-            />
-          </View>
+          {orders.length > 0 && (
+            <View style={styles.headerActions}>
+              <ViewToggle
+                currentView={ordersView}
+                onToggle={setOrdersView}
+              />
+            </View>
+          )}
         </View>
       )}
 
