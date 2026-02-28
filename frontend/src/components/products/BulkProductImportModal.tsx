@@ -99,7 +99,7 @@ const BulkProductImportModal: React.FC<BulkProductImportModalProps> = ({
   };
 
   // Validate a single row
-  const validateRow = (row) => {
+  const validateRow = (row: BulkProductRow): { valid: boolean; error?: string } => {
     if (!row.name.trim()) {
       return { valid: false, error: 'Product name is required' };
     }
