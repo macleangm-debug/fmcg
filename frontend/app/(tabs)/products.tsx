@@ -145,6 +145,21 @@ export default function Products() {
     setShowCustomerModal(true);
   };
 
+  // Bulk Import handler
+  const handleBulkImport = async (products: any[]): Promise<{ success: number; failed: number }> => {
+    try {
+      const response = await productsApi.bulkImport(products);
+      // Refresh the product list after import
+      await fetchData();
+      return {
+        success: response.data.success,
+        failed: response.data.failed,
+      };
+    } catch (error: any) {
+      throw new Error(error.response?.data?.detail || 'Failed to import products');
+    }
+  };
+
   const resetNewCustomerForm = () => {
     setNewCustomerName('');
     setNewCustomerEmail('');
