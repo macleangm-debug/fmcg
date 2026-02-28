@@ -573,10 +573,18 @@ const BulkProductImportModal: React.FC<BulkProductImportModalProps> = ({
       </View>
   );
 
-  // For web, use a Portal-like fixed position overlay
+  // For web, use ReactDOM.createPortal to render at body level
   // For native, use the Modal component
   if (isWeb) {
-    return modalContent;
+    // Create portal container if it doesn't exist
+    let portalRoot = document.getElementById('bulk-import-portal');
+    if (!portalRoot) {
+      portalRoot = document.createElement('div');
+      portalRoot.id = 'bulk-import-portal';
+      portalRoot.style.cssText = 'position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 99999; pointer-events: auto;';
+      document.body.appendChild(portalRoot);
+    }
+    return ReactDOM.createPortal(modalContent, portalRoot);
   }
 
   return (
