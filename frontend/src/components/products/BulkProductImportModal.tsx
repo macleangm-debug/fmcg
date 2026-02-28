@@ -125,7 +125,7 @@ const BulkProductImportModal: React.FC<BulkProductImportModalProps> = ({
       const validation = validateRow(row);
       return {
         ...row,
-        status: validation.valid ? 'valid' : 'invalid',
+        status: validation.valid ? 'valid' as const : 'invalid' as const,
         error: validation.error,
       };
     });
