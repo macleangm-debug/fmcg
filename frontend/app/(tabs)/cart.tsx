@@ -1140,6 +1140,17 @@ export default function Cart() {
           </TouchableOpacity>
         </View>
 
+        {/* Product Action Buttons */}
+        <View style={styles.productActionBar}>
+          <TouchableOpacity 
+            style={styles.productActionButton}
+            onPress={() => setShowBulkImportModal(true)}
+          >
+            <Ionicons name="cloud-upload-outline" size={18} color="#10B981" />
+            <Text style={styles.productActionButtonText}>Bulk Import</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Category Filter */}
         <ScrollView 
           horizontal 
