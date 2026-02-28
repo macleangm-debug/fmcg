@@ -1693,6 +1693,15 @@ export default function ProductManagement() {
         templateEndpoint="/products/import-template"
         entityName="products"
       />
+      
+      {/* Bulk Product Import Modal */}
+      <BulkProductImportModal
+        visible={showBulkImportModal}
+        onClose={() => setShowBulkImportModal(false)}
+        categories={categories}
+        onImport={handleBulkImport}
+        formatCurrency={formatCurrency}
+      />
     </SafeAreaView>
   );
 }
