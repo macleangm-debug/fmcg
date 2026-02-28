@@ -320,43 +320,38 @@ export default function ProductSwitcher({ currentProductId }: ProductSwitcherPro
       return;
     }
     
-    // Core apps that should always be accessible without subscription check
-    const coreApps = ['retail_pro', 'inventory', 'invoicing', 'kwikpay', 'bulk_sms', 'expenses', 'loyalty'];
-    const isCoreApp = coreApps.includes(app.id);
-    
     const subscribed = isSubscribed(app.id);
-    console.log('Is subscribed:', subscribed, 'Is core app:', isCoreApp);
+    console.log('Is subscribed:', subscribed);
     
-    if (subscribed || isCoreApp) {
-      // Subscribed or core app - navigate directly to dashboard
+    if (subscribed) {
+      // Subscribed - navigate directly to dashboard
       console.log('Navigating to:', app.route);
       setShowDropdown(false);
-      // Use setTimeout to ensure modal closes before navigation
-      setTimeout(() => {
-        router.push(app.route as any);
-      }, 100);
+      router.push(app.route as any);
     } else {
       // Not subscribed - show beautiful trial modal via global context
       console.log('Showing trial modal for:', app.name);
       setSelectedApp(app);
       setShowDropdown(false); // Close dropdown first
       
-      // Open global trial modal
-      openTrialModal(
-        {
-          id: app.id,
-          name: app.name,
-          tagline: app.tagline,
-          description: app.description,
-          icon: app.icon,
-          color: app.color,
-          bgColor: app.bgColor,
-          gradientColors: app.gradientColors as [string, string],
-          features: app.features,
-          route: app.route,
-        },
-        () => handleStartTrial(app)
-      );
+      // Use setTimeout to ensure dropdown closes before opening trial modal
+      setTimeout(() => {
+        openTrialModal(
+          {
+            id: app.id,
+            name: app.name,
+            tagline: app.tagline,
+            description: app.description,
+            icon: app.icon,
+            color: app.color,
+            bgColor: app.bgColor,
+            gradientColors: app.gradientColors as [string, string],
+            features: app.features,
+            route: app.route,
+          },
+          () => handleStartTrial(app)
+        );
+      }, 150);
     }
   };
 
