@@ -288,11 +288,6 @@ export default function BulkProductImportModal({
 
   const validRowsCount = rows.filter(r => r.name.trim() && r.price.trim() && r.category_id).length;
 
-  // Early return if not visible
-  if (!visible) return null;
-
-  console.log('BulkProductImportModal rendering, visible:', visible);
-
   return (
     <Modal
       visible={visible}
