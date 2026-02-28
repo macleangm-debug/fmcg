@@ -33,12 +33,12 @@ export default function BulkProductImportModal({
   onImport,
   formatCurrency,
 }) {
-  const [rows, setRows] = useState<BulkProductRow[]>([createEmptyRow()]);
+  const [rows, setRows] = useState([createEmptyRow()]);
   const [importing, setImporting] = useState(false);
-  const [importResult, setImportResult] = useState<{ success: number; failed: number } | null>(null);
-  const [activeTab, setActiveTab] = useState<'manual' | 'csv'>('manual');
+  const [importResult, setImportResult] = useState(null);
+  const [activeTab, setActiveTab] = useState('manual');
   const [csvContent, setCsvContent] = useState('');
-  const [showCategoryPicker, setShowCategoryPicker] = useState<string | null>(null);
+  const [showCategoryPicker, setShowCategoryPicker] = useState(null);
 
   const isWeb = Platform.OS === 'web';
 
