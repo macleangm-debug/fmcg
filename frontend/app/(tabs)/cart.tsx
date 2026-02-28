@@ -2149,23 +2149,16 @@ export default function Cart() {
         orderTotal={lastOrderTotal}
       />
       
-      {/* Bulk Product Import Modal */}
+      {/* Bulk Product Import Modal - NOTE: Modal has rendering issues on web platform */}
+      {/* The backend API is functional and can be accessed via /api/products/bulk */}
+      <BulkProductImportModal
+        visible={showBulkImportModal}
+        onClose={() => setShowBulkImportModal(false)}
+        categories={categories}
+        onImport={handleBulkImport}
+        formatCurrency={formatCurrency}
+      />
     </SafeAreaView>
-    {showBulkImportModal && (
-      <View style={{ position: 'fixed' as any, top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', zIndex: 10000 }}>
-        <View style={{ backgroundColor: '#FFFFFF', borderRadius: 16, padding: 24, width: '90%', maxWidth: 500 }}>
-          <Text style={{ fontSize: 20, fontWeight: '700', marginBottom: 16 }}>Bulk Product Import - TEST</Text>
-          <Text style={{ marginBottom: 16 }}>This is a test modal to verify rendering works.</Text>
-          <TouchableOpacity 
-            style={{ backgroundColor: '#2563EB', padding: 14, borderRadius: 10 }}
-            onPress={() => setShowBulkImportModal(false)}
-          >
-            <Text style={{ color: '#FFFFFF', textAlign: 'center', fontWeight: '600' }}>Close</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    )}
-  </>
   );
 }
 
