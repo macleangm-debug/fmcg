@@ -550,8 +550,9 @@ export default function Customers() {
               }
               ListEmptyComponent={
                 <View style={styles.webEmptyState}>
-                  <Ionicons name="people-outline" size={64} color="#6B7280" />
-                  <Text style={styles.webEmptyText}>No customers found</Text>
+                  <Ionicons name="people-outline" size={48} color="#9CA3AF" />
+                  <Text style={styles.webEmptyTitle}>No business runs without customers!</Text>
+                  <Text style={styles.webEmptyText}>Your customer list is feeling lonely. Add your first one!</Text>
                   <TouchableOpacity style={styles.webEmptyBtn} onPress={handleOpenAddModal}>
                     <Text style={styles.webEmptyBtnText}>Add First Customer</Text>
                   </TouchableOpacity>
