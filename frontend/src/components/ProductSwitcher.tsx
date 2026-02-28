@@ -471,17 +471,19 @@ export default function ProductSwitcher({ currentProductId }: ProductSwitcherPro
                   const hasAccess = isSubscribed(app.id);
                   
                   return (
-                    <Pressable
+                    <TouchableOpacity
                       key={app.id}
                       style={[
                         styles.appItem,
                         isCurrent && styles.appItemActiveSpace
                       ]}
-                      onPress={(e) => {
-                        e.stopPropagation();
-                        if (!isCurrent) handleAppSelect(app);
+                      onPress={() => {
+                        if (!isCurrent) {
+                          handleAppSelect(app);
+                        }
                       }}
                       disabled={isCurrent}
+                      activeOpacity={0.7}
                     >
                       <View style={[styles.appIconSpace, { backgroundColor: app.bgColor }]}>
                         <Ionicons name={app.icon as any} size={22} color={app.color} />
@@ -501,7 +503,7 @@ export default function ProductSwitcher({ currentProductId }: ProductSwitcherPro
                       ]} numberOfLines={1}>
                         {app.name}
                       </Text>
-                    </Pressable>
+                    </TouchableOpacity>
                   );
                 })}
               </View>
