@@ -11,7 +11,21 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 
 ## What's Been Implemented
 
-### February 16, 2026 (Latest Session) - UI STANDARDIZATION COMPLETE ✅
+### February 28, 2026 (Latest Session) - DASHBOARD & NEW SALE UI/UX IMPROVEMENTS ✅
+- ✅ **P0 COMPLETED: Dashboard Quick Actions** - Added Quick Actions section with New Sale, Add Product, New Customer buttons
+- ✅ **P0 COMPLETED: Dashboard Recent Activity Feed** - Shows timeline of recent orders with timestamps
+- ✅ **P0 COMPLETED: Dashboard Top Selling Products** - Shows top 5 products with revenue and sales count
+- ✅ **P0 COMPLETED: Enhanced Low Stock Alert** - Shows low stock products with CTA to link Inventory (disappears when linked)
+- ✅ **P0 COMPLETED: New Sale Customer-First Flow** - Products only appear AFTER customer is selected (no walk-ins)
+- ✅ **P0 COMPLETED: Customer Selection Modal** - Phone search with country code (+255), Add New Customer option
+- ✅ **P0 COMPLETED: Browse Products & Scan Barcode** - Buttons appear after customer is selected
+- ✅ **New Dashboard Components Created**:
+  - `QuickActions.tsx` - 3-button row for common tasks
+  - `TodaySummaryCard.tsx` - Today vs yesterday comparison with goal progress
+  - `LowStockAlert.tsx` - Enhanced alert with inventory CTA
+  - `RecentActivityFeed.tsx` - Timeline of recent activities
+  - `TopSellingProducts.tsx` - Period toggle (today/week/month) with product rankings
+- ✅ **Testing Agent Validation** - iteration_10.json (70% pass - blocked by sales_staff permissions, admin flow works)
 - ✅ **P0 COMPLETED: UI Unification** - All 7 product pages now use the shared `WebSidebarLayout` component
 - ✅ **Layout Migration**:
   - Updated `/app/frontend/app/unitxt/_layout.tsx` - Now uses WebSidebarLayout (was UnitxtSidebarLayout)
