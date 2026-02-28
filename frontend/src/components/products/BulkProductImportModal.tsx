@@ -389,16 +389,16 @@ const BulkProductImportModal: React.FC<BulkProductImportModalProps> = ({
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.tab, activeTab === 'csv' && styles.tabActive]}
-              onPress={() => setActiveTab('csv')}
+              style={[styles.tab, activeTab === 'file' && styles.tabActive]}
+              onPress={() => setActiveTab('file')}
             >
               <Ionicons 
-                name="document-text-outline" 
+                name="cloud-upload-outline" 
                 size={18} 
-                color={activeTab === 'csv' ? '#2563EB' : '#6B7280'} 
+                color={activeTab === 'file' ? '#2563EB' : '#6B7280'} 
               />
-              <Text style={[styles.tabText, activeTab === 'csv' && styles.tabTextActive]}>
-                Import CSV
+              <Text style={[styles.tabText, activeTab === 'file' && styles.tabTextActive]}>
+                Import File
               </Text>
             </TouchableOpacity>
           </View>
