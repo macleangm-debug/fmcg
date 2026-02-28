@@ -30,6 +30,7 @@ import ConfirmationModal from '../../src/components/ConfirmationModal';
 import OfflineIndicator from '../../src/components/OfflineIndicator';
 import PostPurchaseReferralPopup from '../../src/components/PostPurchaseReferralPopup';
 import CustomerSelectionModal from '../../src/components/CustomerSelectionModal';
+import BulkProductImportModal from '../../src/components/products/BulkProductImportModal';
 import { useModal } from '../../src/context/ModalContext';
 import { printerService, ReceiptData } from '../../src/services/printerService';
 import syncService from '../../src/services/syncService';
