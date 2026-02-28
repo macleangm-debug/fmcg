@@ -361,25 +361,27 @@ export default function Categories() {
       {isWeb ? (
         <View style={styles.webContentWrapper}>
           <View style={styles.webWhiteCard}>
-            {/* Search Row */}
-            <View style={styles.webCardHeader}>
-              <Text style={styles.webCardTitle}>{filteredCategories.length} Categories</Text>
-              <View style={styles.webSearchBox}>
-                <Ionicons name="search" size={18} color="#6B7280" />
-                <TextInput
-                  style={styles.webSearchInput}
-                  placeholder="Search categories..."
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  placeholderTextColor="#6B7280"
-                />
-                {searchQuery.length > 0 && (
-                  <TouchableOpacity onPress={() => setSearchQuery('')}>
-                    <Ionicons name="close-circle" size={18} color="#6B7280" />
-                  </TouchableOpacity>
-                )}
+            {/* Search Row - Only show when there are categories */}
+            {categories.length > 0 && (
+              <View style={styles.webCardHeader}>
+                <Text style={styles.webCardTitle}>{filteredCategories.length} Categories</Text>
+                <View style={styles.webSearchBox}>
+                  <Ionicons name="search" size={18} color="#6B7280" />
+                  <TextInput
+                    style={styles.webSearchInput}
+                    placeholder="Search categories..."
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    placeholderTextColor="#6B7280"
+                  />
+                  {searchQuery.length > 0 && (
+                    <TouchableOpacity onPress={() => setSearchQuery('')}>
+                      <Ionicons name="close-circle" size={18} color="#6B7280" />
+                    </TouchableOpacity>
+                  )}
+                </View>
               </View>
-            </View>
+            )}
 
             {/* Table Header - No numbering column */}
             {categoriesView === 'table' && filteredCategories.length > 0 && (
