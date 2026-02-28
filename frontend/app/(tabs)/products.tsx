@@ -448,6 +448,8 @@ export default function Products() {
             icon="cube-outline"
             title="Your shelves are empty!"
             message={search ? 'Try a different search term' : "Time to stock up! Add products to start selling."}
+            actionLabel={!search ? "Add Product" : undefined}
+            onAction={!search ? () => setShowAddProductModal(true) : undefined}
           />
         }
       />
