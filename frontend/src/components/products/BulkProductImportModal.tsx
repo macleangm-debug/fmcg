@@ -180,7 +180,7 @@ const BulkProductImportModal: React.FC<BulkProductImportModalProps> = ({
     }
 
     // Parse data rows
-    const parsedRows = [];
+    const parsedRows: BulkProductRow[] = [];
     for (let i = 1; i < lines.length; i++) {
       const values = lines[i].split(',').map(v => v.trim().replace(/^["']|["']$/g, '')); // Remove quotes
       
