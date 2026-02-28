@@ -477,7 +477,8 @@ export default function Categories() {
             {categories.length === 0 ? (
               <View style={styles.emptyState}>
                 <Ionicons name="folder-outline" size={48} color={THEME.gray} />
-                <Text style={styles.emptyText}>No categories found</Text>
+                <Text style={styles.emptyTitle}>Organization is key to success!</Text>
+                <Text style={styles.emptyText}>Create categories to organize your products like a pro.</Text>
                 <TouchableOpacity style={styles.emptyBtn} onPress={() => setShowAddModal(true)}>
                   <Text style={styles.emptyBtnText}>Add Category</Text>
                 </TouchableOpacity>
