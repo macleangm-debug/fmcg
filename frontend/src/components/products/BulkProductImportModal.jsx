@@ -100,7 +100,7 @@ export default function BulkProductImportModal({
       const validation = validateRow(row);
       return {
         ...row,
-        status: validation.valid ? 'valid' as const : 'invalid' as const,
+        status: validation.valid ? 'valid' : 'invalid',
         error: validation.error,
       };
     });
