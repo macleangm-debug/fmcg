@@ -1,130 +1,134 @@
 <analysis>**original_problem_statement:**
-The initial goal was to set up an application from a GitHub repository and integrate SMS services. The project evolved into a major UI/UX overhaul for the RetailPro product dashboard and standardization of the entire SSO Soko app suite (7 products) to a consistent look and feel.
+The initial goal was a UI/UX overhaul for the RetailPro product dashboard and Add New Sale pages. The scope expanded based on user feedback to include a full implementation of a progressive profiling system for customer and product creation, humorous and cleaner empty-state UIs, and a dynamic cross-promotion banner for other products in the ecosystem.
 
 Recent user requests have focused on:
-1.  Thoroughly testing the RetailPro application (Completed).
-2.  Implementing product-specific advertisement carousels (Completed).
-3.  Fixing inconsistent sidebar menus for each product (Completed).
-4.  Fixing a bug in the 9-dot product switcher where clicking did not trigger the Start Free Trial modal (In Progress).
-5.  Testing the Tigo SMS integration on the user's personal server (Blocked by user's environment setup).
-6.  Discussing UI/UX improvements for the Dashboard and Add New Sale pages (Current active task).
+1.  Improving the Dashboard and Add New Sale page UI/UX. **(Completed)**
+2.  Implementing a customer-first checkout flow where products can only be added after a customer is selected. **(Completed)**
+3.  Implementing a progressive profiling system where customers can be created with minimal info (Name + Phone), with prompts to complete the profile later. **(In Progress)**
+4.  Adding humorous, context-aware empty state messages to all primary tables (Customers, Products, Orders, Categories). **(Completed)**
+5.  Advising on and implementing a bulk product import feature. **(Not Started)**
+6.  Fixing a bug where the Add Customer modal did not auto-navigate to the product list after creation. **(Completed)**
 
 **PRODUCT REQUIREMENTS:**
-1.  **P0**: Discuss and improve the UI/UX of the RetailPro Dashboard and Add New Sale page. **(IN PROGRESS)**
-2.  **P1**: Fix the Product Switcher modal not appearing on click. **(IN PROGRESS)**
-3.  **P2**: Finalize Deployment and User Verification for Tigo SMS. **(BLOCKED - User Action Pending)**
-4.  **P3**: Fix the Cannot use import.meta crash related to the  component. **(NOT STARTED)**
-5.  **P4**: Implement a UniTxt admin dashboard for managing SMS campaigns. **(NOT STARTED)**
-6.  **P5**:  component on the dashboard uses hardcoded mock data. **(NOT STARTED)**
-7.  **P6**: Investigate and resolve original Frontend loading issues. **(NOT STARTED)**
+1.  **P0**: Add a Complete Profile prompt during checkout for customers missing an email. **(IN PROGRESS)**
+2.  **P0**: Design and implement a self-service bulk product import feature (e.g., via CSV). **(NOT STARTED)**
+3.  **P1**: Fix the Product Switcher modal not appearing on click for unsubscribed apps. **(NOT STARTED)**
+4.  **P2**: Finalize Deployment and User Verification for Tigo SMS. **(BLOCKED - User Action Pending)**
+5.  **P3**: Fix the Cannot use import.meta crash related to the  component. **(NOT STARTED)**
+6.  **P4**: Implement a UniTxt admin dashboard for managing SMS campaigns. **(NOT STARTED)**
+7.  **P5**: Replace hardcoded mock data in the  component with live data. **(NOT STARTED)**
 
 **User's preferred language**: English
 
 **what currently exists?**
-The application is a full-stack platform with an Expo (React Native for Web) frontend and a FastAPI backend. A component-driven UI architecture is in place, ensuring all seven product dashboards (, , , etc.) share a consistent layout, header, and sidebar via  and  components. Dynamic theming provides each product with a unique color scheme, product-specific advertisement carousels, and context-aware sidebar menus. The RetailPro module has been seeded with test data and has passed a comprehensive automated test suite.
+The application is a full-stack platform with a React (Expo for Web) frontend and a FastAPI backend. The UI is component-driven, ensuring a consistent look across seven product dashboards.
+
+Key implemented features include:
+*   **Enhanced Dashboard**: The RetailPro dashboard now features a  bar, a  feed, , and a dynamic  that promotes unsubscribed products.
+*   **Customer-First New Sale Flow**: The Add New Sale page mandates customer selection before products can be added. It uses a reusable  for searching or creating customers. After selection, it auto-navigates directly to the product list.
+*   **Progressive Profiling**: The customer creation modal requires only a name and phone number, speeding up checkout. A Quick Add Product modal has also been added to the Add Sale screen for on-the-fly product creation.
+*   **Improved Empty States**: Tables for Orders, Products, Categories, and Customers feature humorous, context-aware messages and a cleaner UI that hides search/count controls when there is no data.
+*   **SMS Integration**: A comprehensive backend for Tigo SMS integration exists and has been verified. It is currently in sandbox mode awaiting user environment setup for production use.
 
 **Last working item**:
-- **Last item agent was working**: The user requested to begin a UI/UX review of the RetailPro **Dashboard** and **Add New Sale** pages. The agent's immediate goal was to capture screenshots of these two screens to facilitate the discussion. However, the agent was repeatedly failing to navigate past the login screen with the screenshot tool, which blocked progress on the user's request.
+- **Last item agent was working**: The user requested two features: a Complete Profile prompt during checkout and advice on a bulk product import feature. The agent began implementing the Complete Profile prompt in .
 - **Status**: IN PROGRESS
 - **Agent Testing Done**: N
-- **Which testing method agent to use?**: screenshot tool. A potential workaround is needed to get past the login screen, such as injecting an auth token.
+- **Which testing method agent to use?**: Frontend testing agent. The test will need to:
+    1. Create a customer without an email.
+    2. Add items to the cart and proceed to checkout.
+    3. Verify the Complete Profile modal appears.
+    4. Test both Save and Skip for now actions to ensure the checkout flow continues correctly.
 - **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
-- **Issue 1**: UI/UX Discussion Blocked by Screenshot Tool (P0)
-- **Issue 2**: Product Switcher Click Not Working (P1)
-- **Issue 3**: Tigo SMS Testing on User's Server (P2)
-- **Issue 4**: Frontend crashes when integrating  (P3)
+- **Issue 1**: Product Switcher Click Not Working (P1)
+- **Issue 2**: Backend permission issue for  (Low Priority)
 
 **Issues Detail**:
 - **Issue 1**:
-    - **Description**: The agent is unable to take screenshots of the authenticated pages (Dashboard, New Sale) because the screenshot tool fails to successfully log in and redirect. This is blocking the user's request to discuss UI/UX.
-    - **Attempted fixes**: The agent tried waiting for longer periods after the login action, but it kept resulting in screenshots of the login page.
+    - **Description (P1)**: In the 9-dot grid product switcher, clicking an unsubscribed app fails to open the Start Free Trial modal. This is a carry-over from a previous session and is a critical user acquisition bug.
+    - **Attempted fixes**: None in this session.
     - **Next debug checklist**:
-        1.  Attempt a workaround: use  to get a valid auth token.
-        2.  Try to inject the token into the browser's local storage via a script within the screenshot tool before navigating to the target URL.
-        3.  If that fails, directly capture the dashboard at  and then navigate to the New Sale page for the second screenshot.
-    - **Why fix this issue and what will be achieved with the fix?**: This is blocking the user's current highest-priority task. Fixing it will allow the UI/UX improvement discussion to begin.
-    - **Status**: IN PROGRESS
-    - **Is recurring issue?**: Y
-    - **Should Test frontend/backend/both after fix?**: Frontend (via screenshot tool)
-    - **Blocked on other issue**: None.
-
-- **Issue 2**:
-    - **Description (P1)**: In the 9-dot grid product switcher, clicking on an unsubscribed app fails to open the Start Free Trial modal as intended. The user has explicitly stated this modal *should* appear. The click event appears to be blocked or mishandled.
-    - **Attempted fixes**: Swapped  with , stopped event propagation, added  to overlaying style elements, and corrected the mapping of route segments to product IDs. Despite these fixes, the user reported the issue persists for Retail Pro.
-    - **Next debug checklist**:
-        1.  Review  again.
-        2.  Focus on the  function and the logic that calls .
-        3.  Log events within the component to trace the click and state changes. Check for z-index conflicts or other invisible elements that might be intercepting clicks.
-    - **Why fix this issue and what will be achieved with the fix?**: This is a critical user acquisition and cross-selling feature.
-    - **Status**: IN PROGRESS
-    - **Is recurring issue?**: Y
-    - **Should Test frontend/backend/both after fix?**: Frontend
-    - **Blocked on other issue**: None.
-
-- **Issue 3**:
-    - **Description (P2)**: User cannot test the Tigo SMS integration on their own server () because the backend service is not running. The  file was missing, which is expected as it's in .
-    - **Attempted fixes**: The agent provided the user with detailed bash commands to create the  file on their server and start the  process.
-    - **Status**: USER VERIFICATION PENDING
-    - **Is recurring issue?**: N
-    - **Should Test frontend/backend/both after fix?**: Backend (on user's server)
-    - **Blocked on other issue**: Waiting for the user to perform the actions on their server and provide feedback.
-
-- **Issue 4**:
-    - **Description (P3)**: An old, recurring issue where integrating  causes a Metro bundler error Cannot use import.meta outside a module, crashing the frontend.
+        1. Review .
+        2. Trace the  function and the logic calling .
+        3. Use console logs to check for z-index conflicts or other elements intercepting clicks.
+    - **Why fix this issue and what will be achieved with the fix?**: This is a core cross-selling feature for the product suite.
     - **Status**: NOT STARTED
     - **Is recurring issue?**: Y
     - **Should Test frontend/backend/both after fix?**: Frontend
 
+- **Issue 2**:
+    - **Description (Low Priority)**: A previous test run by  reported a 403 Forbidden error when a  role tried to search/create customers. The agent's manual tests with an  user worked correctly.
+    - **Attempted fixes**: Agent reviewed the code and found no explicit role restrictions on the customer endpoints.
+    - **Next debug checklist**:
+        1. Explicitly add the  role to the allowed roles for customer-related endpoints in .
+        2. Create a test user with the  role and reproduce the issue via .
+    - **Why fix this issue and what will be achieved with the fix?**: Ensures that sales staff can perform their core function of managing customers during a sale.
+    - **Status**: NOT STARTED
+    - **Is recurring issue?**: N
+    - **Should Test frontend/backend/both after fix?**: Backend
+
 **In progress Task List**:
-- **Task 1**: Capture Screenshots for UI/UX Discussion (P0)
-    - **Where to resume**: The task is blocked by **Issue 1**. The agent must find a way to get screenshots of the authenticated Dashboard and New Sale pages.
-    - **What will be achieved with this?**: Provide the visual assets needed to start the user-requested UI/UX discussion.
-    - **Status**: BLOCKED
-    - **Should Test frontend/backend/both after fix?**: N/A
-    - **Blocked on something**: **Issue 1: UI/UX Discussion Blocked by Screenshot Tool**.
+- **Task 1**: Implement Complete Profile Prompt (P0)
+    - **Where to resume**: The code for the modal's state, trigger logic, and UI has been added to . The next step is to test the complete user flow.
+    - **What will be achieved with this?**: Encourages users to provide more data over time without creating friction at the initial point of sale.
+    - **Status**: IN PROGRESS
+    - **Should Test frontend/backend/both after fix?**: Frontend
+    - **Blocked on something**: None.
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks**:
+    - **(P0)** Design and implement a self-service bulk product import feature (e.g., via CSV upload with a downloadable template and column mapping).
     - **(P1)** Implement UniTxt admin dashboard for managing SMS campaigns.
 - **Future Tasks**:
     - Refactor the monolithic  into a routed structure.
-    - Refactor the massive  file (4,890 lines).
-    - Add animated transitions for theme color changes.
+    - Refactor .
+    - Fix the  component on the dashboard to use live API data instead of hardcoded mock data.
     - Configure a production-ready static web build ().
+    - Fix the  integration crash.
 
 **Completed work in this session**
-- **RetailPro Comprehensive Testing (DONE)**:
-    - Debugged and fixed the order creation API call for test data seeding.
-    - Ran  which confirmed core backend and frontend functionality is working.
-- **Product-Specific Advertisement Carousel (DONE)**:
-    - Implemented logic to fetch and display different carousel ads based on the product being viewed.
-- **Product-Specific Sidebar Menus (DONE)**:
-    - Refactored  to dynamically display a relevant sidebar menu for each of the 7 products.
+- **Dashboard UI/UX Overhaul (DONE)**:
+    - Added Quick Actions, Recent Activity, and Top Selling Products sections.
+    - Integrated a dynamic  to cross-promote unsubscribed products.
+- **Add New Sale Page Enhancement (DONE)**:
+    - Implemented a mandatory, customer-first flow.
+    - Created and integrated a reusable  supporting progressive profiling (Name + Phone).
+    - Implemented auto-navigation to the product list after customer selection.
+    - Added a Quick Add Product modal for on-the-fly additions.
+- **Empty State UI/UX Improvement (DONE)**:
+    - Added humorous, context-aware messages to all major tables (Orders, Products, Categories, Customers).
+    - Refined the UI to hide search/count controls and reduce spacing on empty tables.
+- **Tigo SMS Code Verification (DONE)**:
+    - Confirmed the existence of a comprehensive SMS integration backend.
+    - Verified all API endpoints () are functional in sandbox mode.
+- **UI Bug Fix (DONE)**:
+    - Corrected the flow to auto-navigate to the product list after adding/selecting a customer, removing an extra click.
 
 **Earlier issues found/mentioned but not fixed**
 - The  component on the dashboard uses hardcoded mock data.
-- An old, uninvestigated issue about Frontend loading issues reported by a testing agent.
+- An old, uninvestigated issue about Frontend loading issues.
 
 **Known issue recurrence from previous fork**
 - **Issue**: The  crash.
-- **Recurrence count**: 2+
+- **Recurrence count**: 3+
 - **Status**: NOT STARTED
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Component-Driven UI**: Shared components (, ) are used across all 7 product modules to ensure consistency.
-- **Dynamic Theming**: Product-specific colors, sidebars, and carousel content are driven by props passed to shared components based on the current route.
-- **Monolithic Backend**: Most API logic resides in .
+- **Component-Driven UI**: Reusable components like  and  are used to maintain consistency and speed up development.
+- **Progressive Profiling**: A UX strategy to reduce initial user friction by collecting minimal information upfront (e.g., Name/Phone) and prompting for more details later at opportune moments.
+- **Dynamic Theming & Content**: The app uses props to render product-specific colors, sidebars, and promotional content ().
 - **SMPP Integration**:  handles direct communication with Tigo's SMS gateway.
 
 **key DB schema**
-- : Authentication
-- : Promotional carousel content with  field.
-- , , , : Core RetailPro data collections.
+- : {email, password, role, subscriptions: [product_id]}
+- : {target_products, content}
+- : {name, phone, email, ...}
+- , , : Core RetailPro data collections.
 
 **All files of reference**
 - **Updated in this session**:
@@ -133,65 +137,73 @@ The application is a full-stack platform with an Expo (React Native for Web) fro
     - 
     - 
     - 
-- **Key files for next steps**:
-    -  (To fix the click bug)
-    -  (For UI/UX discussion)
-    -  (For user's SMS testing guidance)
+    - 
+    - 
+    - 
+- **Created in this session**:
+    - 
+    - 
+    - 
+    - 
+    - 
+    - 
 
 **Areas that need refactoring**:
-- The backend at  is a large monolithic file.
-- The frontend dashboard at  is 4,890 lines and should be broken into smaller, manageable components.
+- Backend  remains monolithic.
+- Frontend  is still very large despite moving some logic to new components.
 
 **key api endpoints**
 - 
-- 
-- 
-- 
-- All CRUD endpoints for RetailPro (products, customers, categories).
+-  (GET with , POST)
+-  (POST for quick add)
+-  (and other related SMS endpoints)
+- All CRUD endpoints for RetailPro (products, customers, categories, orders).
 
 **Critical Info for New Agent**
-- Your immediate priority is to unblock the user's request for a UI/UX discussion. You must find a way to get screenshots of the **RetailPro Dashboard** and the **Add New Sale** page. The screenshot tool is failing to log in, so you will need a workaround.
-- The most critical bug is the **Product Switcher modal failure**. Clicking an app in the 9-dot grid should show a Start Free Trial modal, but it's not working. The user is aware and expects a fix.
-- Be prepared to assist the user with their **Tigo SMS setup** on their server. They were last instructed on how to create a  file and start the backend service. They may have follow-up questions.
-- **Do not** revisit the major UI standardization or RetailPro testing, as these are complete and verified.
+- Your immediate priority is to finish the Complete Profile prompt feature. The code is already in ; it just needs to be tested and potentially polished.
+- After that, the next task is to design and propose a solution for the **Bulk Product Import** feature, a key requirement for onboarding new businesses.
+- Do not forget the high-priority bug from the previous session: the **Product Switcher modal** is broken and needs to be fixed.
 
 **documents and test reports created in this job**
-- 
-- 
-- 
--  (Updated)
+-  (Shows a backend permission issue for sales_staff).
+-  (Updated).
 
 **Last 10 User Messages and any pending HUMAN messages**
-- **User**: Now let us do one thing - Lets discuss the UI/UX starting with Dashboard and Add New Sale - **Status**: IN PROGRESS. This is the current active task, blocked by screenshot failure.
-- **User**: Check the testing egent as well - **Status**: COMPLETED. Agent ran automated tests for RetailPro successfully.
-- **User**: Advise the best way to test the functionality of RetailPRo end to end ? - **Status**: RESOLVED. Agent provided a comprehensive testing guide.
-- **User**: Share the acrual codebase -> Now from here share the codebase for Dashboard in Retail Pro - **Status**: RESOLVED. User requested dashboard code, which agent provided/explained how to access.
-- **User**: Ok I am working on the linking with Tigo and there is nofile named .env? -> Can tyou verify in the code if it is there? -> Why then cant I see it in the - see the attached - **Status**: RESOLVED. User was confused about the missing  file on their server. Agent explained that it's in  for security and provided instructions to create it manually.
-- **User**: Stil clicking is not working -> All others are working except Retail Pro - Also you are already in unitxt why when you click unitxt it tells you to start free trial - **Status**: IN PROGRESS. User reporting the persistent bug in the Product Switcher.
+1.  **User**: Add a Complete Profile prompt during checkout and advise on a bulk product import feature. - **Status**: IN PROGRESS.
+2.  **User**: For empty tables, remove the item count and search bar. For the Add Sale product list, add a CTA that opens a modal. - **Status**: COMPLETED.
+3.  **User**: Add humorous messages to empty tables in RetailPro (orders, customers, products, categories) and reduce spacing. - **Status**: COMPLETED.
+4.  **User**: After adding a client in the pop-up modal, it should go straight to the product list page for a better UX. Also, make CTA icons uniform. - **Status**: COMPLETED.
+5.  **User**: Verify the Tigo SMS integration routes. - **Status**: COMPLETED.
+6.  **User**: Asked if SMS provider code exists in the codebase. - **Status**: RESOLVED.
+7.  **User**: Proceed with implementing progressive profiling and the ecosystem banner. - **Status**: COMPLETED.
+8.  **User**: Requested the code for the reusable customer selection modal. - **Status**: RESOLVED.
+9.  **User**: Requested the preview URL and login credentials. - **Status**: RESOLVED.
+10. **User**: Implement all suggested UI/UX improvements for the Dashboard and Add New Sale page. - **Status**: COMPLETED.
 
 **Project Health Check:**
 - **Broken**:
     - Product Switcher modal flow.
     -  component integration.
-    - Tigo SMS functionality on the user's external server (due to environment issues).
+    - Customer creation/search for  role is likely broken (needs verification).
 - **Mocked**:
     -  component on the dashboard still uses hardcoded data.
 
 **3rd Party Integrations**
-- **Tigo Bulk SMS (SMPP)**: Integrated via . Awaiting user testing on their own server.
+- **Tigo Bulk SMS (SMPP)**: Integrated via . Awaiting user testing.
 - **lucide-react**: Used for icons.
 - **Zustand**: For state management.
 - **recharts**: For rendering charts on the dashboard.
 
 **Testing status**
-- **Testing agent used after significant changes**: YES (for RetailPro testing).
+- **Testing agent used after significant changes**: YES (found a potential backend permission issue).
 - **Troubleshoot agent used after agent stuck in loop**: NO
-- **Test files created**: 
-- **Known regressions**: None.
+- **Test files created**: None in this session.
+- **Known regressions**: The  flagged a 403 error for the  role when accessing customer APIs, which may be a regression or a newly discovered issue.
 
 **Credentials to test flow:**
 - **Admin**:  / 
 - **Demo User**:  / 
 
 **What agent forgot to execute**
-The agent was actively working on the user's requests. The primary issue was not forgetting a task, but getting stuck on a technical limitation of the screenshot tool, which prevented progress on the user's latest request.</analysis>
+- The agent did not address the high-priority **Product Switcher bug** that was carried over from the previous session.
+- The agent did not address the other pending issues/tasks from the previous handoff summary, focusing entirely on the new UI/UX requests from the user.</analysis>

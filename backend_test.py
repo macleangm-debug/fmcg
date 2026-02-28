@@ -3,7 +3,7 @@ import sys
 from datetime import datetime
 
 class FMCGAPITester:
-    def __init__(self, base_url="https://retailpro-new-sale.preview.emergentagent.com/api"):
+    def __init__(self, base_url="https://bulk-import-7.preview.emergentagent.com/api"):
         self.base_url = base_url
         self.token = None
         self.tests_run = 0

@@ -7,7 +7,7 @@ import pytest
 import requests
 import os
 
-BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://retailpro-new-sale.preview.emergentagent.com')
+BASE_URL = os.environ.get('EXPO_PUBLIC_BACKEND_URL', 'https://bulk-import-7.preview.emergentagent.com')
 
 class TestHealthAndAuth:
     """Basic health and authentication tests"""
