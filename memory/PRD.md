@@ -127,6 +127,8 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 - `/app/frontend/src/components/dashboard/LowStockAlert.tsx` - Enhanced low stock alert with inventory CTA
 - `/app/frontend/src/components/dashboard/RecentActivityFeed.tsx` - Activity timeline
 - `/app/frontend/src/components/dashboard/TopSellingProducts.tsx` - Top products with period toggle
+- `/app/frontend/src/components/dashboard/EcosystemUpsellBanner.tsx` - Cross-sell carousel for SSO Soko products
+- `/app/frontend/src/components/CustomerSelectionModal.tsx` - Reusable customer search/add modal (Name + Phone only)
 
 ### Dashboard Components (EXISTING)
 - `/app/frontend/src/components/dashboard/TotalViewPerformance.tsx`
