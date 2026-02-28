@@ -604,8 +604,8 @@ export default function Customers() {
             ListEmptyComponent={
               <EmptyState
                 icon="people-outline"
-                title="No Clients Found"
-                message={search ? 'Try a different search term' : 'Add your first customer'}
+                title="No business runs without customers!"
+                message={search ? 'Try a different search term' : 'Your customer list is feeling lonely. Add your first one!'}
                 actionLabel="Add Customer"
                 onAction={handleOpenAddModal}
               />
