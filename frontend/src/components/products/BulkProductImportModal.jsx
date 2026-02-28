@@ -291,6 +291,8 @@ export default function BulkProductImportModal({
   // Early return if not visible
   if (!visible) return null;
 
+  console.log('BulkProductImportModal rendering, visible:', visible);
+
   return (
     <Modal
       visible={visible}
