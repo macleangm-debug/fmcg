@@ -2696,6 +2696,16 @@ const styles = StyleSheet.create({
   },
   webPageTitle: { fontSize: 24, fontWeight: '700', color: '#111827' },
   webPageSubtitle: { fontSize: 14, color: '#6B7280', marginTop: 4 },
+  bulkImportBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#D1FAE5',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+  },
+  bulkImportBtnText: { fontSize: 15, fontWeight: '600', color: '#059669' },
   webCreateBtn: {
     flexDirection: 'row',
     alignItems: 'center',
