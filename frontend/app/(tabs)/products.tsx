@@ -883,6 +883,32 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#111827',
   },
+  productActions: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    gap: 10,
+  },
+  productActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: '#EFF6FF',
+    gap: 6,
+  },
+  productActionBtnAlt: {
+    backgroundColor: '#D1FAE5',
+  },
+  productActionBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#2563EB',
+  },
+  productActionBtnTextAlt: {
+    color: '#059669',
+  },
   categoriesContainer: {
     marginBottom: 8,
   },
