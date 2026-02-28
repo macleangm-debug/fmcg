@@ -1180,7 +1180,7 @@ export default function Dashboard() {
             />
           </View>
           
-          {/* Middle Column: Revenue Chart + Sales Report */}
+          {/* Middle Column: Revenue Chart + Sales Report + Top Selling */}
           <View style={webDashStyles.middleColumn}>
             <RevenueChart 
               totalRevenue={stats?.total_sales_today ? stats.total_sales_today * 4 : 193000}
@@ -1188,19 +1188,23 @@ export default function Dashboard() {
               formatCurrency={formatCurrency}
             />
             
-            {/* Sales Report */}
-            <SalesReport 
-              data={[
-                { label: 'Product Launched', value: stats?.total_products || 233, color: '#95D5B2' },
-                { label: 'Ongoing Product', value: stats?.low_stock_products || 23, color: '#B7E4C7' },
-                { label: 'Product Sold', value: stats?.total_orders_today ? stats.total_orders_today * 10 : 482, color: '#D8F3DC' },
-              ]}
-              onViewMore={() => router.push('/admin/reports')}
+            {/* Top Selling Products */}
+            <TopSellingProducts
+              products={stats?.top_products || []}
+              formatCurrency={formatCurrency}
+              onViewReport={() => router.push('/admin/reports')}
             />
           </View>
           
-          {/* Right Column: Total View Performance + Promotional Card */}
+          {/* Right Column: Activity Feed + Performance + Promo */}
           <View style={webDashStyles.rightColumn}>
+            {/* Recent Activity Feed */}
+            <RecentActivityFeed
+              activities={recentActivities}
+              onViewAll={() => router.push('/(tabs)/orders')}
+              formatCurrency={formatCurrency}
+            />
+            
             <TotalViewPerformance 
               totalCount={565000}
               viewCount={68}
