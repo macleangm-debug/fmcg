@@ -71,17 +71,52 @@ const BulkProductImportModal: React.FC<BulkProductImportModalProps> = ({
   const [skuFormat, setSkuFormat] = useState<'auto' | 'prefix' | 'custom'>('auto');
   const [skuPrefix, setSkuPrefix] = useState('SKU');
   const [skuCounter, setSkuCounter] = useState(1);
+  const [skuSeparator, setSkuSeparator] = useState('-');
+  const [skuDigits, setSkuDigits] = useState(4);
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isWeb = Platform.OS === 'web';
 
+  // Load SKU settings from business settings
+  useEffect(() => {
+    const loadSkuSettings = async () => {
+      if (visible && !settingsLoaded) {
+        try {
+          const response = await businessSettingsApi.get();
+          const settings = response.data;
+          
+          if (settings) {
+            // Map settings format to our format
+            const format = settings.sku_format || 'prefix_number';
+            if (format === 'prefix_number') setSkuFormat('prefix');
+            else if (format === 'custom') setSkuFormat('custom');
+            else setSkuFormat('auto');
+            
+            setSkuPrefix(settings.sku_prefix || 'SKU');
+            setSkuCounter(parseInt(settings.sku_start_number) || 1);
+            setSkuSeparator(settings.sku_separator || '-');
+            setSkuDigits(parseInt(settings.sku_digits) || 4);
+          }
+          setSettingsLoaded(true);
+        } catch (error) {
+          console.log('Could not load SKU settings, using defaults');
+          setSettingsLoaded(true);
+        }
+      }
+    };
+    
+    loadSkuSettings();
+  }, [visible, settingsLoaded]);
+
   // Generate SKU based on format
   const generateSku = (index: number): string => {
+    const paddedNum = String(skuCounter + index).padStart(skuDigits, '0');
     switch (skuFormat) {
       case 'auto':
-        return `SKU${String(skuCounter + index).padStart(5, '0')}`;
+        return `SKU${paddedNum}`;
       case 'prefix':
-        return `${skuPrefix}-${String(skuCounter + index).padStart(4, '0')}`;
+        return `${skuPrefix}${skuSeparator}${paddedNum}`;
       case 'custom':
         return ''; // User enters manually
       default:
