@@ -74,7 +74,7 @@
     "cash_offline": "ALLOWED - Can complete checkout with cash payment while offline, creates order with OFF- prefix",
     "card_offline": "BLOCKED - Shows disabled state with 'Offline' label and cloud icon badge",
     "mobile_money_offline": "BLOCKED - Shows disabled state with 'Offline' label and cloud icon badge",
-    "credit_offline": "ALLOWED - Credit method uses requiresInternet = false since method === 'credit' !== 'cash' is true BUT the implementation has a bug here",
-    "implementation_note": "POTENTIAL BUG: The credit payment method is also disabled offline (requiresInternet = method !== 'cash'), which may be intentional since credit might need verification, but should be verified with requirements"
+    "credit_offline": "BLOCKED - Also disabled offline per 'Cash is the only payment allowed offline' requirement",
+    "implementation_note": "All non-cash payments (card, mobile_money, credit) are correctly blocked offline. The Alert message mentions only 'Card and Mobile Money' but code correctly blocks all non-cash. This matches the requirement: 'Cash is the only payment allowed offline'."
   }
 }
