@@ -4920,7 +4920,7 @@ async def get_reports_summary(
         start = now - timedelta(days=365)
         end = now
     
-    query = {"created_at": {"$gte": start, "$lte": now}, "status": "completed"}
+    query = {"created_at": {"$gte": start, "$lte": end}, "status": "completed"}
     if business_id and current_user["role"] != "superadmin":
         query["business_id"] = business_id
     
