@@ -248,6 +248,10 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 - [x] **CUSTOMER API ENDPOINTS (COMPLETED Feb 28, 2026)** - GET/PUT /api/customers/{id} for progressive profiling
 - [x] **BULK IMPORT UI ENHANCED (COMPLETED Mar 1, 2026)** - Modal accessible from Products page, supports Excel (.xlsx, .xls) and CSV upload, Download Template, Add Manually with row-based entry
 - [x] **PRODUCT SWITCHER FIX (COMPLETED Mar 1, 2026)** - Fixed pointer events interception issue in Soko launcher - clicking unsubscribed apps now opens "Start Free Trial" modal correctly
+- [x] **REPORTS PAGE INTERACTIVITY (COMPLETED Mar 1, 2026)** - Period filters and tabs now trigger data refresh, fixed useEffect dependencies
+- [x] **IMPORT.META ERROR FIX (COMPLETED Mar 1, 2026)** - Fixed metro.config.js to disable package exports, resolves ESM/CJS conflicts
+- [x] **SETTINGS PAGE CRASH FIX (COMPLETED Mar 1, 2026)** - Fixed null safety issues with useLocalSearchParams and useOfflineStore
+- [x] **OFFLINE MODE FOUNDATION (COMPLETED Mar 1, 2026)** - Created OfflineDB, SyncService, OfflineStatusIndicator, OfflineSettings components
 
 ### P1 - In Progress
 - [ ] **Tigo SMS Testing** - User deferred ("We will test later"), requires VPN access
