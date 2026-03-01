@@ -216,7 +216,6 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 - [ ] **Tigo SMS Testing** - User deferred ("We will test later"), requires VPN access
 - [ ] Language Selector integration (blocked - `import.meta` bundler error)
 - [ ] UniTxt admin dashboard for SMS campaigns
-- [ ] Fix TransactionList mock data - replace with live API data
 
 ### P2 - Future/Backlog
 - [ ] Deploy to VPN-connected server
