@@ -21,6 +21,8 @@
     "@react-navigation/native": "^7.1.6",
     "axios": "^1.13.2",
     "date-fns": "^4.1.0",
+    "dexie": "^4.3.0",
+    "dexie-react-hooks": "^4.2.0",
     "exceljs": "^4.4.0",
     "expo": "^54.0.33",
     "expo-auth-session": "~7.0.10",
