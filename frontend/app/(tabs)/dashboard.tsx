@@ -55,11 +55,13 @@ interface Order {
   order_number?: string;
   customer_name?: string;
   customer_phone?: string;
-  items: Array<{ name: string; quantity: number; price: number; total: number }>;
+  items: Array<{ product_name?: string; name?: string; quantity: number; unit_price?: number; price?: number; subtotal?: number; total?: number }>;
   subtotal: number;
-  tax: number;
+  tax?: number;
+  tax_total?: number;
   total: number;
-  payment_method: string;
+  payment_method?: string;
+  payments?: Array<{ method: string; amount: number }>;
   status: string;
   created_at: string;
   notes?: string;
