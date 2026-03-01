@@ -482,10 +482,19 @@ const BulkProductImportModal: React.FC<BulkProductImportModalProps> = ({
                       
                       <View style={styles.fieldRow}>
                         <View style={styles.fieldHalf}>
-                          <Text style={styles.fieldLabel}>SKU / Barcode</Text>
+                          <View style={styles.skuLabelRow}>
+                            <Text style={styles.fieldLabel}>SKU / Barcode</Text>
+                            <TouchableOpacity 
+                              style={styles.skuFormatBtn}
+                              onPress={() => setShowSkuFormatModal(true)}
+                            >
+                              <Ionicons name="settings-outline" size={14} color="#2563EB" />
+                              <Text style={styles.skuFormatBtnText}>Format</Text>
+                            </TouchableOpacity>
+                          </View>
                           <TextInput
                             style={styles.fieldInput}
-                            placeholder="SKU001"
+                            placeholder={skuFormat === 'custom' ? 'Enter SKU' : generateSku(rows.indexOf(row))}
                             value={row.sku}
                             onChangeText={(v) => handleUpdateRow(row.id, 'sku', v)}
                             placeholderTextColor="#9CA3AF"
@@ -497,7 +506,7 @@ const BulkProductImportModal: React.FC<BulkProductImportModalProps> = ({
                             style={styles.fieldInput}
                             placeholder="5000"
                             value={row.price}
-                            onChangeText={(v) => handleUpdateRow(row.id, 'price', v)}
+                            onChangeText={(v) => handleUpdateRow(row.id, 'price', v)}}
                             keyboardType="numeric"
                             placeholderTextColor="#9CA3AF"
                           />
