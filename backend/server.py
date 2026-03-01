@@ -4880,26 +4880,45 @@ async def deactivate_user(user_id: str, current_user: dict = Depends(get_current
 @api_router.get("/admin/reports/summary")
 async def get_reports_summary(
     period: str = "today",
+    start_date: str = None,
+    end_date: str = None,
     current_user: dict = Depends(get_current_user)
 ):
     business_id = current_user.get("business_id")
     
     now = datetime.utcnow()
-    if period == "today":
+    
+    # Use explicit date range if provided
+    if start_date and end_date:
+        try:
+            start = datetime.fromisoformat(start_date.replace('Z', '+00:00'))
+            end = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
+            # Set end to end of day
+            end = end.replace(hour=23, minute=59, second=59, microsecond=999999)
+        except:
+            start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+            end = now
+    elif period == "today":
         start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        end = now
     elif period == "yesterday":
         start = (now - timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
-        now = start + timedelta(days=1)
+        end = start + timedelta(days=1)
     elif period == "week":
         start = now - timedelta(days=7)
+        end = now
     elif period == "month":
         start = now - timedelta(days=30)
+        end = now
     elif period == "quarter":
         start = now - timedelta(days=90)
+        end = now
     elif period == "year":
         start = now - timedelta(days=365)
+        end = now
     else:
         start = now - timedelta(days=365)
+        end = now
     
     query = {"created_at": {"$gte": start, "$lte": now}, "status": "completed"}
     if business_id and current_user["role"] != "superadmin":
