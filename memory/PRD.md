@@ -226,7 +226,7 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 ## Testing Credentials
 - **Admin User**: admin@fmcg.com / Admin@2025
 - **Demo User**: demo@fmcg.com / Demo@2025
-- **Preview URL**: https://bulk-import-7.preview.emergentagent.com
+- **Preview URL**: https://retailpro-checkout.preview.emergentagent.com
 
 ---
 
