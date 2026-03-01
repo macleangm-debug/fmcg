@@ -17,6 +17,7 @@ import { useCartStore } from '../store/cartStore';
 import ProductSwitcher from './ProductSwitcher';
 import LinkedAppsSidebar from './LinkedAppsSidebar';
 import ContextSwitcher from './ContextSwitcher';
+import OfflineStatusIndicator from './OfflineStatusIndicator';
 
 // App Configuration Interface
 export interface AppConfig {
