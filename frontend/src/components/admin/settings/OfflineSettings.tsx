@@ -46,12 +46,18 @@ const OfflineSettings: React.FC<OfflineSettingsProps> = ({
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [syncing, setSyncing] = useState(false);
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<{
+    pendingMutations: number;
+    cachedProducts: number;
+    cachedCustomers: number;
+    cachedCategories: number;
+    lastCacheTime?: Date;
+  }>({
     pendingMutations: 0,
     cachedProducts: 0,
     cachedCustomers: 0,
     cachedCategories: 0,
-    lastCacheTime: undefined as Date | undefined
+    lastCacheTime: undefined
   });
   const isOnline = getNetworkStatus();
 
