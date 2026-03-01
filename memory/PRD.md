@@ -27,8 +27,14 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
   - `/app/frontend/src/services/SyncService.ts` - Service for syncing offline mutations when back online
   - `/app/frontend/src/components/common/OfflineStatusIndicator.tsx` - Visual indicator for offline status
   - `/app/frontend/src/components/admin/settings/OfflineSettings.tsx` - Admin settings panel for offline mode
+- ✅ **P0 COMPLETED: Offline Checkout Payment Restrictions** - Smart offline payment logic
+  - Cash payments ALLOWED offline (creates order with OFF- prefix, syncs when online)
+  - Card/Mobile Money/Credit payments BLOCKED offline (require internet for verification)
+  - Yellow warning banner when offline: "You're offline. Only Cash payments are available."
+  - Payment buttons show disabled state with "Offline" label and cloud-offline badge
+  - handleCheckout validates payment method before proceeding offline
 - ✅ **Settings POS Tab Shows Offline Mode** - Sync Status shows "Online • 0 pending orders"
-- ✅ **Testing Agent Validation** - iteration_14.json (100% backend, 100% frontend pass)
+- ✅ **Testing Agent Validation** - iteration_14.json, iteration_15.json (code review verified)
 
 ### March 1, 2026 - BULK IMPORT ENHANCEMENT & PRODUCT SWITCHER FIX ✅
 - ✅ **P0 COMPLETED: Bulk Import on Products Page** - Green "Bulk Import" button added to Admin Products page
