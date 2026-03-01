@@ -3086,6 +3086,9 @@ export default function Settings() {
                 
                 {/* Printer Settings */}
                 <PrinterSettings />
+                
+                {/* Offline Mode Settings */}
+                <OfflineSettings />
               </View>
             )}
 
