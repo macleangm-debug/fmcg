@@ -23,6 +23,11 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
   - Fixed pointer events interception issue with nested Pressable components
   - Updated to use TouchableOpacity with stopPropagation for app items
   - Trial modal shows app features, "Maybe Later" and "Start Free Trial" buttons
+- ✅ **P1 COMPLETED: TransactionList Live Data** - Dashboard "Recent Orders" now shows real order data
+  - Displays product names with "+X more" for multi-item orders
+  - Shows real order dates, order numbers, and completion status
+  - "View All Orders" button links to orders page
+  - Empty state with helpful message when no orders exist
 - ✅ **Minor Fix: subscriptionApi.getCurrent** - Fixed API call to use correct method name (getStatus)
 - ✅ **Testing Agent Validation** - iteration_12.json (85% frontend pass)
 
