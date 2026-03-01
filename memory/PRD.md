@@ -11,6 +11,21 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 
 ## What's Been Implemented
 
+### March 1, 2026 - BULK IMPORT ENHANCEMENT & PRODUCT SWITCHER FIX ✅
+- ✅ **P0 COMPLETED: Bulk Import on Products Page** - Green "Bulk Import" button added to Admin Products page
+- ✅ **P0 COMPLETED: Excel File Support** - BulkProductImportModal supports .xlsx, .xls, and .csv file uploads
+- ✅ **P0 COMPLETED: Download Excel Template** - Button to download a template file for bulk imports
+- ✅ **P0 COMPLETED: Add Manually Tab** - Row-based product entry with validation
+  - Fields: Product Name, SKU/Barcode, Price, Stock Qty, Category dropdown
+  - "Add Another Product" button for multiple rows
+  - Validation indicators per row
+- ✅ **P1 COMPLETED: Product Switcher Bug Fix** - 9-dot Soko launcher now correctly opens "Start Free Trial" modal
+  - Fixed pointer events interception issue with nested Pressable components
+  - Updated to use TouchableOpacity with stopPropagation for app items
+  - Trial modal shows app features, "Maybe Later" and "Start Free Trial" buttons
+- ✅ **Minor Fix: subscriptionApi.getCurrent** - Fixed API call to use correct method name (getStatus)
+- ✅ **Testing Agent Validation** - iteration_12.json (85% frontend pass)
+
 ### February 28, 2026 (Session 2) - PROGRESSIVE PROFILING & BULK IMPORT ✅
 - ✅ **P0 COMPLETED: Complete Profile Prompt** - Modal appears during checkout for customers without email
   - Shows "Complete Customer Profile?" with email input field
