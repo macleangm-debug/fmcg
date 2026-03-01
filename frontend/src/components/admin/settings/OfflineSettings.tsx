@@ -28,9 +28,9 @@ import {
 import { 
   refreshOfflineCache, 
   getNetworkStatus,
-  getPendingMutationCount,
   syncPendingMutations
 } from '../../../services/SyncService';
+import { getPendingMutationCount } from '../../../services/OfflineDB';
 
 interface OfflineSettingsProps {
   theme?: {
