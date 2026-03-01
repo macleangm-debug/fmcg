@@ -3326,6 +3326,23 @@ const styles = StyleSheet.create({
     color: '#F59E0B',
     marginTop: 2,
   },
+  offlinePaymentBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFFBEB',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  offlinePaymentText: {
+    flex: 1,
+    fontSize: 13,
+    color: '#92400E',
+    fontWeight: '500',
+  },
   // Split Payment Styles - Simplified
   paymentHeader: {
     flexDirection: 'row',
