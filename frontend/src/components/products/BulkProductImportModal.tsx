@@ -66,9 +66,43 @@ const BulkProductImportModal: React.FC<BulkProductImportModalProps> = ({
   const [csvContent, setCsvContent] = useState('');
   const [showCategoryPicker, setShowCategoryPicker] = useState<string | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [showSkuFormatModal, setShowSkuFormatModal] = useState(false);
+  const [skuFormat, setSkuFormat] = useState<'auto' | 'prefix' | 'custom'>('auto');
+  const [skuPrefix, setSkuPrefix] = useState('SKU');
+  const [skuCounter, setSkuCounter] = useState(1);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isWeb = Platform.OS === 'web';
+
+  // Generate SKU based on format
+  const generateSku = (index: number): string => {
+    switch (skuFormat) {
+      case 'auto':
+        return `SKU${String(skuCounter + index).padStart(5, '0')}`;
+      case 'prefix':
+        return `${skuPrefix}-${String(skuCounter + index).padStart(4, '0')}`;
+      case 'custom':
+        return ''; // User enters manually
+      default:
+        return '';
+    }
+  };
+
+  // Apply SKU format to all empty SKU rows
+  const applySkuFormat = () => {
+    setRows(prevRows => {
+      let counter = 0;
+      return prevRows.map(row => {
+        if (!row.sku && skuFormat !== 'custom') {
+          const newSku = generateSku(counter);
+          counter++;
+          return { ...row, sku: newSku };
+        }
+        return row;
+      });
+    });
+    setShowSkuFormatModal(false);
+  };
 
   // Handle Excel/CSV file upload
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
