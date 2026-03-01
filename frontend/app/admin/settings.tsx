@@ -180,13 +180,13 @@ export default function Settings() {
 
   // Handle tab from URL params
   useEffect(() => {
-    if (params.tab) {
+    if (params?.tab) {
       const validTabs = ['general', 'app', 'apps', 'pos', 'locations', 'subscription', 'referral'];
       if (validTabs.includes(params.tab as string)) {
         setActiveTab(params.tab as any);
       }
     }
-  }, [params.tab]);
+  }, [params?.tab]);
 
   // Business form state
   const [formName, setFormName] = useState('');
