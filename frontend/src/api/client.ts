@@ -213,7 +213,16 @@ export const promotionsApi = {
 };
 
 export const reportsApi = {
-  getSummary: (period: string = 'today') => api.get('/admin/reports/summary', { params: { period } }),
+  getSummary: (startDate?: string, endDate?: string) => {
+    const params: any = {};
+    if (startDate) params.start_date = startDate;
+    if (endDate) params.end_date = endDate;
+    return api.get('/admin/reports/summary', { params });
+  },
+  getProductReport: (startDate?: string, endDate?: string) => api.get('/admin/reports/products', { params: { start_date: startDate, end_date: endDate } }),
+  getStaffReport: (startDate?: string, endDate?: string) => api.get('/admin/reports/staff', { params: { start_date: startDate, end_date: endDate } }),
+  getCustomerReport: (startDate?: string, endDate?: string) => api.get('/admin/reports/customers', { params: { start_date: startDate, end_date: endDate } }),
+  getPaymentReport: (startDate?: string, endDate?: string) => api.get('/admin/reports/payments', { params: { start_date: startDate, end_date: endDate } }),
 };
 
 // Multi-Business Management
