@@ -722,6 +722,14 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
               />
             )}
             
+            {/* Offline Status Indicator */}
+            <OfflineStatusIndicator 
+              theme={{ 
+                primary: productTheme.primary, 
+                primaryLight: productTheme.primaryLight 
+              }} 
+            />
+            
             {/* Help Section */}
             <View style={[styles.helpSection, { borderTopColor: '#E5E7EB' }]}>
               <TouchableOpacity
