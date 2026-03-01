@@ -154,9 +154,10 @@ export default function ReportsPage() {
     }
   }, [period, customDateRange]);
 
+  // Fetch reports when period or custom date range changes
   useEffect(() => {
     fetchReports();
-  }, [period, customDateRange]);
+  }, [fetchReports]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
