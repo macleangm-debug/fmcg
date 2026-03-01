@@ -3286,6 +3286,11 @@ const styles = StyleSheet.create({
     borderColor: '#2563EB',
     backgroundColor: '#EEF2FF',
   },
+  paymentButtonDisabled: {
+    borderColor: '#F3F4F6',
+    backgroundColor: '#F9FAFB',
+    opacity: 0.7,
+  },
   paymentButtonText: {
     fontSize: 14,
     fontWeight: '600',
@@ -3294,6 +3299,22 @@ const styles = StyleSheet.create({
   },
   paymentButtonTextActive: {
     color: '#2563EB',
+  },
+  paymentButtonTextDisabled: {
+    color: '#D1D5DB',
+  },
+  offlineIndicatorBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    backgroundColor: '#FFFBEB',
+    borderRadius: 6,
+    padding: 2,
+  },
+  offlineLabel: {
+    fontSize: 10,
+    color: '#F59E0B',
+    marginTop: 2,
   },
   // Split Payment Styles - Simplified
   paymentHeader: {
