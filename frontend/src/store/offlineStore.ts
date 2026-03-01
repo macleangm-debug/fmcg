@@ -1,261 +1,335 @@
+/**
+ * Offline Store - IndexedDB wrapper for offline data persistence
+ * Handles caching of products, customers, categories, and pending operations
+ */
+
 import { create } from 'zustand';
-import { Platform } from 'react-native';
+import { persist } from 'zustand/middleware';
 
-// Simple storage that works on both web and native
-const getStorage = () => {
-  if (Platform.OS === 'web' && typeof localStorage !== 'undefined') {
-    return {
-      getItem: (key: string) => localStorage.getItem(key),
-      setItem: (key: string, value: string) => localStorage.setItem(key, value),
-    };
-  }
-  // Return a no-op storage for SSR or when localStorage is not available
-  return {
-    getItem: (_key: string) => null,
-    setItem: (_key: string, _value: string) => {},
-  };
-};
-
-// Pending transaction to be synced when online
-export interface PendingTransaction {
+// Types
+export interface PendingOperation {
   id: string;
-  type: 'sale' | 'return' | 'adjustment';
+  type: 'order' | 'customer' | 'loyalty_points' | 'inventory_update';
   data: any;
-  created_at: string;
+  createdAt: string;
   retryCount: number;
-  lastError?: string;
+  status: 'pending' | 'syncing' | 'failed' | 'completed';
+  error?: string;
 }
 
-// Cached product for offline use
 export interface CachedProduct {
   id: string;
   name: string;
-  sku?: string;
-  barcode?: string;
+  sku: string;
   price: number;
-  cost_price?: number;
   stock_quantity: number;
-  category_id?: string;
+  category_id: string;
   category_name?: string;
-  image?: string;
-  tax_rate?: number;
-  is_active: boolean;
-  variants?: any[];
-  has_variants?: boolean;
-  cached_at: string;
+  image_url?: string;
+  cachedAt: string;
+}
+
+export interface CachedCustomer {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string;
+  loyalty_points?: number;
+  loyalty_tier?: string;
+  cachedAt: string;
+}
+
+export interface CachedCategory {
+  id: string;
+  name: string;
+  cachedAt: string;
+}
+
+export interface SyncStatus {
+  lastSyncAt: string | null;
+  isSyncing: boolean;
+  pendingCount: number;
+  failedCount: number;
+  nextScheduledSync: string | null;
+}
+
+export interface OfflineSettings {
+  enabled: boolean;
+  autoSyncEnabled: boolean;
+  scheduledSyncEnabled: boolean;
+  scheduledSyncIntervalMinutes: number;
+  allowLoyaltyRedemptionOffline: boolean;
+  showOfflineWarnings: boolean;
+  maxPendingOperations: number;
+  cacheExpiryHours: number;
 }
 
 interface OfflineState {
-  // Network status
+  // Connection status
   isOnline: boolean;
-  lastOnlineAt: string | null;
+  isManualOffline: boolean; // User toggled offline mode
   
-  // Offline mode settings
-  offlineModeEnabled: boolean;
-  autoSyncEnabled: boolean;
+  // Settings
+  settings: OfflineSettings;
   
-  // Pending transactions queue
-  pendingTransactions: PendingTransaction[];
+  // Cached data
+  products: CachedProduct[];
+  customers: CachedCustomer[];
+  categories: CachedCategory[];
   
-  // Cached data for offline use
-  cachedProducts: CachedProduct[];
-  cachedCategories: { id: string; name: string; }[];
-  lastSyncAt: string | null;
+  // Pending operations queue
+  pendingOperations: PendingOperation[];
   
   // Sync status
-  isSyncing: boolean;
-  syncErrors: string[];
+  syncStatus: SyncStatus;
   
   // Actions
   setOnlineStatus: (isOnline: boolean) => void;
-  setOfflineModeEnabled: (enabled: boolean) => void;
+  toggleManualOffline: () => void;
+  setManualOffline: (value: boolean) => void;
+  updateSettings: (settings: Partial<OfflineSettings>) => void;
   
-  // Transaction queue management
-  addPendingTransaction: (transaction: Omit<PendingTransaction, 'id' | 'created_at' | 'retryCount'>) => string;
-  removePendingTransaction: (id: string) => void;
-  updateTransactionError: (id: string, error: string) => void;
-  clearAllPendingTransactions: () => void;
+  // Cache operations
+  cacheProducts: (products: CachedProduct[]) => void;
+  cacheCustomers: (customers: CachedCustomer[]) => void;
+  cacheCategories: (categories: CachedCategory[]) => void;
+  getCachedProduct: (id: string) => CachedProduct | undefined;
+  getCachedCustomer: (id: string) => CachedCustomer | undefined;
+  searchCachedCustomers: (query: string) => CachedCustomer[];
   
-  // Cache management
-  cacheProducts: (products: any[]) => void;
-  cacheCategories: (categories: any[]) => void;
-  getProductByBarcode: (barcode: string) => CachedProduct | undefined;
-  getProductBySku: (sku: string) => CachedProduct | undefined;
-  getProductById: (id: string) => CachedProduct | undefined;
-  clearCache: () => void;
+  // Pending operations
+  addPendingOperation: (op: Omit<PendingOperation, 'id' | 'createdAt' | 'retryCount' | 'status'>) => string;
+  updatePendingOperation: (id: string, updates: Partial<PendingOperation>) => void;
+  removePendingOperation: (id: string) => void;
+  getPendingOperations: () => PendingOperation[];
   
-  // Sync actions
+  // Sync
   setSyncing: (isSyncing: boolean) => void;
-  addSyncError: (error: string) => void;
-  clearSyncErrors: () => void;
   updateLastSync: () => void;
+  setNextScheduledSync: (date: string | null) => void;
+  
+  // Clear
+  clearCache: () => void;
+  clearPendingOperations: () => void;
 }
 
-// Generate unique ID for transactions
-const generateId = () => `offline_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-export const useOfflineStore = create<OfflineState>()((set, get) => ({
-  // Initial state
-  isOnline: true,
-  lastOnlineAt: null,
-  offlineModeEnabled: true,
+const defaultSettings: OfflineSettings = {
+  enabled: false,
   autoSyncEnabled: true,
-  pendingTransactions: [],
-  cachedProducts: [],
-  cachedCategories: [],
-  lastSyncAt: null,
-  isSyncing: false,
-  syncErrors: [],
-  
-  // Network status
-  setOnlineStatus: (isOnline: boolean) => {
-    const state = get();
-    set({ 
-      isOnline,
-      lastOnlineAt: isOnline ? new Date().toISOString() : state.lastOnlineAt
-    });
-  },
-  
-  setOfflineModeEnabled: (enabled: boolean) => {
-    set({ offlineModeEnabled: enabled });
-  },
+  scheduledSyncEnabled: true,
+  scheduledSyncIntervalMinutes: 30,
+  allowLoyaltyRedemptionOffline: false,
+  showOfflineWarnings: true,
+  maxPendingOperations: 100,
+  cacheExpiryHours: 24,
+};
+
+export const useOfflineStore = create<OfflineState>()(
+  persist(
+    (set, get) => ({
+      // Initial state
+      isOnline: true,
+      isManualOffline: false,
+      settings: defaultSettings,
+      products: [],
+      customers: [],
+      categories: [],
+      pendingOperations: [],
+      syncStatus: {
+        lastSyncAt: null,
+        isSyncing: false,
+        pendingCount: 0,
+        failedCount: 0,
+        nextScheduledSync: null,
+      },
       
-      // Transaction queue
-      addPendingTransaction: (transaction) => {
-        const id = generateId();
-        const newTransaction: PendingTransaction = {
-          ...transaction,
+      // Connection status
+      setOnlineStatus: (isOnline) => set({ isOnline }),
+      
+      toggleManualOffline: () => set((state) => ({ 
+        isManualOffline: !state.isManualOffline 
+      })),
+      
+      setManualOffline: (value) => set({ isManualOffline: value }),
+      
+      // Settings
+      updateSettings: (newSettings) => set((state) => ({
+        settings: { ...state.settings, ...newSettings }
+      })),
+      
+      // Cache products
+      cacheProducts: (products) => {
+        const cachedAt = new Date().toISOString();
+        set({
+          products: products.map(p => ({ ...p, cachedAt }))
+        });
+      },
+      
+      // Cache customers
+      cacheCustomers: (customers) => {
+        const cachedAt = new Date().toISOString();
+        set({
+          customers: customers.map(c => ({ ...c, cachedAt }))
+        });
+      },
+      
+      // Cache categories
+      cacheCategories: (categories) => {
+        const cachedAt = new Date().toISOString();
+        set({
+          categories: categories.map(c => ({ ...c, cachedAt }))
+        });
+      },
+      
+      // Get cached product
+      getCachedProduct: (id) => {
+        return get().products.find(p => p.id === id);
+      },
+      
+      // Get cached customer
+      getCachedCustomer: (id) => {
+        return get().customers.find(c => c.id === id);
+      },
+      
+      // Search cached customers
+      searchCachedCustomers: (query) => {
+        const lowerQuery = query.toLowerCase();
+        return get().customers.filter(c => 
+          c.name.toLowerCase().includes(lowerQuery) ||
+          c.phone.includes(query) ||
+          (c.email && c.email.toLowerCase().includes(lowerQuery))
+        );
+      },
+      
+      // Add pending operation
+      addPendingOperation: (op) => {
+        const id = `pending_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        const newOp: PendingOperation = {
+          ...op,
           id,
-          created_at: new Date().toISOString(),
+          createdAt: new Date().toISOString(),
           retryCount: 0,
+          status: 'pending',
         };
         
-        set(state => ({
-          pendingTransactions: [...state.pendingTransactions, newTransaction]
+        set((state) => ({
+          pendingOperations: [...state.pendingOperations, newOp],
+          syncStatus: {
+            ...state.syncStatus,
+            pendingCount: state.syncStatus.pendingCount + 1,
+          }
         }));
         
         return id;
       },
       
-      removePendingTransaction: (id: string) => {
-        set(state => ({
-          pendingTransactions: state.pendingTransactions.filter(t => t.id !== id)
-        }));
-      },
-      
-      updateTransactionError: (id: string, error: string) => {
-        set(state => ({
-          pendingTransactions: state.pendingTransactions.map(t =>
-            t.id === id 
-              ? { ...t, lastError: error, retryCount: t.retryCount + 1 }
-              : t
-          )
-        }));
-      },
-      
-      clearAllPendingTransactions: () => {
-        set({ pendingTransactions: [] });
-      },
-      
-      // Cache management
-      cacheProducts: (products: any[]) => {
-        const cachedAt = new Date().toISOString();
-        const cachedProducts: CachedProduct[] = products.map(p => ({
-          id: p.id,
-          name: p.name,
-          sku: p.sku,
-          barcode: p.barcode,
-          price: p.price || p.cost_price || 0,
-          cost_price: p.cost_price,
-          stock_quantity: p.stock_quantity || p.quantity || 0,
-          category_id: p.category_id,
-          category_name: p.category_name,
-          image: p.image,
-          tax_rate: p.tax_rate || 0,
-          is_active: p.is_active !== false,
-          variants: p.variants,
-          has_variants: p.has_variants,
-          cached_at: cachedAt,
-        }));
-        
-        set({ cachedProducts, lastSyncAt: cachedAt });
-      },
-      
-      cacheCategories: (categories: any[]) => {
-        set({ 
-          cachedCategories: categories.map(c => ({ id: c.id, name: c.name }))
+      // Update pending operation
+      updatePendingOperation: (id, updates) => {
+        set((state) => {
+          const ops = state.pendingOperations.map(op => 
+            op.id === id ? { ...op, ...updates } : op
+          );
+          const pendingCount = ops.filter(op => op.status === 'pending').length;
+          const failedCount = ops.filter(op => op.status === 'failed').length;
+          
+          return {
+            pendingOperations: ops,
+            syncStatus: {
+              ...state.syncStatus,
+              pendingCount,
+              failedCount,
+            }
+          };
         });
       },
       
-      getProductByBarcode: (barcode: string) => {
-        const { cachedProducts } = get();
-        return cachedProducts.find(p => 
-          p.barcode === barcode || 
-          p.variants?.some(v => v.barcode === barcode)
-        );
+      // Remove pending operation
+      removePendingOperation: (id) => {
+        set((state) => {
+          const ops = state.pendingOperations.filter(op => op.id !== id);
+          return {
+            pendingOperations: ops,
+            syncStatus: {
+              ...state.syncStatus,
+              pendingCount: ops.filter(op => op.status === 'pending').length,
+              failedCount: ops.filter(op => op.status === 'failed').length,
+            }
+          };
+        });
       },
       
-      getProductBySku: (sku: string) => {
-        const { cachedProducts } = get();
-        return cachedProducts.find(p => 
-          p.sku === sku ||
-          p.variants?.some(v => v.sku === sku)
-        );
-      },
+      // Get pending operations
+      getPendingOperations: () => get().pendingOperations,
       
-      getProductById: (id: string) => {
-        const { cachedProducts } = get();
-        return cachedProducts.find(p => p.id === id);
-      },
+      // Set syncing status
+      setSyncing: (isSyncing) => set((state) => ({
+        syncStatus: { ...state.syncStatus, isSyncing }
+      })),
       
-      clearCache: () => {
-        set({ cachedProducts: [], cachedCategories: [], lastSyncAt: null });
-      },
+      // Update last sync
+      updateLastSync: () => set((state) => ({
+        syncStatus: { 
+          ...state.syncStatus, 
+          lastSyncAt: new Date().toISOString() 
+        }
+      })),
       
-      // Sync status
-      setSyncing: (isSyncing: boolean) => {
-        set({ isSyncing });
-      },
+      // Set next scheduled sync
+      setNextScheduledSync: (date) => set((state) => ({
+        syncStatus: { ...state.syncStatus, nextScheduledSync: date }
+      })),
       
-      addSyncError: (error: string) => {
-        set(state => ({
-          syncErrors: [...state.syncErrors.slice(-9), error] // Keep last 10 errors
-        }));
-      },
+      // Clear cache
+      clearCache: () => set({
+        products: [],
+        customers: [],
+        categories: [],
+      }),
       
-      clearSyncErrors: () => {
-        set({ syncErrors: [] });
-      },
-      
-      updateLastSync: () => {
-        set({ lastSyncAt: new Date().toISOString() });
-      },
-    })
+      // Clear pending operations
+      clearPendingOperations: () => set((state) => ({
+        pendingOperations: [],
+        syncStatus: {
+          ...state.syncStatus,
+          pendingCount: 0,
+          failedCount: 0,
+        }
+      })),
+    }),
+    {
+      name: 'retailpro-offline-storage',
+      partialize: (state) => ({
+        settings: state.settings,
+        products: state.products,
+        customers: state.customers,
+        categories: state.categories,
+        pendingOperations: state.pendingOperations,
+        syncStatus: state.syncStatus,
+        isManualOffline: state.isManualOffline,
+      }),
+    }
+  )
 );
 
-// Network listener setup
-export const setupNetworkListener = () => {
-  if (Platform.OS === 'web') {
-    // Web network listener
-    const handleOnline = () => useOfflineStore.getState().setOnlineStatus(true);
-    const handleOffline = () => useOfflineStore.getState().setOnlineStatus(false);
-    
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    
-    // Set initial status
-    useOfflineStore.getState().setOnlineStatus(navigator.onLine);
-    
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  } else {
-    // Native network listener using NetInfo
-    const NetInfo = require('@react-native-community/netinfo').default;
-    return NetInfo.addEventListener((state: any) => {
-      const isConnected = state.isConnected ?? false;
-      useOfflineStore.getState().setOnlineStatus(isConnected);
-    });
-  }
+// Helper to check if effectively offline (either network or manual)
+export const useIsEffectivelyOffline = () => {
+  const { isOnline, isManualOffline, settings } = useOfflineStore();
+  return !isOnline || (settings.enabled && isManualOffline);
+};
+
+// Helper to get offline status details
+export const useOfflineStatus = () => {
+  const { isOnline, isManualOffline, settings, syncStatus } = useOfflineStore();
+  
+  const isEffectivelyOffline = !isOnline || (settings.enabled && isManualOffline);
+  const reason = !isOnline ? 'No internet connection' : isManualOffline ? 'Manual offline mode' : null;
+  
+  return {
+    isOnline,
+    isManualOffline,
+    isEffectivelyOffline,
+    reason,
+    offlineEnabled: settings.enabled,
+    syncStatus,
+  };
 };
