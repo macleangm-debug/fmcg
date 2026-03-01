@@ -282,4 +282,4 @@ export async function getOfflineDataStats(): Promise<{
   };
 }
 
-export default db;
+export default getDB;
