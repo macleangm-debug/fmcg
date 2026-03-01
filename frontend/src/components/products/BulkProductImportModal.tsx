@@ -506,7 +506,7 @@ const BulkProductImportModal: React.FC<BulkProductImportModalProps> = ({
                             style={styles.fieldInput}
                             placeholder="5000"
                             value={row.price}
-                            onChangeText={(v) => handleUpdateRow(row.id, 'price', v)}}
+                            onChangeText={(v) => handleUpdateRow(row.id, 'price', v)}
                             keyboardType="numeric"
                             placeholderTextColor="#9CA3AF"
                           />
