@@ -28,15 +28,19 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
   - Shows real order dates, order numbers, and completion status
   - "View All Orders" button links to orders page
   - Empty state with helpful message when no orders exist
-- ✅ **REPORTS PAGE FULL REDESIGN** - Complete UI/UX overhaul with Swiss minimalist design
-  - Clean header without gradient backgrounds
-  - Horizontal period filter pills (Today, This Week, This Month, This Year)
-  - 4-column metric cards (Total Sales, Orders, Customers, Avg Order)
-  - Side-by-side Payment Methods (donut chart) and Top Products cards
-  - Clean area chart for Sales Trend
-  - Bottom sheet Export modal with PDF and CSV options
-  - Empty states with helpful guidance messages
-  - RetailPro Green theme (#1B4332) throughout
+- ✅ **REPORTS PAGE FULL REDESIGN (Zoho-style)** - Complete analytics hierarchy overhaul
+  - KPIs at top with % change indicators
+  - Full-width Revenue Trend chart
+  - Side-by-side Payment Methods (donut) + Top Products
+  - Side-by-side Staff Performance + Category Performance (progress bars)
+  - Business Insights summary section
+  - Report tabs: Overview, Products, Staff, Customers, Payments
+  - Reused ExportReportModal with PDF/Excel preview
+- ✅ **SELECT CUSTOMER EMPTY STATE FIX** - Cleaner design matching EmptyState component
+- ✅ **BULK IMPORT SKU FORMAT MODAL** - "Format" button opens configuration
+  - Auto-generate, Custom Prefix, Manual entry options
+  - Loads settings from business settings API
+- ✅ **BULK IMPORT DROPDOWN Z-INDEX FIX** - Category dropdown displays correctly
 - ✅ **Minor Fix: subscriptionApi.getCurrent** - Fixed API call to use correct method name (getStatus)
 - ✅ **Testing Agent Validation** - iteration_12.json (85% frontend pass)
 
