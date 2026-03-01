@@ -342,7 +342,7 @@ export default function ReportsPage() {
               <TouchableOpacity
                 key={p.key}
                 style={[styles.periodPill, period === p.key && styles.periodPillActive]}
-                onPress={() => p.key === 'custom' ? setShowDatePicker(true) : setPeriod(p.key)}
+                onPress={() => handlePeriodChange(p.key)}
                 data-testid={`period-${p.key}`}
               >
                 {p.key === 'custom' && <Ionicons name="calendar-outline" size={14} color={period === p.key ? THEME.surface : THEME.textSecondary} style={{ marginRight: 4 }} />}
