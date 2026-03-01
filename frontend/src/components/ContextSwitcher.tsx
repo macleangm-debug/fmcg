@@ -219,7 +219,7 @@ export default function ContextSwitcher({
 
   const fetchSubscription = async () => {
     try {
-      const response = await subscriptionApi.getCurrent();
+      const response = await subscriptionApi.getStatus();
       setSubscription(response.data);
     } catch (error) {
       console.log('Failed to fetch subscription:', error);
