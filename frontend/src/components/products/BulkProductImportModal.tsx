@@ -692,6 +692,106 @@ const BulkProductImportModal: React.FC<BulkProductImportModalProps> = ({
             </View>
           </View>
         </View>
+
+        {/* SKU Format Modal */}
+        {showSkuFormatModal && (
+          <View style={styles.skuFormatOverlay}>
+            <View style={styles.skuFormatModal}>
+              <View style={styles.skuFormatHeader}>
+                <Text style={styles.skuFormatTitle}>SKU Format</Text>
+                <TouchableOpacity onPress={() => setShowSkuFormatModal(false)}>
+                  <Ionicons name="close" size={24} color="#6B7280" />
+                </TouchableOpacity>
+              </View>
+              
+              <Text style={styles.skuFormatSubtitle}>
+                Choose how SKU codes should be generated
+              </Text>
+
+              <View style={styles.skuFormatOptions}>
+                <TouchableOpacity
+                  style={[styles.skuFormatOption, skuFormat === 'auto' && styles.skuFormatOptionActive]}
+                  onPress={() => setSkuFormat('auto')}
+                >
+                  <View style={styles.skuFormatOptionRadio}>
+                    {skuFormat === 'auto' && <View style={styles.skuFormatOptionRadioInner} />}
+                  </View>
+                  <View style={styles.skuFormatOptionContent}>
+                    <Text style={styles.skuFormatOptionTitle}>Auto-generate</Text>
+                    <Text style={styles.skuFormatOptionDesc}>SKU00001, SKU00002, ...</Text>
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.skuFormatOption, skuFormat === 'prefix' && styles.skuFormatOptionActive]}
+                  onPress={() => setSkuFormat('prefix')}
+                >
+                  <View style={styles.skuFormatOptionRadio}>
+                    {skuFormat === 'prefix' && <View style={styles.skuFormatOptionRadioInner} />}
+                  </View>
+                  <View style={styles.skuFormatOptionContent}>
+                    <Text style={styles.skuFormatOptionTitle}>Custom Prefix</Text>
+                    <Text style={styles.skuFormatOptionDesc}>{skuPrefix}-0001, {skuPrefix}-0002, ...</Text>
+                  </View>
+                </TouchableOpacity>
+
+                {skuFormat === 'prefix' && (
+                  <View style={styles.skuPrefixInputContainer}>
+                    <Text style={styles.skuPrefixLabel}>Prefix:</Text>
+                    <TextInput
+                      style={styles.skuPrefixInput}
+                      value={skuPrefix}
+                      onChangeText={setSkuPrefix}
+                      placeholder="e.g. PROD, BEV, FD"
+                      placeholderTextColor="#9CA3AF"
+                      maxLength={10}
+                    />
+                  </View>
+                )}
+
+                <TouchableOpacity
+                  style={[styles.skuFormatOption, skuFormat === 'custom' && styles.skuFormatOptionActive]}
+                  onPress={() => setSkuFormat('custom')}
+                >
+                  <View style={styles.skuFormatOptionRadio}>
+                    {skuFormat === 'custom' && <View style={styles.skuFormatOptionRadioInner} />}
+                  </View>
+                  <View style={styles.skuFormatOptionContent}>
+                    <Text style={styles.skuFormatOptionTitle}>Enter Manually</Text>
+                    <Text style={styles.skuFormatOptionDesc}>I'll enter each SKU myself</Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.skuStartingContainer}>
+                <Text style={styles.skuStartingLabel}>Starting number:</Text>
+                <TextInput
+                  style={styles.skuStartingInput}
+                  value={String(skuCounter)}
+                  onChangeText={(v) => setSkuCounter(parseInt(v) || 1)}
+                  keyboardType="numeric"
+                  placeholder="1"
+                  placeholderTextColor="#9CA3AF"
+                />
+              </View>
+
+              <View style={styles.skuFormatActions}>
+                <TouchableOpacity 
+                  style={styles.skuFormatCancelBtn}
+                  onPress={() => setShowSkuFormatModal(false)}
+                >
+                  <Text style={styles.skuFormatCancelBtnText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.skuFormatApplyBtn}
+                  onPress={applySkuFormat}
+                >
+                  <Text style={styles.skuFormatApplyBtnText}>Apply to All</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        )}
       </View>
   );
 
