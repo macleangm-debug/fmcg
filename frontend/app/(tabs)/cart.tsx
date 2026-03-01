@@ -631,6 +631,22 @@ export default function Cart() {
       return;
     }
     
+    // Check if non-cash payment requires online connection
+    const requiresOnlinePayment = splitPaymentMode 
+      ? splitPayments.some(p => p.method !== 'cash')
+      : paymentMethod !== 'cash';
+    
+    if (requiresOnlinePayment && !isOnline) {
+      Alert.alert(
+        'Internet Required',
+        'Card and Mobile Money payments require an internet connection to verify the transaction.\n\nPlease:\n• Connect to the internet, or\n• Switch to Cash payment',
+        [
+          { text: 'OK', style: 'default' }
+        ]
+      );
+      return;
+    }
+    
     // Validate split payments cover the total
     if (splitPaymentMode) {
       const splitTotal = splitPayments.reduce((sum, p) => sum + p.amount, 0);
