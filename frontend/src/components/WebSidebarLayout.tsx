@@ -19,6 +19,7 @@ import { subscriptionApi } from '../api/client';
 import ProductSwitcher from './ProductSwitcher';
 import LinkedAppsSidebar from './LinkedAppsSidebar';
 import ContextSwitcher from './ContextSwitcher';
+import OfflineStatusIndicator from './common/OfflineStatusIndicator';
 
 interface WebSidebarLayoutProps {
   children: React.ReactNode;
