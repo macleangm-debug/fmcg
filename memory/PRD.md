@@ -272,7 +272,7 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 ---
 
 ## Known Issues
-1. **Language Selector Bundler Error**: Importing `useLanguageStore` causes "Cannot use 'import.meta' outside a module" - requires metro.config.js investigation
+1. **LanguageSelector Component**: May still cause issues in certain contexts - needs separate investigation
 2. **Minor - `/api/locations` API**: Returns 400 error in console - non-critical
 3. **Pre-existing**: Console warning about deprecated shadow style props
 4. **Pre-existing**: Some sidebar icons may appear as empty boxes (font loading issue)
