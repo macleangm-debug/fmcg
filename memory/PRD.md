@@ -194,12 +194,14 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 - [x] **COMPLETE PROFILE PROMPT (COMPLETED Feb 28, 2026)** - Modal during checkout for customers without email, Skip/Save options
 - [x] **BULK IMPORT API (COMPLETED Feb 28, 2026)** - POST /api/products/bulk endpoint with auto-SKU generation
 - [x] **CUSTOMER API ENDPOINTS (COMPLETED Feb 28, 2026)** - GET/PUT /api/customers/{id} for progressive profiling
+- [x] **BULK IMPORT UI ENHANCED (COMPLETED Mar 1, 2026)** - Modal accessible from Products page, supports Excel (.xlsx, .xls) and CSV upload, Download Template, Add Manually with row-based entry
+- [x] **PRODUCT SWITCHER FIX (COMPLETED Mar 1, 2026)** - Fixed pointer events interception issue in Soko launcher - clicking unsubscribed apps now opens "Start Free Trial" modal correctly
 
 ### P1 - In Progress
-- [ ] **Product Switcher Bug** - 9-dot grid click not triggering "Start Free Trial" modal for unsubscribed apps
 - [ ] **Tigo SMS Testing** - User deferred ("We will test later"), requires VPN access
 - [ ] Language Selector integration (blocked - `import.meta` bundler error)
 - [ ] UniTxt admin dashboard for SMS campaigns
+- [ ] Fix TransactionList mock data - replace with live API data
 
 ### P2 - Future/Backlog
 - [ ] Deploy to VPN-connected server
