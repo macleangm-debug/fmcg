@@ -32,6 +32,7 @@ import PaymentModal from '../../src/components/PaymentModal';
 import LinkedAppsManager from '../../src/components/LinkedAppsManager';
 import PrinterSettings from '../../src/components/PrinterSettings';
 import OfflineIndicator from '../../src/components/OfflineIndicator';
+import OfflineSettings from '../../src/components/admin/settings/OfflineSettings';
 import syncService from '../../src/services/syncService';
 
 // Country data with codes and cities
