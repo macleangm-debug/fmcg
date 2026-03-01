@@ -1,0 +1,274 @@
+/**
+ * OfflineDB Service - Manages offline data storage using IndexedDB (via Dexie)
+ * 
+ * This service provides:
+ * - Queued mutations for offline operations
+ * - Cached data for offline access
+ * - Sync tracking and conflict resolution
+ */
+
+import Dexie, { Table } from 'dexie';
+
+// Types for offline queue items
+export interface QueuedMutation {
+  id?: number;
+  type: 'order' | 'customer' | 'product' | 'expense';
+  action: 'create' | 'update' | 'delete';
+  payload: any;
+  timestamp: Date;
+  synced: boolean;
+  error?: string;
+  retryCount: number;
+}
+
+// Types for cached data
+export interface CachedProduct {
+  id: string;
+  name: string;
+  price: number;
+  sku: string;
+  barcode?: string;
+  stock_quantity: number;
+  category_id: string;
+  category_name?: string;
+  image?: string;
+  cachedAt: Date;
+}
+
+export interface CachedCustomer {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string;
+  loyalty_points?: number;
+  total_purchases?: number;
+  cachedAt: Date;
+}
+
+export interface CachedCategory {
+  id: string;
+  name: string;
+  description?: string;
+  cachedAt: Date;
+}
+
+export interface OfflineSettings {
+  key: string;
+  value: any;
+  updatedAt: Date;
+}
+
+// Define the database
+class RetailProOfflineDB extends Dexie {
+  // Queue for offline mutations
+  mutationQueue!: Table<QueuedMutation, number>;
+  
+  // Cached data tables
+  products!: Table<CachedProduct, string>;
+  customers!: Table<CachedCustomer, string>;
+  categories!: Table<CachedCategory, string>;
+  
+  // Settings
+  settings!: Table<OfflineSettings, string>;
+
+  constructor() {
+    super('RetailProOfflineDB');
+    
+    this.version(1).stores({
+      mutationQueue: '++id, type, action, synced, timestamp',
+      products: 'id, name, sku, barcode, category_id, cachedAt',
+      customers: 'id, name, phone, cachedAt',
+      categories: 'id, name, cachedAt',
+      settings: 'key, updatedAt'
+    });
+  }
+}
+
+// Create singleton instance
+const db = new RetailProOfflineDB();
+
+// ============== OFFLINE SETTINGS ==============
+
+export async function getOfflineSetting(key: string): Promise<any> {
+  const setting = await db.settings.get(key);
+  return setting?.value;
+}
+
+export async function setOfflineSetting(key: string, value: any): Promise<void> {
+  await db.settings.put({
+    key,
+    value,
+    updatedAt: new Date()
+  });
+}
+
+export async function isOfflineModeEnabled(): Promise<boolean> {
+  const enabled = await getOfflineSetting('offlineModeEnabled');
+  return enabled === true;
+}
+
+export async function setOfflineModeEnabled(enabled: boolean): Promise<void> {
+  await setOfflineSetting('offlineModeEnabled', enabled);
+}
+
+// ============== MUTATION QUEUE ==============
+
+export async function queueMutation(
+  type: QueuedMutation['type'],
+  action: QueuedMutation['action'],
+  payload: any
+): Promise<number> {
+  const id = await db.mutationQueue.add({
+    type,
+    action,
+    payload,
+    timestamp: new Date(),
+    synced: false,
+    retryCount: 0
+  });
+  return id;
+}
+
+export async function getPendingMutations(): Promise<QueuedMutation[]> {
+  return await db.mutationQueue
+    .where('synced')
+    .equals(0) // false = 0 in IndexedDB
+    .sortBy('timestamp');
+}
+
+export async function markMutationSynced(id: number): Promise<void> {
+  await db.mutationQueue.update(id, { synced: true });
+}
+
+export async function markMutationFailed(id: number, error: string): Promise<void> {
+  const mutation = await db.mutationQueue.get(id);
+  if (mutation) {
+    await db.mutationQueue.update(id, {
+      error,
+      retryCount: (mutation.retryCount || 0) + 1
+    });
+  }
+}
+
+export async function clearSyncedMutations(): Promise<number> {
+  return await db.mutationQueue
+    .where('synced')
+    .equals(1) // true = 1 in IndexedDB
+    .delete();
+}
+
+export async function getPendingMutationCount(): Promise<number> {
+  return await db.mutationQueue
+    .where('synced')
+    .equals(0)
+    .count();
+}
+
+// ============== PRODUCT CACHE ==============
+
+export async function cacheProducts(products: CachedProduct[]): Promise<void> {
+  const cachedAt = new Date();
+  const productsWithTimestamp = products.map(p => ({ ...p, cachedAt }));
+  await db.products.bulkPut(productsWithTimestamp);
+}
+
+export async function getCachedProducts(): Promise<CachedProduct[]> {
+  return await db.products.toArray();
+}
+
+export async function getCachedProduct(id: string): Promise<CachedProduct | undefined> {
+  return await db.products.get(id);
+}
+
+export async function getCachedProductByBarcode(barcode: string): Promise<CachedProduct | undefined> {
+  return await db.products.where('barcode').equals(barcode).first();
+}
+
+export async function clearProductCache(): Promise<void> {
+  await db.products.clear();
+}
+
+// ============== CUSTOMER CACHE ==============
+
+export async function cacheCustomers(customers: CachedCustomer[]): Promise<void> {
+  const cachedAt = new Date();
+  const customersWithTimestamp = customers.map(c => ({ ...c, cachedAt }));
+  await db.customers.bulkPut(customersWithTimestamp);
+}
+
+export async function getCachedCustomers(): Promise<CachedCustomer[]> {
+  return await db.customers.toArray();
+}
+
+export async function getCachedCustomer(id: string): Promise<CachedCustomer | undefined> {
+  return await db.customers.get(id);
+}
+
+export async function searchCachedCustomers(query: string): Promise<CachedCustomer[]> {
+  const lowerQuery = query.toLowerCase();
+  return await db.customers
+    .filter(c => 
+      c.name.toLowerCase().includes(lowerQuery) ||
+      c.phone.includes(query)
+    )
+    .toArray();
+}
+
+export async function clearCustomerCache(): Promise<void> {
+  await db.customers.clear();
+}
+
+// ============== CATEGORY CACHE ==============
+
+export async function cacheCategories(categories: CachedCategory[]): Promise<void> {
+  const cachedAt = new Date();
+  const categoriesWithTimestamp = categories.map(c => ({ ...c, cachedAt }));
+  await db.categories.bulkPut(categoriesWithTimestamp);
+}
+
+export async function getCachedCategories(): Promise<CachedCategory[]> {
+  return await db.categories.toArray();
+}
+
+export async function clearCategoryCache(): Promise<void> {
+  await db.categories.clear();
+}
+
+// ============== FULL SYNC/CLEAR ==============
+
+export async function clearAllOfflineData(): Promise<void> {
+  await Promise.all([
+    db.mutationQueue.clear(),
+    db.products.clear(),
+    db.customers.clear(),
+    db.categories.clear()
+  ]);
+}
+
+export async function getOfflineDataStats(): Promise<{
+  pendingMutations: number;
+  cachedProducts: number;
+  cachedCustomers: number;
+  cachedCategories: number;
+  lastCacheTime?: Date;
+}> {
+  const [pendingMutations, cachedProducts, cachedCustomers, cachedCategories] = await Promise.all([
+    getPendingMutationCount(),
+    db.products.count(),
+    db.customers.count(),
+    db.categories.count()
+  ]);
+
+  // Get the latest cache time
+  const latestProduct = await db.products.orderBy('cachedAt').last();
+  
+  return {
+    pendingMutations,
+    cachedProducts,
+    cachedCustomers,
+    cachedCategories,
+    lastCacheTime: latestProduct?.cachedAt
+  };
+}
+
+export default db;
