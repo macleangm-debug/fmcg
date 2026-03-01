@@ -165,7 +165,7 @@ async def get_my_referral_info(current_user: dict = Depends(get_current_user)):
         })
     
     # Generate shareable link
-    base_url = os.environ.get("FRONTEND_URL", "https://retailpro-checkout.preview.emergentagent.com")
+    base_url = os.environ.get("FRONTEND_URL", "https://bulk-import-hub-1.preview.emergentagent.com")
     referral_link = f"{base_url}/signup?ref={referral_code}"
     
     return {
@@ -249,7 +249,7 @@ async def send_referral_invite(
     
     # Send email invitation in background
     if EMAIL_SERVICE_AVAILABLE:
-        base_url = os.environ.get("FRONTEND_URL", os.environ.get("API_BASE_URL", "https://retailpro-checkout.preview.emergentagent.com"))
+        base_url = os.environ.get("FRONTEND_URL", os.environ.get("API_BASE_URL", "https://bulk-import-hub-1.preview.emergentagent.com"))
         referral_link = f"{base_url}/signup?ref={referral_code}"
         background_tasks.add_task(
             send_referral_invite_email,

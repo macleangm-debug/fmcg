@@ -1,103 +1,90 @@
 <analysis>**original_problem_statement:**
-The initial goal was a UI/UX overhaul for the RetailPro product dashboard and Add New Sale pages. The scope expanded to include a progressive profiling system, humorous empty-state UIs, a dynamic cross-promotion banner, a customer-first checkout flow, and a bulk product import feature.
+The initial goal was a UI/UX overhaul for the RetailPro product dashboard and Add New Sale pages. The scope has significantly expanded to include a progressive profiling system, humorous empty-state UIs, a dynamic cross-promotion banner, a customer-first checkout flow, and a bulk product import feature.
 
 Recent user requests have focused on:
 1.  Implementing a Complete Profile prompt during checkout for customers missing an email. **(Completed)**
-2.  Designing and implementing a bulk product import feature, which was later expanded to include:
-    *   Manual row-by-row entry for non-technical users. **(In Progress)**
-    *   Support for Excel file uploads in addition to CSV. **(In Progress)**
-    *   Availability on the main Products page, not just the New Sale flow. **(In Progress)**
-3.  Fixing the empty state UI for the products page to be cleaner and more user-friendly. **(Completed)**
-4.  Fixing a critical rendering bug where the  was not appearing on the web. **(Completed)**
+2.  Designing and implementing a bulk product import feature, including support for Excel files, manual entry, and SKU format selection. **(Completed)**
+3.  Fixing the empty state UI for various pages to be cleaner and more user-friendly. **(Completed)**
+4.  Fixing critical bugs, including the  rendering, the  modal not opening, and the  on the dashboard showing mocked data. **(Completed)**
+5.  A complete redesign of the Reports page to a professional, Zoho-style analytical interface. **(Completed)**
+6.  Making the new Reports page interactive (date filters, tabs). **(In Progress)**
+7.  Implementing a comprehensive offline mode for the application. **(In Progress)**
+8.  Clarifying why Tigo SMS integration files were not visible on GitHub. **(Resolved, user-side action pending)**
 
 **PRODUCT REQUIREMENTS:**
-1.  **P0**: Enhance the Bulk Product Import feature to support Excel files and be accessible from the main Products page. **(IN PROGRESS)**
-2.  **P1**: Fix the Product Switcher modal not appearing on click for unsubscribed apps. **(NOT STARTED)**
-3.  **P2**: Design and implement a self-service bulk product import feature (e.g., via CSV). **(Partially Implemented, now P0)**
-4.  **P3**: Finalize Deployment and User Verification for Tigo SMS. **(BLOCKED - User Action Pending)**
-5.  **P4**: Fix the Cannot use import.meta crash related to the  component. **(NOT STARTED)**
-6.  **P5**: Implement a UniTxt admin dashboard for managing SMS campaigns. **(NOT STARTED)**
-7.  **P6**: Replace hardcoded mock data in the  component with live data. **(NOT STARTED)**
+Refer to  for a complete list. Key active items:
+1.  **P0**: Implement Offline Mode. **(IN PROGRESS)**
+2.  **P0**: Fix Reports page interactivity (date/tab filters). **(IN PROGRESS)**
+3.  **P1**: Connect the Bulk Import SKU generator to use the format defined in the admin business settings. **(NOT STARTED)**
+4.  **P2**: Fix the  component crash. **(NOT STARTED)**
+5.  **P3**: Finalize Deployment and User Verification for Tigo SMS. **(BLOCKED - User Action Pending)**
 
 **User's preferred language**: English
 
 **what currently exists?**
 The application is a full-stack platform with a React (Expo for Web) frontend and a FastAPI backend.
-Key implemented features include:
-*   **Enhanced Dashboard & New Sale Flow**: A complete UI/UX overhaul with a customer-first checkout process is in place.
-*   **Progressive Profiling**: The customer creation modal requires only Name + Phone. A Complete Profile prompt now correctly appears during checkout for customers missing an email.
-*   **Bulk Product Import (V1)**: A  exists and is accessible from the New Sale page. It supports manual row-by-row product entry and pasting CSV content. The backend has a corresponding  endpoint.
-*   **Improved Empty States**: Tables for Orders, Customers, Categories, and now Products feature humorous, context-aware messages and a cleaner UI that hides search/count controls when there is no data.
-*   **Bug Fixes**: The critical bug preventing the  from rendering on the web has been resolved.
+- **Key Features**: A redesigned Zoho-style Reports page, a complete Bulk Product Import feature (supporting manual, CSV, and Excel), a fixed Product Switcher, a live-data  on the dashboard, and progressive customer profiling.
+- **Offline Mode Foundation**: Core files for offline functionality (, , UI components) have been created but are not yet fully integrated.
+- **Reports Interactivity Foundation**: The backend endpoint for reports now accepts date ranges, and the frontend has been partially updated to handle state changes, but the full interactivity logic is not yet implemented.
 
 **Last working item**:
-- **Last item agent was working**: The user requested that the Bulk Import functionality also be available on the main Products page and support Excel file uploads. The agent was in the process of implementing these enhancements. The Bulk Import button was added to the admin products page, and the  was being refactored to handle file uploads (, ) instead of just pasted text.
+- **Last item agent was working**: The user requested two major features simultaneously: fixing the interactivity on the new Reports page and implementing a comprehensive offline mode. The agent began work on both, creating the necessary files and starting the integration for the offline mode, while also modifying the frontend and backend for the reports page filters.
 - **Status**: IN PROGRESS
 - **Agent Testing Done**: N
 - **Which testing method agent to use?**: both
-    - **Frontend**: Verify the Bulk Import button and modal work on the  page. Test the new file upload UI, including successful uploads (, ), error handling for invalid files, and the Download Template functionality.
-    - **Backend**: Update the  endpoint to parse uploaded Excel and CSV files. Create unit tests for the parsing logic.
+    - **Frontend**: Test the Reports page filters (date/tabs) and the date picker crash. Test the full offline mode flow: enable via settings, see the UI indicator, create a sale offline, and verify it syncs when back online.
+    - **Backend**: Test the  endpoint with  and  parameters to ensure correct data filtering.
 - **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
-- **Issue 1**: Product Switcher Click Not Working (P1)
-- **Issue 2**:  Crash (P4)
+- **Issue 1**: Reports page is not interactive (P0)
 
 **Issues Detail**:
 - **Issue 1**:
-    - **Description (P1)**: In the 9-dot grid product switcher, clicking an unsubscribed app fails to open the Start Free Trial modal. This is a critical user acquisition bug carried over from a previous session.
-    - **Attempted fixes**: None.
+    - **Description (P0)**: The redesigned Zoho-style reports page at  is static. Clicking on period filters (Today, Week, Month), report tabs (Products, Staff), or using the Apply Range button in the custom date picker does not update the data. The date picker crashes the app.
+    - **Attempted fixes**: Backend endpoint  was updated to accept  and . The frontend component  was partially updated with state management (, ) and a  function. An incorrect prop usage in  was identified.
     - **Next debug checklist**:
-        1. Review .
-        2. Trace the  function and the logic calling .
-        3. Use browser dev tools to check for z-index conflicts or other elements intercepting clicks.
-    - **Why fix this issue and what will be achieved with the fix?**: This is a core cross-selling feature for the product suite.
-    - **Status**: NOT STARTED
-    - **Is recurring issue?**: Y
-    - **Should Test frontend/backend/both after fix?**: Frontend
-    - **Blocked on other issue**: None
-
-- **Issue 2**:
-    - **Description (P4)**: The  component causes a frontend crash with a Cannot use import.meta error.
-    - **Attempted fixes**: None.
-    - **Next debug checklist**: Investigate the component's code and its dependencies to find the source of the  usage, which is not supported in the current build environment.
-    - **Why fix this issue and what will be achieved with the fix?**: Will enable multi-language support.
-    - **Status**: NOT STARTED
-    - **Is recurring issue?**: Y
-    - **Should Test frontend/backend/both after fix?**: Frontend
+        1.  In , complete the  hook to refetch data when , , or  changes.
+        2.  Fix the  crash by using the correct  and  props.
+        3.  Wire up the report tabs to update the  state.
+        4.  Ensure the  call correctly passes the date range to the backend.
+    - **Why fix this issue and what will be achieved with the fix?**: The new reports page is a key feature but is currently unusable without interactivity.
+    - **Status**: IN PROGRESS
+    - **Is recurring issue?**: N
+    - **Should Test frontend/backend/both after fix?**: Both
     - **Blocked on other issue**: None
 
 **In progress Task List**:
-- **Task 1**: Enhance Bulk Product Import Feature (P0)
+- **Task 1**: Implement Offline Mode (P0)
     - **Where to resume**:
-        - **Frontend**: Continue refactoring . The component has been updated to include  and  libraries, and the UI is being changed from a textarea to a file dropzone.
-        - **Backend**: The  bulk import endpoint currently only accepts a JSON payload. It needs to be modified to accept  (file uploads) and include logic to parse  and  files.
-    - **What will be achieved with this?**: Users will be able to easily import products in bulk from both the New Sale and main Products pages using standard spreadsheet formats.
+        - Integrate the  into the UI, likely in .
+        - Add the  component to the main settings page.
+        - Wrap critical API calls (e.g., creating an order in ) with logic from  to check for offline status and queue actions into IndexedDB via .
+    - **What will be achieved with this?**: Users can perform core actions like making sales without an internet connection, with data syncing automatically upon reconnection.
     - **Status**: IN PROGRESS
     - **Should Test frontend/backend/both after fix?**: Both
-    - **Blocked on something**: None.
+    - **Blocked on something**: None
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks**:
-    - **(P2)** Fix  on the dashboard to use live API data instead of hardcoded mocks.
-    - **(P3)** Implement UniTxt admin dashboard for managing SMS campaigns.
+    - **(P1)** Connect the Bulk Import's SKU generation logic in  to fetch and use the SKU format defined in the admin business settings from the backend.
+    - **(P2)** Fix the recurring  crash.
 - **Future Tasks**:
+    - Finalize Tigo SMS integration (currently blocked).
+    - Implement a UniTxt admin dashboard.
     - Refactor the monolithic  into a routed structure.
-    - Refactor the oversized  and  components.
-    - Configure a production-ready static web build ().
+    - Refactor the oversized .
 
 **Completed work in this session**
-- **Complete Profile Prompt (DONE)**: Implemented and fully tested the modal flow that prompts users to add an email during checkout.
-- **Bulk Product Import (V1) (DONE)**: Created the initial feature with a backend endpoint () and a frontend modal supporting manual entry and CSV pasting.
-- ** Rendering Fix (DONE)**: Diagnosed and fixed a complex React Native Web rendering bug where the modal failed to appear because it was being rendered in the wrong conditional  branch of a large component ().
-- **Products Page Empty State UI (DONE)**: Redesigned the empty state for the  and  pages to match the cleaner, more user-friendly style of the Orders page, hiding search/stats when no products are present.
-- **Backend Customer Endpoints (DONE)**: Added  and  to support the Complete Profile feature.
-- **Sales Staff Role Verification (DONE)**: Manually tested and confirmed that the  role can search for customers, resolving a potential issue flagged by a previous automated test.
+- **Reports Page Redesign (DONE)**: Fully redesigned  with a Zoho-style analytical layout, while successfully retaining the existing .
+- **Product Switcher Bug (FIXED)**: Resolved the critical issue where the Start Free Trial modal wouldn't appear for unsubscribed apps.
+- ** Live Data (FIXED)**: The Recent Orders component on the dashboard now correctly displays live data from the API.
+- **Bulk Import UX Fixes (DONE)**: Resolved z-index issues with dropdowns and added a Format button with a modal for SKU generation preferences.
+- **Select Customer UI Fix (DONE)**: The empty state on the  page was updated to use the standard, cleaner design.
+- **GitHub Sync Issue Diagnosis (DONE)**: Helped the user understand that their commits were going to a  branch instead of , explaining why the Tigo integration files were not visible in their repository.
 
 **Earlier issues found/mentioned but not fixed**
-- The  component on the dashboard uses hardcoded mock data.
-- The Product Switcher modal is broken.
-- The  component crashes the app.
+- The  component causes a frontend crash with a Cannot use import.meta error. This is a recurring issue from a previous fork.
 
 **Known issue recurrence from previous fork**
 - **Issue recurrence in previous fork**: The  crash.
@@ -108,87 +95,91 @@ Key implemented features include:
 
 
 **Key Technical Concepts**
-- **Component-Driven UI**: Reusable components like modals and banners.
-- **Progressive Profiling**: Reducing user friction by collecting minimal info upfront.
-- **React Rendering Debugging**: The session involved in-depth debugging of a React Native Web rendering issue caused by complex conditional returns, highlighting the need for component refactoring.
-- **File Upload Handling**: Introducing  for frontend file selection and  for parsing.
+- **Offline-First Architecture**: Initiated implementation using IndexedDB (via ) to queue mutations made while offline and a sync service to process them upon reconnection.
+- **Complex UI State Management**: The Reports page requires managing multiple interdependent state variables (tabs, period, custom date range) to trigger API refetches.
+- **React Native Web Event Propagation**: Successfully debugged and fixed pointer event interception in nested  components to resolve the Product Switcher bug.
 
 **key DB schema**
-- : {email, password, role, subscriptions: [product_id]}
+- : {email, password, role, subscriptions: [product_id], settings: {sku_format, ...}}
 - : {name, phone, email, ...}
 - , , : Core RetailPro data collections.
 
 **changes in tech stack**
-- Added  and  for the bulk import feature enhancement.
+- Added  and  to support the new offline mode feature.
 
 **All files of reference**
-- **Updated/Created**:
-    - : Created and refactored to support manual entry and file uploads.
-    - : Added customer update/get and bulk product endpoints.
-    - : Added  to the correct render branch, fixing a major bug.
-    - : Updated to hide search/stats on empty state and added Bulk Import button.
-    - : Updated to hide search/stats on empty state.
-    - , : Updated with new API methods.
-- **Referenced**:
-    - : Used as a reference for the desired empty state UI.
-    - : Updated with progress.
+- **Updated/In Progress**:
+    - : Redesigned, interactivity fix is in progress.
+    - : Updated the  endpoint for date filtering.
+    - : To be updated to include the offline indicator.
+- **Fixed/Completed**:
+    - : Fixed trial modal bug.
+    - : Now uses live data.
+    - : UI/UX fixes implemented.
+- **New (Offline Mode)**:
+    - 
+    - 
+    - 
+    - 
 
 **Areas that need refactoring**:
--  is extremely large and difficult to maintain due to multiple conditional  statements. It was the source of a significant bug and should be broken down into smaller, more manageable components.
--  is a monolith and should be broken down into a routed structure for better organization and scalability.
+-  is extremely large and difficult to maintain.
+-  is a monolith and should be broken into a routed structure.
 
 **key api endpoints**
-- : Creates products in bulk from a JSON payload. (Needs update for file uploads).
-- : Updates a customer's details.
-- : Fetches a single customer's details.
+- : Updated to accept  and  query parameters.
+- : (To be used) To fetch SKU format for bulk import.
 
 **Critical Info for New Agent**
-- **Your top priority is to complete the Bulk Product Import enhancement.** This involves finishing the frontend UI in  and, crucially, modifying the backend endpoint  to handle file uploads () and parse Excel/CSV files.
-- **Be extremely cautious when editing .** This file's complexity with multiple  branches caused a major bug that was difficult to find. Ensure any new UI is placed within the correct conditional render block.
-- After completing the bulk import task, address the high-priority bug with the **Product Switcher modal**. This is a recurring issue that impacts a core business goal.
+- **Your top priorities are the two  items currently in progress**:
+    1.  **Fix Reports Page Interactivity**: This is critical as the new page is unusable. Complete the frontend logic in  to make the filters and tabs fetch new data. Fix the date picker crash.
+    2.  **Implement Offline Mode**: The foundation is laid. Your next steps are to integrate the UI elements (, ) and then wrap critical API calls (like ) with the  to queue actions when the user is offline.
+- **GitHub Sync Awareness**: The user has previously faced issues where their work was saved to a  branch instead of . If they mention missing files on GitHub, guide them to check their selected branch in the Save to Github UI first.
+- After completing the P0 tasks, prioritize connecting the Bulk Import's SKU generator to the backend business settings.
 
 **documents and test reports created in this job**
 - 
 -  (Updated multiple times)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User**: Add the Bulk Import function to the Products page and allow Excel format for import. - **Status**: IN PROGRESS
-2.  **User**: Confirmed where the Add Manually UI is located. - **Status**: RESOLVED
-3.  **User**: Asked where the Add Manually UI for bulk import is. - **Status**: RESOLVED
-4.  **User**: Requested a summary of work done, URL, and credentials. - **Status**: RESOLVED
-5.  **User**: Explicitly asked to fix the  rendering bug on the web. - **Status**: COMPLETED
-6.  **User**: Provided an image and requested to fix the empty state UI on the products page to match the orders page. - **Status**: COMPLETED
-7.  **User**: Gave approval () to continue fixing the modal. - **Status**: RESOLVED
-8.  **User**: Gave approval () to continue debugging. - **Status**: RESOLVED
-9.  **User**: Added a requirement for add row functionality for manual product entry. - **Status**: COMPLETED
-10. **User**: Approved the initial plan. - **Status**: RESOLVED
+1.  **User**: Reports page filters/tabs don't work, date picker crashes. Also, requested offline mode. **Status**: IN PROGRESS
+2.  **User**: Provided detailed requirements for offline mode (PWA, UI toggle, loyalty handling, sync strategy). **Status**: IN PROGRESS
+3.  **User**: Requested credentials and URL. **Status**: RESOLVED
+4.  **User**: Requested a Zoho-style redesign for the reports page and asked if SKU settings were connected. **Status**: Reports redesign DONE, SKU connection NOT STARTED.
+5.  **User**: Provided feedback on three UI issues: Select Customer empty state, Bulk Import modal (dropdowns/SKU), and the location of the Export modal on the reports page. **Status**: ALL FIXED.
+6.  **User**: Requested credentials and URL. **Status**: RESOLVED
+7.  **User**: Asked how to merge the conflict branch on GitHub. **Status**: RESOLVED
+8.  **User**: Asked if a git conflict was causing sync issues. **Status**: RESOLVED (Agent confirmed the conflict branch was the issue).
+9.  **User**: Asked again if files were on GitHub after saving. **Status**: RESOLVED (Agent guided them to check repo).
+10. **User**: Asked where the Tigo integration files were on GitHub. **Status**: RESOLVED (Agent located files locally and diagnosed the sync issue).
 
 **Project Health Check:**
 - **Broken**:
-    - Product Switcher modal flow ().
-    -  component integration ().
+    - Reports page interactivity ().
+    -  component ().
 - **Mocked**:
-    -  component on the dashboard still uses hardcoded data.
+    - None.  was fixed.
 
 **3rd Party Integrations**
-- **Tigo Bulk SMS (SMPP)**: Integrated via . Awaiting user testing.
-- **lucide-react**: Used for icons.
+- **Tigo Bulk SMS (SMPP)**: Integrated, but BLOCKED on user VPN setup. Files are not on  branch.
+- **dexie / dexie-react-hooks**: (Newly added) For offline database storage.
+- **lucide-react**: For icons.
 - **Zustand**: For state management.
-- **recharts**: For rendering charts on the dashboard.
-- **xlsx**: (Newly added) For parsing Excel files.
-- **expo-document-picker**: (Newly added) For picking files on the frontend.
+- **recharts**: For rendering charts.
+- **xlsx**: For parsing Excel files.
+- **expo-document-picker**: For picking files on the frontend.
 
 **Testing status**
-- **Testing agent used after significant changes**: YES, confirmed functionality of Complete Profile and bulk import API. Flagged a sales_staff permission issue that was later debunked via manual testing.
+- **Testing agent used after significant changes**: YES, to verify the Product Switcher bug fix.
 - **Troubleshoot agent used after agent stuck in loop**: NO
 - **Test files created**: None.
-- **Known regressions**: None confirmed, but the  permission issue reported by the testing agent should be monitored.
+- **Known regressions**: None.
 
 **Credentials to test flow:**
 - **Admin**:  / 
 - **Demo User**:  / 
 
 **What agent forgot to execute**
-- The high-priority **Product Switcher bug** () has still not been addressed.
-- The recurring  crash has not been investigated.
-- The  component on the dashboard has not been updated to use live data.</analysis>
+- The agent started but did not complete the Reports page interactivity fix.
+- The agent started but did not complete the Offline Mode implementation.
+- The agent identified the need to connect the Bulk Import SKU settings to the backend but did not implement it.</analysis>
