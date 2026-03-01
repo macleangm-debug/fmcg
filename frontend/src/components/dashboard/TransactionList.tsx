@@ -16,118 +16,73 @@ export interface Transaction {
 interface TransactionListProps {
   transactions?: Transaction[];
   onViewMore?: () => void;
+  isLoading?: boolean;
 }
 
-const defaultTransactions: Transaction[] = [
-  {
-    id: '1',
-    name: 'Premium T-Shirt',
-    date: 'Jul 12th 2024',
-    orderId: 'OJWEJS7ISNC',
-    status: 'Completed',
-    icon: 'pricetag',
-    iconColor: '#DC2626',
-    iconBg: '#FEE2E2',
-  },
-  {
-    id: '2',
-    name: 'Playstation 5',
-    date: 'Jul 12th 2024',
-    orderId: 'OJWEJS7ISNC',
-    status: 'Pending',
-    icon: 'game-controller',
-    iconColor: '#2563EB',
-    iconBg: '#DBEAFE',
-  },
-  {
-    id: '3',
-    name: 'Hoodie Gombrong',
-    date: 'Jul 12th 2024',
-    orderId: 'OJWEJS7ISNC',
-    status: 'Pending',
-    icon: 'pricetag',
-    iconColor: '#1B4332',
-    iconBg: '#D8F3DC',
-  },
-  {
-    id: '4',
-    name: 'iPhone 15 Pro Max',
-    date: 'Jul 12th 2024',
-    orderId: 'OJWEJS7ISNC',
-    status: 'Completed',
-    icon: 'phone-portrait',
-    iconColor: '#6B7280',
-    iconBg: '#F3F4F6',
-  },
-  {
-    id: '5',
-    name: 'Lotse',
-    date: 'Jul 12th 2024',
-    orderId: 'OJWEJS7ISNC',
-    status: 'Completed',
-    icon: 'briefcase',
-    iconColor: '#1B4332',
-    iconBg: '#D8F3DC',
-  },
-  {
-    id: '6',
-    name: 'Starbucks',
-    date: 'Jul 12th 2024',
-    orderId: 'OJWEJS7ISNC',
-    status: 'Completed',
-    icon: 'cafe',
-    iconColor: '#059669',
-    iconBg: '#D1FAE5',
-  },
-  {
-    id: '7',
-    name: 'Tinek Detstar T-Shirt',
-    date: 'Jul 12th 2024',
-    orderId: 'OJWEJS7ISNC',
-    status: 'Completed',
-    icon: 'pricetag',
-    iconColor: '#DC2626',
-    iconBg: '#FEE2E2',
-  },
-];
-
 const TransactionList: React.FC<TransactionListProps> = ({
-  transactions = defaultTransactions,
+  transactions,
   onViewMore,
+  isLoading = false,
 }) => {
+  const hasTransactions = transactions && transactions.length > 0;
+
   return (
     <View style={styles.container} data-testid="transaction-list">
       <View style={styles.header}>
-        <Text style={styles.title}>Transaction</Text>
-        <TouchableOpacity onPress={onViewMore} data-testid="transaction-more-btn">
-          <Icon name="ellipsis-horizontal" size={20} color="#6B7280" />
-        </TouchableOpacity>
+        <Text style={styles.title}>Recent Orders</Text>
+        {hasTransactions && (
+          <TouchableOpacity onPress={onViewMore} data-testid="transaction-more-btn">
+            <Icon name="ellipsis-horizontal" size={20} color="#6B7280" />
+          </TouchableOpacity>
+        )}
       </View>
       
-      <View style={styles.list}>
-        {transactions.map((transaction) => (
-          <View key={transaction.id} style={styles.item} data-testid={`transaction-item-${transaction.id}`}>
-            <View style={[styles.iconContainer, { backgroundColor: transaction.iconBg }]}>
-              <Icon name={transaction.icon} size={18} color={transaction.iconColor} />
+      {isLoading ? (
+        <View style={styles.emptyState}>
+          <Icon name="hourglass-outline" size={32} color="#9CA3AF" />
+          <Text style={styles.emptyText}>Loading orders...</Text>
+        </View>
+      ) : hasTransactions ? (
+        <View style={styles.list}>
+          {transactions.map((transaction) => (
+            <View key={transaction.id} style={styles.item} data-testid={`transaction-item-${transaction.id}`}>
+              <View style={[styles.iconContainer, { backgroundColor: transaction.iconBg }]}>
+                <Icon name={transaction.icon} size={18} color={transaction.iconColor} />
+              </View>
+              
+              <View style={styles.itemInfo}>
+                <Text style={styles.itemName} numberOfLines={1}>{transaction.name}</Text>
+                <Text style={styles.itemDate}>{transaction.date}</Text>
+              </View>
+              
+              <View style={styles.itemRight}>
+                <Text style={[
+                  styles.itemStatus,
+                  { color: transaction.status === 'Completed' ? '#059669' : '#D97706' }
+                ]}>
+                  {transaction.status}
+                </Text>
+                <Text style={styles.itemOrderId}>{transaction.orderId}</Text>
+              </View>
             </View>
-            
-            <View style={styles.itemInfo}>
-              <Text style={styles.itemName} numberOfLines={1}>{transaction.name}</Text>
-              <Text style={styles.itemDate}>{transaction.date}</Text>
-            </View>
-            
-            <View style={styles.itemRight}>
-              <Text style={[
-                styles.itemStatus,
-                { color: transaction.status === 'Completed' ? '#059669' : '#D97706' }
-              ]}>
-                {transaction.status}
-              </Text>
-              <Text style={styles.itemOrderId}>{transaction.orderId}</Text>
-            </View>
+          ))}
+          
+          {onViewMore && (
+            <TouchableOpacity style={styles.viewAllButton} onPress={onViewMore}>
+              <Text style={styles.viewAllText}>View All Orders</Text>
+              <Icon name="arrow-forward" size={16} color="#1B4332" />
+            </TouchableOpacity>
+          )}
+        </View>
+      ) : (
+        <View style={styles.emptyState}>
+          <View style={styles.emptyIconContainer}>
+            <Icon name="receipt-outline" size={32} color="#9CA3AF" />
           </View>
-        ))}
-      </View>
+          <Text style={styles.emptyTitle}>No orders yet</Text>
+          <Text style={styles.emptyText}>Orders will appear here once customers start buying</Text>
+        </View>
+      )}
     </View>
   );
 };
