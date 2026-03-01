@@ -265,9 +265,9 @@ export async function getOfflineDataStats(): Promise<{
 }> {
   const [pendingMutations, cachedProducts, cachedCustomers, cachedCategories] = await Promise.all([
     getPendingMutationCount(),
-    db.products.count(),
-    db.customers.count(),
-    db.categories.count()
+    getDB().products.count(),
+    getDB().customers.count(),
+    getDB().categories.count()
   ]);
 
   // Get the latest cache time
