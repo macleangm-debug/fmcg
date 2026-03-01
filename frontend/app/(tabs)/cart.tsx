@@ -1664,6 +1664,16 @@ export default function Cart() {
             </TouchableOpacity>
           </View>
           
+          {/* Offline Payment Notice */}
+          {!isOnline && (
+            <View style={styles.offlinePaymentBanner}>
+              <Ionicons name="cloud-offline" size={16} color="#F59E0B" />
+              <Text style={styles.offlinePaymentText}>
+                You're offline. Only Cash payments are available.
+              </Text>
+            </View>
+          )}
+          
           {!splitPaymentMode ? (
             <View style={styles.paymentGrid}>
               <PaymentMethodButton method="cash" icon="cash-outline" label="Cash" />
