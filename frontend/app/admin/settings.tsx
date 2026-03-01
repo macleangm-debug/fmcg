@@ -164,11 +164,11 @@ interface SubscriptionInfo {
 
 export default function Settings() {
   const router = useRouter();
-  const { onboarding } = useLocalSearchParams<{ onboarding?: string }>();
+  const params = useLocalSearchParams<{ onboarding?: string; tab?: string }>();
+  const { onboarding } = params || {};
   const isOnboarding = onboarding === 'true';
   const { user: currentUser } = useAuthStore();
   const { loadSettings: reloadBusinessSettings } = useBusinessStore();
-  const params = useLocalSearchParams();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
