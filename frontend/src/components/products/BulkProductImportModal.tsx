@@ -800,9 +800,12 @@ const styles = StyleSheet.create({
   fieldRow: {
     flexDirection: 'row',
     gap: 12,
+    zIndex: 1,
   },
   fieldHalf: {
     flex: 1,
+    position: 'relative',
+    zIndex: 1,
   },
   fieldLabel: {
     fontSize: 12,
