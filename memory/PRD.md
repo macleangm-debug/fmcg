@@ -287,6 +287,8 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 ---
 
 ## Test Reports
+- `/app/test_reports/iteration_14.json` - **Reports Interactivity & Offline Mode (Mar 1, 2026)** - Import.meta fix, Reports page filters/tabs, Settings POS offline mode all verified (100% backend, 100% frontend pass)
+- `/app/test_reports/iteration_13.json` - **Pre-fix testing (Mar 1, 2026)** - Backend 100% pass, Frontend blocked by import.meta error (now fixed)
 - `/app/test_reports/iteration_12.json` - **Bulk Import & Product Switcher Testing (Mar 1, 2026)** - Bulk Import button on Products page, Excel/CSV upload, Product Switcher trial modal all verified (85% frontend pass)
 - `/app/test_reports/iteration_11.json` - **Progressive Profiling & Bulk Import Testing (Feb 28, 2026)** - Complete Profile modal, Bulk Import API, Customer GET/UPDATE all verified (100% backend pass)
 - `/app/test_reports/iteration_10.json` - **Dashboard & New Sale UI/UX Testing (Feb 28, 2026)** - Quick Actions, Recent Activity, Customer-First flow verified (admin works, sales_staff blocked by permissions)
