@@ -101,12 +101,12 @@ function getDB(): RetailProOfflineDB {
 // ============== OFFLINE SETTINGS ==============
 
 export async function getOfflineSetting(key: string): Promise<any> {
-  const setting = await db.settings.get(key);
+  const setting = await getDB().settings.get(key);
   return setting?.value;
 }
 
 export async function setOfflineSetting(key: string, value: any): Promise<void> {
-  await db.settings.put({
+  await getDB().settings.put({
     key,
     value,
     updatedAt: new Date()
@@ -129,7 +129,7 @@ export async function queueMutation(
   action: QueuedMutation['action'],
   payload: any
 ): Promise<number> {
-  const id = await db.mutationQueue.add({
+  const id = await getDB().mutationQueue.add({
     type,
     action,
     payload,
@@ -141,20 +141,20 @@ export async function queueMutation(
 }
 
 export async function getPendingMutations(): Promise<QueuedMutation[]> {
-  return await db.mutationQueue
+  return await getDB().mutationQueue
     .where('synced')
     .equals(0) // false = 0 in IndexedDB
     .sortBy('timestamp');
 }
 
 export async function markMutationSynced(id: number): Promise<void> {
-  await db.mutationQueue.update(id, { synced: true });
+  await getDB().mutationQueue.update(id, { synced: true });
 }
 
 export async function markMutationFailed(id: number, error: string): Promise<void> {
-  const mutation = await db.mutationQueue.get(id);
+  const mutation = await getDB().mutationQueue.get(id);
   if (mutation) {
-    await db.mutationQueue.update(id, {
+    await getDB().mutationQueue.update(id, {
       error,
       retryCount: (mutation.retryCount || 0) + 1
     });
@@ -162,14 +162,14 @@ export async function markMutationFailed(id: number, error: string): Promise<voi
 }
 
 export async function clearSyncedMutations(): Promise<number> {
-  return await db.mutationQueue
+  return await getDB().mutationQueue
     .where('synced')
     .equals(1) // true = 1 in IndexedDB
     .delete();
 }
 
 export async function getPendingMutationCount(): Promise<number> {
-  return await db.mutationQueue
+  return await getDB().mutationQueue
     .where('synced')
     .equals(0)
     .count();
@@ -180,23 +180,23 @@ export async function getPendingMutationCount(): Promise<number> {
 export async function cacheProducts(products: CachedProduct[]): Promise<void> {
   const cachedAt = new Date();
   const productsWithTimestamp = products.map(p => ({ ...p, cachedAt }));
-  await db.products.bulkPut(productsWithTimestamp);
+  await getDB().products.bulkPut(productsWithTimestamp);
 }
 
 export async function getCachedProducts(): Promise<CachedProduct[]> {
-  return await db.products.toArray();
+  return await getDB().products.toArray();
 }
 
 export async function getCachedProduct(id: string): Promise<CachedProduct | undefined> {
-  return await db.products.get(id);
+  return await getDB().products.get(id);
 }
 
 export async function getCachedProductByBarcode(barcode: string): Promise<CachedProduct | undefined> {
-  return await db.products.where('barcode').equals(barcode).first();
+  return await getDB().products.where('barcode').equals(barcode).first();
 }
 
 export async function clearProductCache(): Promise<void> {
-  await db.products.clear();
+  await getDB().products.clear();
 }
 
 // ============== CUSTOMER CACHE ==============
@@ -204,20 +204,20 @@ export async function clearProductCache(): Promise<void> {
 export async function cacheCustomers(customers: CachedCustomer[]): Promise<void> {
   const cachedAt = new Date();
   const customersWithTimestamp = customers.map(c => ({ ...c, cachedAt }));
-  await db.customers.bulkPut(customersWithTimestamp);
+  await getDB().customers.bulkPut(customersWithTimestamp);
 }
 
 export async function getCachedCustomers(): Promise<CachedCustomer[]> {
-  return await db.customers.toArray();
+  return await getDB().customers.toArray();
 }
 
 export async function getCachedCustomer(id: string): Promise<CachedCustomer | undefined> {
-  return await db.customers.get(id);
+  return await getDB().customers.get(id);
 }
 
 export async function searchCachedCustomers(query: string): Promise<CachedCustomer[]> {
   const lowerQuery = query.toLowerCase();
-  return await db.customers
+  return await getDB().customers
     .filter(c => 
       c.name.toLowerCase().includes(lowerQuery) ||
       c.phone.includes(query)
@@ -226,7 +226,7 @@ export async function searchCachedCustomers(query: string): Promise<CachedCustom
 }
 
 export async function clearCustomerCache(): Promise<void> {
-  await db.customers.clear();
+  await getDB().customers.clear();
 }
 
 // ============== CATEGORY CACHE ==============
@@ -234,15 +234,15 @@ export async function clearCustomerCache(): Promise<void> {
 export async function cacheCategories(categories: CachedCategory[]): Promise<void> {
   const cachedAt = new Date();
   const categoriesWithTimestamp = categories.map(c => ({ ...c, cachedAt }));
-  await db.categories.bulkPut(categoriesWithTimestamp);
+  await getDB().categories.bulkPut(categoriesWithTimestamp);
 }
 
 export async function getCachedCategories(): Promise<CachedCategory[]> {
-  return await db.categories.toArray();
+  return await getDB().categories.toArray();
 }
 
 export async function clearCategoryCache(): Promise<void> {
-  await db.categories.clear();
+  await getDB().categories.clear();
 }
 
 // ============== FULL SYNC/CLEAR ==============
@@ -271,7 +271,7 @@ export async function getOfflineDataStats(): Promise<{
   ]);
 
   // Get the latest cache time
-  const latestProduct = await db.products.orderBy('cachedAt').last();
+  const latestProduct = await getDB().products.orderBy('cachedAt').last();
   
   return {
     pendingMutations,
