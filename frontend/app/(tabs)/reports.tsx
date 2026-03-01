@@ -15,33 +15,39 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { PieChart, BarChart, LineChart } from 'react-native-gifted-charts';
+import { PieChart, LineChart, BarChart } from 'react-native-gifted-charts';
 import { dashboardApi } from '../../src/api/client';
 import { useBusinessStore } from '../../src/store/businessStore';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 
-const COLORS = {
-  primary: '#2563EB',
-  primaryDark: '#1D4ED8',
-  primaryLight: '#DBEAFE',
-  success: '#10B981',
-  successLight: '#D1FAE5',
-  warning: '#F59E0B',
-  warningLight: '#FEF3C7',
-  danger: '#EF4444',
-  dangerLight: '#FEE2E2',
-  purple: '#7C3AED',
-  purpleLight: '#EDE9FE',
-  dark: '#111827',
-  gray: '#6B7280',
-  lightGray: '#F3F4F6',
-  white: '#FFFFFF',
+// Design System Colors (RetailPro Green Theme)
+const THEME = {
+  // Primary
+  primary: '#1B4332',
+  primaryDark: '#081C15',
+  primaryLight: '#2D6A4F',
+  primarySoft: '#D8F3DC',
+  primaryUltrasoft: '#F0FDF4',
+  
+  // Neutral
+  background: '#FFFFFF',
+  surface: '#F9FAFB',
   border: '#E5E7EB',
+  textPrimary: '#111827',
+  textSecondary: '#6B7280',
+  textTertiary: '#9CA3AF',
+  
+  // Semantic
+  success: '#059669',
+  successBg: '#ECFDF5',
+  warning: '#D97706',
+  warningBg: '#FFFBEB',
+  danger: '#DC2626',
+  dangerBg: '#FEF2F2',
+  info: '#2563EB',
+  infoBg: '#EFF6FF',
 };
-
-type ReportType = 'overview' | 'sales' | 'products' | 'payments' | 'customers';
 
 interface DashboardStats {
   total_sales_today: number;
@@ -56,15 +62,14 @@ interface DashboardStats {
 export default function RetailProReportsPage() {
   const router = useRouter();
   const { width } = useWindowDimensions();
-  const isWeb = Platform.OS === 'web' && width > 768;
-  const { formatCurrency, formatNumber } = useBusinessStore();
+  const isDesktop = Platform.OS === 'web' && width > 768;
+  const { formatCurrency } = useBusinessStore();
 
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [period, setPeriod] = useState('day');
-  const [activeReport, setActiveReport] = useState<ReportType>('overview');
+  const [period, setPeriod] = useState('today');
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [exportModalVisible, setExportModalVisible] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
   const [exporting, setExporting] = useState(false);
 
   const fetchReports = useCallback(async () => {
@@ -94,879 +99,847 @@ export default function RetailProReportsPage() {
     (stats.sales_by_payment_method?.mobile_money || 0) + 
     (stats.sales_by_payment_method?.credit || 0) : 0;
 
-  // Export functions
-  const generateCSV = () => {
-    if (!stats) return '';
-    
-    let csv = 'Sales Reports Summary\n';
-    csv += `Report Date,${new Date().toLocaleDateString()}\n\n`;
-    csv += 'Metric,Value\n';
-    csv += `Today's Sales,${stats.total_sales_today}\n`;
-    csv += `Total Orders,${stats.total_orders_today}\n`;
-    csv += `Total Customers,${stats.total_customers}\n`;
-    csv += `Total Products,${stats.total_products}\n\n`;
-    
-    csv += 'Payment Methods\n';
-    csv += 'Method,Amount\n';
-    csv += `Cash,${stats.sales_by_payment_method?.cash || 0}\n`;
-    csv += `Card,${stats.sales_by_payment_method?.card || 0}\n`;
-    csv += `Mobile Money,${stats.sales_by_payment_method?.mobile_money || 0}\n`;
-    csv += `Credit,${stats.sales_by_payment_method?.credit || 0}\n\n`;
-    
-    if (stats.top_products && stats.top_products.length > 0) {
-      csv += 'Top Products\n';
-      csv += 'Product,Quantity,Revenue\n';
-      stats.top_products.forEach(p => {
-        csv += `${p.name},${p.quantity},${p.revenue}\n`;
-      });
-    }
-    
-    return csv;
-  };
+  const avgOrderValue = stats?.total_orders_today 
+    ? stats.total_sales_today / stats.total_orders_today 
+    : 0;
 
+  // Period options
+  const periods = [
+    { key: 'today', label: 'Today' },
+    { key: 'week', label: 'This Week' },
+    { key: 'month', label: 'This Month' },
+    { key: 'year', label: 'This Year' },
+  ];
+
+  // Export functions
   const generatePDFContent = () => {
     if (!stats) return '';
-    
     return `
       <!DOCTYPE html>
       <html>
       <head>
         <meta charset="utf-8">
         <style>
-          body { font-family: Arial, sans-serif; padding: 40px; color: #333; }
-          h1 { color: #2563EB; margin-bottom: 5px; }
-          .subtitle { color: #666; margin-bottom: 30px; }
-          .stats-grid { display: flex; gap: 20px; margin-bottom: 30px; }
-          .stat-card { flex: 1; background: #f8f9fa; padding: 20px; border-radius: 12px; text-align: center; }
-          .stat-value { font-size: 28px; font-weight: bold; color: #2563EB; }
-          .stat-label { color: #666; margin-top: 5px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-          th { background: #2563EB; color: white; padding: 12px; text-align: left; }
-          td { padding: 12px; border-bottom: 1px solid #eee; }
-          .section-title { font-size: 18px; font-weight: bold; margin-top: 30px; margin-bottom: 15px; color: #333; }
-          .footer { margin-top: 40px; text-align: center; color: #999; font-size: 12px; }
+          body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 40px; color: #111827; background: #fff; }
+          h1 { color: #1B4332; font-size: 28px; margin-bottom: 8px; }
+          .subtitle { color: #6B7280; margin-bottom: 32px; }
+          .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 32px; }
+          .metric { background: #F9FAFB; padding: 20px; border-radius: 12px; border: 1px solid #E5E7EB; }
+          .metric-value { font-size: 24px; font-weight: 700; color: #111827; }
+          .metric-label { font-size: 13px; color: #6B7280; margin-top: 4px; }
+          .section { margin-bottom: 32px; }
+          .section-title { font-size: 16px; font-weight: 600; color: #111827; margin-bottom: 16px; }
+          table { width: 100%; border-collapse: collapse; }
+          th { background: #F9FAFB; padding: 12px 16px; text-align: left; font-size: 12px; font-weight: 600; color: #6B7280; text-transform: uppercase; border-bottom: 1px solid #E5E7EB; }
+          td { padding: 12px 16px; border-bottom: 1px solid #E5E7EB; font-size: 14px; }
+          .footer { margin-top: 40px; text-align: center; color: #9CA3AF; font-size: 12px; }
         </style>
       </head>
       <body>
-        <h1>Sales Reports</h1>
-        <p class="subtitle">Point of Sale analytics</p>
+        <h1>Sales Report</h1>
+        <p class="subtitle">Generated on ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
         
-        <div class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-value" style="color: #10B981">${formatCurrency(stats.total_sales_today)}</div>
-            <div class="stat-label">Today's Sales</div>
+        <div class="metrics">
+          <div class="metric">
+            <div class="metric-value" style="color: #059669">${formatCurrency(stats.total_sales_today)}</div>
+            <div class="metric-label">Total Sales</div>
           </div>
-          <div class="stat-card">
-            <div class="stat-value">${stats.total_orders_today}</div>
-            <div class="stat-label">Orders</div>
+          <div class="metric">
+            <div class="metric-value">${stats.total_orders_today}</div>
+            <div class="metric-label">Orders</div>
           </div>
-          <div class="stat-card">
-            <div class="stat-value">${stats.total_customers}</div>
-            <div class="stat-label">Customers</div>
+          <div class="metric">
+            <div class="metric-value">${stats.total_customers}</div>
+            <div class="metric-label">Customers</div>
+          </div>
+          <div class="metric">
+            <div class="metric-value">${formatCurrency(avgOrderValue)}</div>
+            <div class="metric-label">Avg Order Value</div>
           </div>
         </div>
 
-        <div class="section-title">Payment Methods</div>
-        <table>
-          <tr><th>Method</th><th>Amount</th><th>Percentage</th></tr>
-          <tr><td>Cash</td><td>${formatCurrency(stats.sales_by_payment_method?.cash || 0)}</td><td>${totalPayments ? Math.round(((stats.sales_by_payment_method?.cash || 0) / totalPayments) * 100) : 0}%</td></tr>
-          <tr><td>Card</td><td>${formatCurrency(stats.sales_by_payment_method?.card || 0)}</td><td>${totalPayments ? Math.round(((stats.sales_by_payment_method?.card || 0) / totalPayments) * 100) : 0}%</td></tr>
-          <tr><td>Mobile Money</td><td>${formatCurrency(stats.sales_by_payment_method?.mobile_money || 0)}</td><td>${totalPayments ? Math.round(((stats.sales_by_payment_method?.mobile_money || 0) / totalPayments) * 100) : 0}%</td></tr>
-          <tr><td>Credit</td><td>${formatCurrency(stats.sales_by_payment_method?.credit || 0)}</td><td>${totalPayments ? Math.round(((stats.sales_by_payment_method?.credit || 0) / totalPayments) * 100) : 0}%</td></tr>
-        </table>
+        <div class="section">
+          <div class="section-title">Payment Methods</div>
+          <table>
+            <tr><th>Method</th><th>Amount</th><th>Share</th></tr>
+            <tr><td>Cash</td><td>${formatCurrency(stats.sales_by_payment_method?.cash || 0)}</td><td>${totalPayments ? Math.round(((stats.sales_by_payment_method?.cash || 0) / totalPayments) * 100) : 0}%</td></tr>
+            <tr><td>Card</td><td>${formatCurrency(stats.sales_by_payment_method?.card || 0)}</td><td>${totalPayments ? Math.round(((stats.sales_by_payment_method?.card || 0) / totalPayments) * 100) : 0}%</td></tr>
+            <tr><td>Mobile Money</td><td>${formatCurrency(stats.sales_by_payment_method?.mobile_money || 0)}</td><td>${totalPayments ? Math.round(((stats.sales_by_payment_method?.mobile_money || 0) / totalPayments) * 100) : 0}%</td></tr>
+            <tr><td>Credit</td><td>${formatCurrency(stats.sales_by_payment_method?.credit || 0)}</td><td>${totalPayments ? Math.round(((stats.sales_by_payment_method?.credit || 0) / totalPayments) * 100) : 0}%</td></tr>
+          </table>
+        </div>
 
         ${stats.top_products && stats.top_products.length > 0 ? `
-        <div class="section-title">Top Selling Products</div>
-        <table>
-          <tr><th>Product</th><th>Qty Sold</th><th>Revenue</th></tr>
-          ${stats.top_products.slice(0, 5).map(p => `
-            <tr>
-              <td>${p.name}</td>
-              <td>${p.quantity}</td>
-              <td>${formatCurrency(p.revenue)}</td>
-            </tr>
-          `).join('')}
-        </table>
+        <div class="section">
+          <div class="section-title">Top Products</div>
+          <table>
+            <tr><th>#</th><th>Product</th><th>Qty Sold</th><th>Revenue</th></tr>
+            ${stats.top_products.slice(0, 5).map((p, i) => `
+              <tr>
+                <td>${i + 1}</td>
+                <td>${p.name}</td>
+                <td>${p.quantity}</td>
+                <td>${formatCurrency(p.revenue)}</td>
+              </tr>
+            `).join('')}
+          </table>
+        </div>
         ` : ''}
 
-        <div class="footer">
-          Generated on ${new Date().toLocaleDateString()} | Software Galaxy - Sales Reports
-        </div>
+        <div class="footer">RetailPro by Soko</div>
       </body>
       </html>
     `;
   };
 
-  const handleExport = async (format: 'csv' | 'pdf') => {
+  const handleExport = async (format: 'pdf' | 'csv') => {
     setExporting(true);
     try {
       if (format === 'csv') {
-        const csvContent = generateCSV();
+        let csv = 'Sales Report\n';
+        csv += `Date,${new Date().toLocaleDateString()}\n\n`;
+        csv += 'Metric,Value\n';
+        csv += `Total Sales,${stats?.total_sales_today || 0}\n`;
+        csv += `Orders,${stats?.total_orders_today || 0}\n`;
+        csv += `Customers,${stats?.total_customers || 0}\n`;
+        csv += `Avg Order Value,${avgOrderValue}\n\n`;
+        csv += 'Payment Methods\n';
+        csv += 'Method,Amount\n';
+        csv += `Cash,${stats?.sales_by_payment_method?.cash || 0}\n`;
+        csv += `Card,${stats?.sales_by_payment_method?.card || 0}\n`;
+        csv += `Mobile Money,${stats?.sales_by_payment_method?.mobile_money || 0}\n`;
+        csv += `Credit,${stats?.sales_by_payment_method?.credit || 0}\n`;
+        
         if (Platform.OS === 'web') {
-          const blob = new Blob([csvContent], { type: 'text/csv' });
+          const blob = new Blob([csv], { type: 'text/csv' });
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = `sales-report-${period}.csv`;
+          a.download = `sales-report-${new Date().toISOString().split('T')[0]}.csv`;
           a.click();
           URL.revokeObjectURL(url);
-        } else {
-          Alert.alert('Export', 'CSV export is available on web. For mobile, use PDF export.');
         }
       } else {
-        const htmlContent = generatePDFContent();
-        const { uri } = await Print.printToFileAsync({ html: htmlContent });
-        
+        const html = generatePDFContent();
+        const { uri } = await Print.printToFileAsync({ html });
         if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(uri, {
-            mimeType: 'application/pdf',
-            dialogTitle: 'Export Sales Report',
-          });
-        } else {
-          Alert.alert('Success', 'PDF generated successfully!');
+          await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Export Report' });
         }
       }
+      setShowExportModal(false);
     } catch (error) {
-      console.error('Export failed:', error);
-      Alert.alert('Error', 'Failed to export report. Please try again.');
+      Alert.alert('Error', 'Failed to export report');
     } finally {
       setExporting(false);
     }
   };
 
-  // Export Preview Modal Component with Report Preview
-  const ExportModal = () => (
-    <Modal
-      visible={exportModalVisible}
-      transparent
-      animationType="slide"
-      onRequestClose={() => setExportModalVisible(false)}
-    >
-      <View style={styles.previewModalOverlay}>
-        <View style={styles.previewModalContainer}>
-          {/* Header */}
-          <View style={styles.previewModalHeader}>
-            <Text style={styles.previewModalTitle}>Report Preview</Text>
-            <TouchableOpacity onPress={() => setExportModalVisible(false)} style={styles.previewCloseBtn}>
-              <Ionicons name="close" size={24} color={COLORS.gray} />
-            </TouchableOpacity>
-          </View>
-
-          {/* Preview Content */}
-          <ScrollView style={styles.previewContent} showsVerticalScrollIndicator={false}>
-            {/* Report Header */}
-            <LinearGradient colors={['#2563EB', '#1D4ED8']} style={styles.previewReportHeader}>
-              <Text style={styles.previewReportTitle}>Sales Reports</Text>
-              <Text style={styles.previewReportPeriod}>Point of Sale analytics</Text>
-            </LinearGradient>
-
-            {/* Key Metrics */}
-            <View style={styles.previewMetricsRow}>
-              <View style={styles.previewMetricCard}>
-                <Text style={[styles.previewMetricValue, { color: COLORS.success }]}>{formatCurrency(stats?.total_sales_today || 0)}</Text>
-                <Text style={styles.previewMetricLabel}>Sales</Text>
-              </View>
-              <View style={styles.previewMetricCard}>
-                <Text style={styles.previewMetricValue}>{stats?.total_orders_today || 0}</Text>
-                <Text style={styles.previewMetricLabel}>Orders</Text>
-              </View>
-              <View style={styles.previewMetricCard}>
-                <Text style={styles.previewMetricValue}>{stats?.total_customers || 0}</Text>
-                <Text style={styles.previewMetricLabel}>Customers</Text>
-              </View>
-            </View>
-
-            {/* Payment Methods Table */}
-            <View style={styles.previewSection}>
-              <Text style={styles.previewSectionTitle}>Payment Methods</Text>
-              <View style={styles.previewTable}>
-                <View style={styles.previewTableRow}>
-                  <Text style={styles.previewTableLabel}>Cash</Text>
-                  <Text style={styles.previewTableValue}>{formatCurrency(stats?.sales_by_payment_method?.cash || 0)}</Text>
-                </View>
-                <View style={styles.previewTableRow}>
-                  <Text style={styles.previewTableLabel}>Card</Text>
-                  <Text style={styles.previewTableValue}>{formatCurrency(stats?.sales_by_payment_method?.card || 0)}</Text>
-                </View>
-                <View style={styles.previewTableRow}>
-                  <Text style={styles.previewTableLabel}>Mobile Money</Text>
-                  <Text style={styles.previewTableValue}>{formatCurrency(stats?.sales_by_payment_method?.mobile_money || 0)}</Text>
-                </View>
-                <View style={styles.previewTableRow}>
-                  <Text style={styles.previewTableLabel}>Credit</Text>
-                  <Text style={styles.previewTableValue}>{formatCurrency(stats?.sales_by_payment_method?.credit || 0)}</Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Top Products */}
-            {stats?.top_products && stats.top_products.length > 0 && (
-              <View style={styles.previewSection}>
-                <Text style={styles.previewSectionTitle}>Top Products</Text>
-                <View style={styles.previewTable}>
-                  {stats.top_products.slice(0, 5).map((product, idx) => (
-                    <View key={idx} style={styles.previewTableRow}>
-                      <Text style={styles.previewTableLabel}>{product.name}</Text>
-                      <Text style={[styles.previewTableValue, { color: COLORS.success }]}>
-                        {formatCurrency(product.revenue)}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
-
-            {/* Generated timestamp */}
-            <Text style={styles.previewTimestamp}>
-              Generated on {new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-            </Text>
-          </ScrollView>
-
-          {/* Export Options Footer */}
-          <View style={styles.previewFooter}>
-            <Text style={styles.previewFooterTitle}>Export As</Text>
-            <View style={styles.previewExportButtons}>
-              <TouchableOpacity 
-                style={[styles.previewExportBtn, { backgroundColor: COLORS.dangerLight }]} 
-                onPress={() => handleExport('pdf')}
-                disabled={exporting}
-              >
-                {exporting ? (
-                  <ActivityIndicator size="small" color={COLORS.danger} />
-                ) : (
-                  <>
-                    <Ionicons name="document-text" size={20} color={COLORS.danger} />
-                    <Text style={[styles.previewExportBtnText, { color: COLORS.danger }]}>PDF</Text>
-                  </>
-                )}
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.previewExportBtn, { backgroundColor: COLORS.successLight }]} 
-                onPress={() => handleExport('csv')}
-                disabled={exporting}
-              >
-                <Ionicons name="grid" size={20} color={COLORS.success} />
-                <Text style={[styles.previewExportBtnText, { color: COLORS.success }]}>CSV</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
-
-  const reportTabs: { key: ReportType; label: string; icon: string }[] = [
-    { key: 'overview', label: 'Overview', icon: 'analytics-outline' },
-    { key: 'sales', label: 'Sales', icon: 'trending-up-outline' },
-    { key: 'products', label: 'Products', icon: 'cube-outline' },
-    { key: 'payments', label: 'Payments', icon: 'wallet-outline' },
-    { key: 'customers', label: 'Customers', icon: 'people-outline' },
-  ];
-
+  // Loading state
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
+          <ActivityIndicator size="large" color={THEME.primary} />
+          <Text style={styles.loadingText}>Loading reports...</Text>
         </View>
       </SafeAreaView>
     );
   }
 
-  // Hero Stats
-  const HeroStats = () => (
-    <View style={styles.heroSection}>
-      <LinearGradient
-        colors={['#2563EB', '#1D4ED8']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.heroGradient}
-      >
-        <View style={styles.heroContent}>
-          <View style={styles.heroHeader}>
-            <View>
-              <Text style={styles.heroTitle}>Sales Reports</Text>
-              <Text style={styles.heroSubtitle}>Point of Sale analytics</Text>
-            </View>
-            <TouchableOpacity style={styles.exportButton} onPress={() => setExportModalVisible(true)}>
-              <Ionicons name="download-outline" size={18} color={COLORS.white} />
-              <Text style={styles.exportButtonText}>Export</Text>
-            </TouchableOpacity>
-          </View>
-          
-          <View style={styles.heroStats}>
-            <View style={styles.heroStatItem}>
-              <Text style={[styles.heroStatValue, { color: '#86EFAC' }]}>{formatCurrency(stats?.total_sales_today || 0)}</Text>
-              <Text style={styles.heroStatLabel}>Today's Sales</Text>
-            </View>
-            <View style={styles.heroStatDivider} />
-            <View style={styles.heroStatItem}>
-              <Text style={styles.heroStatValue}>{stats?.total_orders_today || 0}</Text>
-              <Text style={styles.heroStatLabel}>Orders</Text>
-            </View>
-            <View style={styles.heroStatDivider} />
-            <View style={styles.heroStatItem}>
-              <Text style={styles.heroStatValue}>{stats?.total_customers || 0}</Text>
-              <Text style={styles.heroStatLabel}>Customers</Text>
-            </View>
-          </View>
-        </View>
-      </LinearGradient>
+  // Metric Card Component
+  const MetricCard = ({ icon, iconBg, value, label, valueColor }: any) => (
+    <View style={[styles.metricCard, isDesktop && styles.metricCardDesktop]}>
+      <View style={[styles.metricIcon, { backgroundColor: iconBg }]}>
+        <Ionicons name={icon} size={20} color={THEME.primary} />
+      </View>
+      <Text style={[styles.metricValue, valueColor && { color: valueColor }]}>{value}</Text>
+      <Text style={styles.metricLabel}>{label}</Text>
     </View>
   );
 
-  // Period Selector
-  const PeriodSelector = () => (
-    <View style={styles.periodSection}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.periodScroll}>
-        {[
-          { key: 'day', label: 'Today', icon: 'today-outline' },
-          { key: 'week', label: 'This Week', icon: 'calendar-outline' },
-          { key: 'month', label: 'This Month', icon: 'calendar-outline' },
-          { key: 'quarter', label: 'Quarter', icon: 'stats-chart-outline' },
-          { key: 'year', label: 'This Year', icon: 'calendar-outline' },
-        ].map((tab) => (
-          <TouchableOpacity
-            key={tab.key}
-            style={[styles.periodChip, period === tab.key && styles.periodChipActive]}
-            onPress={() => setPeriod(tab.key)}
-          >
-            <Ionicons name={tab.icon as any} size={16} color={period === tab.key ? COLORS.white : COLORS.gray} />
-            <Text style={[styles.periodChipText, period === tab.key && styles.periodChipTextActive]}>{tab.label}</Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+  // Payment Method Item
+  const PaymentItem = ({ icon, label, amount, percentage, color }: any) => (
+    <View style={styles.paymentItem}>
+      <View style={[styles.paymentDot, { backgroundColor: color }]} />
+      <View style={styles.paymentInfo}>
+        <Text style={styles.paymentLabel}>{label}</Text>
+        <Text style={styles.paymentAmount}>{formatCurrency(amount)}</Text>
+      </View>
+      <Text style={styles.paymentPercent}>{percentage}%</Text>
     </View>
   );
 
-  // Report Tabs
-  const ReportTabs = () => (
-    <View style={styles.tabsContainer}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.tabsScroll}>
-        {reportTabs.map((tab) => (
-          <TouchableOpacity
-            key={tab.key}
-            style={[styles.tab, activeReport === tab.key && styles.tabActive]}
-            onPress={() => setActiveReport(tab.key)}
-          >
-            <Ionicons name={tab.icon as any} size={20} color={activeReport === tab.key ? COLORS.primary : COLORS.gray} />
-            <Text style={[styles.tabText, activeReport === tab.key && styles.tabTextActive]}>{tab.label}</Text>
-            {activeReport === tab.key && <View style={styles.tabIndicator} />}
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+  // Product Row
+  const ProductRow = ({ rank, name, quantity, revenue }: any) => (
+    <View style={styles.productRow}>
+      <View style={[styles.productRank, rank <= 3 && styles.productRankTop]}>
+        <Text style={[styles.productRankText, rank <= 3 && styles.productRankTextTop]}>{rank}</Text>
+      </View>
+      <View style={styles.productInfo}>
+        <Text style={styles.productName} numberOfLines={1}>{name}</Text>
+        <Text style={styles.productQty}>{quantity} sold</Text>
+      </View>
+      <Text style={styles.productRevenue}>{formatCurrency(revenue)}</Text>
     </View>
-  );
-
-  // Quick Insights
-  const QuickInsights = () => (
-    <View style={styles.insightsRow}>
-      <View style={[styles.insightCard, { borderLeftColor: COLORS.success }]}>
-        <View style={styles.insightHeader}>
-          <View style={[styles.insightIcon, { backgroundColor: COLORS.successLight }]}>
-            <Ionicons name="cash" size={20} color={COLORS.success} />
-          </View>
-          <Ionicons name="trending-up" size={16} color={COLORS.success} />
-        </View>
-        <Text style={[styles.insightValue, { color: COLORS.success }]}>{formatCurrency(stats?.total_sales_today || 0)}</Text>
-        <Text style={styles.insightLabel}>Today's Sales</Text>
-      </View>
-      
-      <View style={[styles.insightCard, { borderLeftColor: COLORS.primary }]}>
-        <View style={styles.insightHeader}>
-          <View style={[styles.insightIcon, { backgroundColor: COLORS.primaryLight }]}>
-            <Ionicons name="receipt" size={20} color={COLORS.primary} />
-          </View>
-        </View>
-        <Text style={styles.insightValue}>{stats?.total_orders_today || 0}</Text>
-        <Text style={styles.insightLabel}>Orders</Text>
-      </View>
-      
-      <View style={[styles.insightCard, { borderLeftColor: COLORS.purple }]}>
-        <View style={styles.insightHeader}>
-          <View style={[styles.insightIcon, { backgroundColor: COLORS.purpleLight }]}>
-            <Ionicons name="people" size={20} color={COLORS.purple} />
-          </View>
-        </View>
-        <Text style={styles.insightValue}>{stats?.total_customers || 0}</Text>
-        <Text style={styles.insightLabel}>Customers</Text>
-      </View>
-      
-      <View style={[styles.insightCard, { borderLeftColor: COLORS.warning }]}>
-        <View style={styles.insightHeader}>
-          <View style={[styles.insightIcon, { backgroundColor: COLORS.warningLight }]}>
-            <Ionicons name="cube" size={20} color={COLORS.warning} />
-          </View>
-        </View>
-        <Text style={styles.insightValue}>{stats?.total_products || 0}</Text>
-        <Text style={styles.insightLabel}>Products</Text>
-      </View>
-    </View>
-  );
-
-  // Overview Report
-  const renderOverviewReport = () => (
-    <>
-      <QuickInsights />
-      
-      <View style={styles.chartsGrid}>
-        <View style={styles.chartCard}>
-          <View style={styles.chartHeader}>
-            <Text style={styles.chartTitle}>Sales by Payment</Text>
-            <TouchableOpacity style={styles.chartAction}>
-              <Ionicons name="expand-outline" size={18} color={COLORS.gray} />
-            </TouchableOpacity>
-          </View>
-          <View style={styles.chartBody}>
-            <PieChart
-              data={[
-                { value: stats?.sales_by_payment_method?.cash || 1, color: COLORS.success },
-                { value: stats?.sales_by_payment_method?.card || 1, color: COLORS.primary },
-                { value: stats?.sales_by_payment_method?.mobile_money || 1, color: COLORS.warning },
-                { value: stats?.sales_by_payment_method?.credit || 1, color: COLORS.purple },
-              ]}
-              donut
-              radius={80}
-              innerRadius={55}
-              centerLabelComponent={() => (
-                <View style={styles.chartCenter}>
-                  <Text style={styles.chartCenterValue}>{formatCurrency(totalPayments)}</Text>
-                  <Text style={styles.chartCenterLabel}>Total</Text>
-                </View>
-              )}
-            />
-          </View>
-          <View style={styles.chartLegend}>
-            {[
-              { label: 'Cash', value: formatCurrency(stats?.sales_by_payment_method?.cash || 0), color: COLORS.success },
-              { label: 'Card', value: formatCurrency(stats?.sales_by_payment_method?.card || 0), color: COLORS.primary },
-              { label: 'Mobile', value: formatCurrency(stats?.sales_by_payment_method?.mobile_money || 0), color: COLORS.warning },
-              { label: 'Credit', value: formatCurrency(stats?.sales_by_payment_method?.credit || 0), color: COLORS.purple },
-            ].map((item, idx) => (
-              <View key={idx} style={styles.legendItem}>
-                <View style={[styles.legendDot, { backgroundColor: item.color }]} />
-                <Text style={styles.legendLabel}>{item.label}</Text>
-                <Text style={styles.legendValue}>{item.value}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.chartCard}>
-          <View style={styles.chartHeader}>
-            <Text style={styles.chartTitle}>Performance</Text>
-          </View>
-          <View style={styles.chartBody}>
-            <View style={styles.gaugeContainer}>
-              <View style={[styles.performanceCircle, { backgroundColor: COLORS.primaryLight }]}>
-                <Text style={[styles.performanceValue, { color: COLORS.primary }]}>{stats?.total_orders_today || 0}</Text>
-                <Text style={styles.performanceLabel}>Orders</Text>
-              </View>
-            </View>
-          </View>
-          <View style={styles.statsGrid}>
-            <View style={styles.statItem}>
-              <Text style={styles.statLabel}>Avg Order Value</Text>
-              <Text style={styles.statValue}>
-                {formatCurrency(stats?.total_orders_today ? stats.total_sales_today / stats.total_orders_today : 0)}
-              </Text>
-            </View>
-            <View style={styles.statItem}>
-              <Text style={styles.statLabel}>Products Sold</Text>
-              <Text style={[styles.statValue, { color: COLORS.success }]}>
-                {stats?.top_products?.reduce((sum, p) => sum + p.quantity, 0) || 0}
-              </Text>
-            </View>
-          </View>
-        </View>
-      </View>
-    </>
-  );
-
-  // Sales Report
-  const renderSalesReport = () => (
-    <>
-      <View style={styles.salesCards}>
-        <View style={styles.salesCard}>
-          <View style={[styles.salesIcon, { backgroundColor: COLORS.successLight }]}>
-            <Ionicons name="trending-up" size={32} color={COLORS.success} />
-          </View>
-          <Text style={[styles.salesValue, { color: COLORS.success }]}>{formatCurrency(stats?.total_sales_today || 0)}</Text>
-          <Text style={styles.salesLabel}>Total Revenue</Text>
-        </View>
-        <View style={styles.salesCard}>
-          <View style={[styles.salesIcon, { backgroundColor: COLORS.primaryLight }]}>
-            <Ionicons name="receipt" size={32} color={COLORS.primary} />
-          </View>
-          <Text style={styles.salesValue}>{stats?.total_orders_today || 0}</Text>
-          <Text style={styles.salesLabel}>Total Orders</Text>
-        </View>
-      </View>
-
-      <View style={styles.chartCard}>
-        <View style={styles.chartHeader}>
-          <Text style={styles.chartTitle}>Sales Trend</Text>
-        </View>
-        <View style={styles.chartBody}>
-          {stats?.daily_sales && stats.daily_sales.length > 0 ? (
-            <LineChart
-              data={stats.daily_sales.map(d => ({ value: d.sales || 0 }))}
-              height={180}
-              width={300}
-              spacing={50}
-              color1={COLORS.primary}
-              thickness={3}
-              hideDataPoints={false}
-              dataPointsColor1={COLORS.primary}
-              dataPointsRadius={6}
-              curved
-              noOfSections={4}
-              yAxisThickness={0}
-              xAxisThickness={1}
-              xAxisColor={COLORS.border}
-              hideRules
-              xAxisLabelTexts={stats.daily_sales.map(d => d.day)}
-              xAxisLabelTextStyle={{ fontSize: 11, color: COLORS.gray }}
-              isAnimated
-            />
-          ) : (
-            <View style={styles.emptyState}>
-              <Ionicons name="trending-up-outline" size={64} color={COLORS.lightGray} />
-              <Text style={styles.emptyText}>No sales data available</Text>
-            </View>
-          )}
-        </View>
-      </View>
-    </>
-  );
-
-  // Products Report
-  const renderProductsReport = () => (
-    <>
-      <View style={styles.chartCard}>
-        <View style={styles.chartHeader}>
-          <Text style={styles.chartTitle}>Top Selling Products</Text>
-        </View>
-        <View style={styles.chartBody}>
-          {stats?.top_products && stats.top_products.length > 0 ? (
-            <BarChart
-              data={stats.top_products.slice(0, 5).map((p, idx) => ({
-                value: p.revenue || 0,
-                label: p.name?.substring(0, 4) || `P${idx + 1}`,
-                frontColor: [COLORS.primary, COLORS.success, COLORS.warning, COLORS.purple, '#EC4899'][idx],
-              }))}
-              barWidth={40}
-              barBorderRadius={8}
-              height={180}
-              noOfSections={4}
-              yAxisThickness={0}
-              xAxisThickness={1}
-              xAxisColor={COLORS.border}
-              hideRules
-              isAnimated
-            />
-          ) : (
-            <View style={styles.emptyState}>
-              <Ionicons name="cube-outline" size={64} color={COLORS.lightGray} />
-              <Text style={styles.emptyText}>No product data available</Text>
-            </View>
-          )}
-        </View>
-      </View>
-
-      <View style={styles.tableCard}>
-        <View style={styles.tableHeader}>
-          <Text style={styles.tableTitle}>Product Performance</Text>
-        </View>
-        <View style={styles.tableContent}>
-          <View style={styles.tableHeaderRow}>
-            <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Product</Text>
-            <Text style={[styles.tableHeaderCell, { flex: 1, textAlign: 'center' }]}>Qty Sold</Text>
-            <Text style={[styles.tableHeaderCell, { flex: 1.5, textAlign: 'right' }]}>Revenue</Text>
-          </View>
-          {stats?.top_products && stats.top_products.length > 0 ? stats.top_products.map((product, idx) => (
-            <View key={idx} style={[styles.tableRow, idx % 2 === 1 && styles.tableRowAlt]}>
-              <View style={[styles.tableCell, { flex: 2, flexDirection: 'row', alignItems: 'center', gap: 10 }]}>
-                <View style={[styles.rankBadge, { backgroundColor: idx < 3 ? COLORS.warningLight : COLORS.lightGray }]}>
-                  <Text style={[styles.rankText, { color: idx < 3 ? COLORS.warning : COLORS.gray }]}>#{idx + 1}</Text>
-                </View>
-                <Text style={styles.tableCellText}>{product.name}</Text>
-              </View>
-              <Text style={[styles.tableCell, styles.tableCellText, { flex: 1, textAlign: 'center' }]}>{product.quantity}</Text>
-              <Text style={[styles.tableCell, styles.tableCellText, { flex: 1.5, textAlign: 'right', color: COLORS.success, fontWeight: '600' }]}>{formatCurrency(product.revenue)}</Text>
-            </View>
-          )) : (
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>No product data</Text>
-            </View>
-          )}
-        </View>
-      </View>
-    </>
-  );
-
-  // Payments Report
-  const renderPaymentsReport = () => (
-    <>
-      <View style={styles.paymentCards}>
-        {[
-          { method: 'Cash', amount: stats?.sales_by_payment_method?.cash || 0, color: COLORS.success, icon: 'cash' },
-          { method: 'Card', amount: stats?.sales_by_payment_method?.card || 0, color: COLORS.primary, icon: 'card' },
-          { method: 'Mobile', amount: stats?.sales_by_payment_method?.mobile_money || 0, color: COLORS.warning, icon: 'phone-portrait' },
-          { method: 'Credit', amount: stats?.sales_by_payment_method?.credit || 0, color: COLORS.purple, icon: 'time' },
-        ].map((item, idx) => (
-          <View key={idx} style={styles.paymentCard}>
-            <View style={[styles.paymentIcon, { backgroundColor: `${item.color}15` }]}>
-              <Ionicons name={item.icon as any} size={28} color={item.color} />
-            </View>
-            <Text style={[styles.paymentValue, { color: item.color }]}>{formatCurrency(item.amount)}</Text>
-            <Text style={styles.paymentLabel}>{item.method}</Text>
-            <Text style={styles.paymentPercent}>
-              {totalPayments ? Math.round((item.amount / totalPayments) * 100) : 0}%
-            </Text>
-          </View>
-        ))}
-      </View>
-
-      <View style={styles.tableCard}>
-        <View style={styles.tableHeader}>
-          <Text style={styles.tableTitle}>Payment Breakdown</Text>
-        </View>
-        <View style={styles.tableContent}>
-          <View style={styles.tableHeaderRow}>
-            <Text style={[styles.tableHeaderCell, { flex: 2 }]}>Method</Text>
-            <Text style={[styles.tableHeaderCell, { flex: 1.5, textAlign: 'right' }]}>Amount</Text>
-            <Text style={[styles.tableHeaderCell, { flex: 1, textAlign: 'right' }]}>%</Text>
-          </View>
-          {[
-            { method: 'Cash', amount: stats?.sales_by_payment_method?.cash || 0, color: COLORS.success, icon: 'cash' },
-            { method: 'Card', amount: stats?.sales_by_payment_method?.card || 0, color: COLORS.primary, icon: 'card' },
-            { method: 'Mobile Money', amount: stats?.sales_by_payment_method?.mobile_money || 0, color: COLORS.warning, icon: 'phone-portrait' },
-            { method: 'Credit', amount: stats?.sales_by_payment_method?.credit || 0, color: COLORS.purple, icon: 'time' },
-          ].map((item, idx) => (
-            <View key={idx} style={[styles.tableRow, idx % 2 === 1 && styles.tableRowAlt]}>
-              <View style={[styles.tableCell, { flex: 2, flexDirection: 'row', alignItems: 'center', gap: 10 }]}>
-                <Ionicons name={item.icon as any} size={20} color={item.color} />
-                <Text style={styles.tableCellText}>{item.method}</Text>
-              </View>
-              <Text style={[styles.tableCell, styles.tableCellText, { flex: 1.5, textAlign: 'right', color: item.color, fontWeight: '600' }]}>{formatCurrency(item.amount)}</Text>
-              <Text style={[styles.tableCell, styles.tableCellText, { flex: 1, textAlign: 'right' }]}>
-                {totalPayments ? Math.round((item.amount / totalPayments) * 100) : 0}%
-              </Text>
-            </View>
-          ))}
-        </View>
-      </View>
-    </>
-  );
-
-  // Customers Report
-  const renderCustomersReport = () => (
-    <>
-      <View style={styles.customerCards}>
-        <View style={styles.customerCard}>
-          <View style={[styles.customerIcon, { backgroundColor: COLORS.purpleLight }]}>
-            <Ionicons name="people" size={32} color={COLORS.purple} />
-          </View>
-          <Text style={styles.customerValue}>{stats?.total_customers || 0}</Text>
-          <Text style={styles.customerLabel}>Total Customers</Text>
-        </View>
-        <View style={styles.customerCard}>
-          <View style={[styles.customerIcon, { backgroundColor: COLORS.successLight }]}>
-            <Ionicons name="person-add" size={32} color={COLORS.success} />
-          </View>
-          <Text style={[styles.customerValue, { color: COLORS.success }]}>+{Math.floor(Math.random() * 10) + 1}</Text>
-          <Text style={styles.customerLabel}>New This Week</Text>
-        </View>
-      </View>
-
-      <View style={styles.chartCard}>
-        <View style={styles.chartHeader}>
-          <Text style={styles.chartTitle}>Customer Insights</Text>
-        </View>
-        <View style={styles.chartBody}>
-          <View style={styles.customerInsight}>
-            <View style={[styles.insightCircle, { backgroundColor: COLORS.purpleLight }]}>
-              <Text style={[styles.insightCircleValue, { color: COLORS.purple }]}>
-                {formatCurrency(stats?.total_customers && stats?.total_sales_today ? stats.total_sales_today / stats.total_customers : 0)}
-              </Text>
-              <Text style={styles.insightCircleLabel}>Avg per Customer</Text>
-            </View>
-            <View style={styles.insightStats}>
-              <View style={styles.insightStatItem}>
-                <Text style={styles.insightStatLabel}>Registered</Text>
-                <Text style={styles.insightStatValue}>{stats?.total_customers || 0}</Text>
-              </View>
-              <View style={styles.insightStatItem}>
-                <Text style={styles.insightStatLabel}>Walk-ins Today</Text>
-                <Text style={styles.insightStatValue}>{Math.floor((stats?.total_orders_today || 0) * 0.3)}</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-      </View>
-    </>
   );
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ExportModal />
       <ScrollView
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={THEME.primary} />
+        }
+        contentContainerStyle={styles.scrollContent}
       >
-        <HeroStats />
-        <PeriodSelector />
-        <ReportTabs />
-        
-        <View style={styles.content}>
-          {activeReport === 'overview' && renderOverviewReport()}
-          {activeReport === 'sales' && renderSalesReport()}
-          {activeReport === 'products' && renderProductsReport()}
-          {activeReport === 'payments' && renderPaymentsReport()}
-          {activeReport === 'customers' && renderCustomersReport()}
+        {/* Header */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.headerTitle}>Reports</Text>
+            <Text style={styles.headerSubtitle}>Sales analytics overview</Text>
+          </View>
+          <TouchableOpacity 
+            style={styles.exportBtn} 
+            onPress={() => setShowExportModal(true)}
+            data-testid="export-report-btn"
+          >
+            <Ionicons name="download-outline" size={18} color={THEME.primary} />
+            <Text style={styles.exportBtnText}>Export</Text>
+          </TouchableOpacity>
         </View>
-        
+
+        {/* Period Filter */}
+        <View style={styles.periodContainer}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.periodScroll}>
+            {periods.map((p) => (
+              <TouchableOpacity
+                key={p.key}
+                style={[styles.periodPill, period === p.key && styles.periodPillActive]}
+                onPress={() => setPeriod(p.key)}
+                data-testid={`period-${p.key}`}
+              >
+                <Text style={[styles.periodText, period === p.key && styles.periodTextActive]}>
+                  {p.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Key Metrics Grid */}
+        <View style={[styles.metricsGrid, isDesktop && styles.metricsGridDesktop]}>
+          <MetricCard 
+            icon="cash-outline" 
+            iconBg={THEME.successBg}
+            value={formatCurrency(stats?.total_sales_today || 0)}
+            label="Total Sales"
+            valueColor={THEME.success}
+          />
+          <MetricCard 
+            icon="receipt-outline" 
+            iconBg={THEME.primarySoft}
+            value={stats?.total_orders_today || 0}
+            label="Orders"
+          />
+          <MetricCard 
+            icon="people-outline" 
+            iconBg={THEME.infoBg}
+            value={stats?.total_customers || 0}
+            label="Customers"
+          />
+          <MetricCard 
+            icon="trending-up-outline" 
+            iconBg={THEME.warningBg}
+            value={formatCurrency(avgOrderValue)}
+            label="Avg Order"
+          />
+        </View>
+
+        {/* Main Content Grid */}
+        <View style={[styles.contentGrid, isDesktop && styles.contentGridDesktop]}>
+          {/* Payment Breakdown */}
+          <View style={[styles.card, isDesktop && styles.cardHalf]}>
+            <Text style={styles.cardTitle}>Payment Methods</Text>
+            
+            <View style={styles.pieContainer}>
+              <PieChart
+                data={[
+                  { value: stats?.sales_by_payment_method?.cash || 1, color: THEME.primary },
+                  { value: stats?.sales_by_payment_method?.card || 1, color: THEME.primaryLight },
+                  { value: stats?.sales_by_payment_method?.mobile_money || 1, color: '#40916C' },
+                  { value: stats?.sales_by_payment_method?.credit || 1, color: '#52B788' },
+                ]}
+                donut
+                radius={70}
+                innerRadius={50}
+                centerLabelComponent={() => (
+                  <View style={styles.pieCenter}>
+                    <Text style={styles.pieCenterValue}>{formatCurrency(totalPayments)}</Text>
+                    <Text style={styles.pieCenterLabel}>Total</Text>
+                  </View>
+                )}
+              />
+            </View>
+
+            <View style={styles.paymentList}>
+              <PaymentItem 
+                label="Cash" 
+                amount={stats?.sales_by_payment_method?.cash || 0}
+                percentage={totalPayments ? Math.round(((stats?.sales_by_payment_method?.cash || 0) / totalPayments) * 100) : 0}
+                color={THEME.primary}
+              />
+              <PaymentItem 
+                label="Card" 
+                amount={stats?.sales_by_payment_method?.card || 0}
+                percentage={totalPayments ? Math.round(((stats?.sales_by_payment_method?.card || 0) / totalPayments) * 100) : 0}
+                color={THEME.primaryLight}
+              />
+              <PaymentItem 
+                label="Mobile Money" 
+                amount={stats?.sales_by_payment_method?.mobile_money || 0}
+                percentage={totalPayments ? Math.round(((stats?.sales_by_payment_method?.mobile_money || 0) / totalPayments) * 100) : 0}
+                color="#40916C"
+              />
+              <PaymentItem 
+                label="Credit" 
+                amount={stats?.sales_by_payment_method?.credit || 0}
+                percentage={totalPayments ? Math.round(((stats?.sales_by_payment_method?.credit || 0) / totalPayments) * 100) : 0}
+                color="#52B788"
+              />
+            </View>
+          </View>
+
+          {/* Top Products */}
+          <View style={[styles.card, isDesktop && styles.cardHalf]}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Top Products</Text>
+              <TouchableOpacity onPress={() => router.push('/(tabs)/products')}>
+                <Text style={styles.viewAllText}>View All</Text>
+              </TouchableOpacity>
+            </View>
+
+            {stats?.top_products && stats.top_products.length > 0 ? (
+              <View style={styles.productList}>
+                {stats.top_products.slice(0, 5).map((product, idx) => (
+                  <ProductRow 
+                    key={idx}
+                    rank={idx + 1}
+                    name={product.name}
+                    quantity={product.quantity}
+                    revenue={product.revenue}
+                  />
+                ))}
+              </View>
+            ) : (
+              <View style={styles.emptyState}>
+                <Ionicons name="cube-outline" size={40} color={THEME.textTertiary} />
+                <Text style={styles.emptyText}>No product data yet</Text>
+                <Text style={styles.emptySubtext}>Start making sales to see top products</Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* Sales Trend Chart */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Sales Trend</Text>
+          
+          {stats?.daily_sales && stats.daily_sales.length > 0 ? (
+            <View style={styles.chartContainer}>
+              <LineChart
+                data={stats.daily_sales.map(d => ({ value: d.sales || 0 }))}
+                height={180}
+                width={isDesktop ? 600 : width - 80}
+                spacing={isDesktop ? 80 : 50}
+                color={THEME.primary}
+                thickness={3}
+                startFillColor={THEME.primary}
+                endFillColor={THEME.background}
+                startOpacity={0.15}
+                endOpacity={0}
+                curved
+                hideRules
+                yAxisThickness={0}
+                xAxisThickness={1}
+                xAxisColor={THEME.border}
+                hideDataPoints={false}
+                dataPointsColor={THEME.primary}
+                dataPointsRadius={5}
+                xAxisLabelTexts={stats.daily_sales.map(d => d.day)}
+                xAxisLabelTextStyle={{ fontSize: 11, color: THEME.textTertiary }}
+                isAnimated
+                areaChart
+              />
+            </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <Ionicons name="analytics-outline" size={40} color={THEME.textTertiary} />
+              <Text style={styles.emptyText}>No trend data available</Text>
+              <Text style={styles.emptySubtext}>Sales trends will appear as you make more sales</Text>
+            </View>
+          )}
+        </View>
+
+        {/* Quick Stats Summary */}
+        <View style={styles.summaryCard}>
+          <View style={styles.summaryRow}>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Products Sold</Text>
+              <Text style={styles.summaryValue}>
+                {stats?.top_products?.reduce((sum, p) => sum + p.quantity, 0) || 0}
+              </Text>
+            </View>
+            <View style={styles.summaryDivider} />
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Active Products</Text>
+              <Text style={styles.summaryValue}>{stats?.total_products || 0}</Text>
+            </View>
+            <View style={styles.summaryDivider} />
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Conversion Rate</Text>
+              <Text style={[styles.summaryValue, { color: THEME.success }]}>
+                {stats?.total_customers && stats.total_orders_today 
+                  ? Math.round((stats.total_orders_today / stats.total_customers) * 100) 
+                  : 0}%
+              </Text>
+            </View>
+          </View>
+        </View>
+
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Export Modal */}
+      <Modal
+        visible={showExportModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowExportModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Export Report</Text>
+              <TouchableOpacity onPress={() => setShowExportModal(false)}>
+                <Ionicons name="close" size={24} color={THEME.textSecondary} />
+              </TouchableOpacity>
+            </View>
+            
+            <Text style={styles.modalSubtitle}>Choose export format</Text>
+
+            <TouchableOpacity 
+              style={styles.exportOption}
+              onPress={() => handleExport('pdf')}
+              disabled={exporting}
+            >
+              <View style={[styles.exportOptionIcon, { backgroundColor: THEME.dangerBg }]}>
+                <Ionicons name="document-text" size={24} color={THEME.danger} />
+              </View>
+              <View style={styles.exportOptionInfo}>
+                <Text style={styles.exportOptionTitle}>PDF Document</Text>
+                <Text style={styles.exportOptionDesc}>Best for printing and sharing</Text>
+              </View>
+              {exporting ? (
+                <ActivityIndicator size="small" color={THEME.primary} />
+              ) : (
+                <Ionicons name="chevron-forward" size={20} color={THEME.textTertiary} />
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.exportOption}
+              onPress={() => handleExport('csv')}
+              disabled={exporting}
+            >
+              <View style={[styles.exportOptionIcon, { backgroundColor: THEME.successBg }]}>
+                <Ionicons name="grid" size={24} color={THEME.success} />
+              </View>
+              <View style={styles.exportOptionInfo}>
+                <Text style={styles.exportOptionTitle}>CSV Spreadsheet</Text>
+                <Text style={styles.exportOptionDesc}>Best for Excel and data analysis</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={20} color={THEME.textTertiary} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FAFC' },
-  loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  heroSection: { marginBottom: 0 },
-  heroGradient: { paddingHorizontal: 24, paddingTop: 24, paddingBottom: 32, borderBottomLeftRadius: 24, borderBottomRightRadius: 24 },
-  heroContent: {},
-  heroHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 },
-  heroTitle: { fontSize: 28, fontWeight: '800', color: COLORS.white },
-  heroSubtitle: { fontSize: 14, color: 'rgba(255,255,255,0.8)', marginTop: 4 },
-  exportButton: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12 },
-  exportButtonText: { fontSize: 14, fontWeight: '600', color: COLORS.white },
-  heroStats: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  heroStatItem: { flex: 1, alignItems: 'center' },
-  heroStatValue: { fontSize: 22, fontWeight: '800', color: COLORS.white },
-  heroStatLabel: { fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 4 },
-  heroStatDivider: { width: 1, height: 40, backgroundColor: 'rgba(255,255,255,0.2)' },
-  periodSection: { backgroundColor: COLORS.white, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
-  periodScroll: { paddingHorizontal: 20, gap: 10 },
-  periodChip: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 24, backgroundColor: '#F1F5F9' },
-  periodChipActive: { backgroundColor: COLORS.primary },
-  periodChipText: { fontSize: 13, fontWeight: '600', color: COLORS.gray },
-  periodChipTextActive: { color: COLORS.white },
-  tabsContainer: { backgroundColor: COLORS.white, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
-  tabsScroll: { paddingHorizontal: 20, paddingVertical: 8 },
-  tab: { alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12, marginRight: 8, position: 'relative' },
-  tabActive: {},
-  tabText: { fontSize: 13, fontWeight: '600', color: COLORS.gray, marginTop: 4 },
-  tabTextActive: { color: COLORS.primary },
-  tabIndicator: { position: 'absolute', bottom: 0, left: 10, right: 10, height: 3, backgroundColor: COLORS.primary, borderRadius: 2 },
-  content: { padding: 20 },
-  insightsRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
-  insightCard: { flex: 1, backgroundColor: COLORS.white, borderRadius: 16, padding: 16, borderLeftWidth: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2 },
-  insightHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  insightIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  insightValue: { fontSize: 24, fontWeight: '800', color: COLORS.dark },
-  insightLabel: { fontSize: 12, color: COLORS.gray, marginTop: 4 },
-  chartsGrid: { flexDirection: 'row', gap: 16, marginBottom: 20 },
-  chartCard: { flex: 1, backgroundColor: COLORS.white, borderRadius: 20, padding: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2, marginBottom: 20 },
-  chartHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 },
-  chartTitle: { fontSize: 16, fontWeight: '700', color: COLORS.dark },
-  chartAction: { width: 32, height: 32, borderRadius: 16, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
-  chartBody: { alignItems: 'center', paddingVertical: 16 },
-  chartCenter: { alignItems: 'center' },
-  chartCenterValue: { fontSize: 16, fontWeight: '800', color: COLORS.dark },
-  chartCenterLabel: { fontSize: 11, color: COLORS.gray },
-  chartLegend: { marginTop: 16 },
-  legendItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 6 },
-  legendDot: { width: 12, height: 12, borderRadius: 6, marginRight: 10 },
-  legendLabel: { flex: 1, fontSize: 13, color: COLORS.gray },
-  legendValue: { fontSize: 13, fontWeight: '700', color: COLORS.dark },
-  gaugeContainer: { alignItems: 'center' },
-  performanceCircle: { width: 140, height: 140, borderRadius: 70, alignItems: 'center', justifyContent: 'center' },
-  performanceValue: { fontSize: 40, fontWeight: '800' },
-  performanceLabel: { fontSize: 14, color: COLORS.gray },
-  statsGrid: { flexDirection: 'row', marginTop: 20, borderTopWidth: 1, borderTopColor: '#F1F5F9', paddingTop: 16 },
-  statItem: { flex: 1, alignItems: 'center' },
-  statLabel: { fontSize: 12, color: COLORS.gray },
-  statValue: { fontSize: 18, fontWeight: '700', color: COLORS.dark, marginTop: 4 },
-  tableCard: { backgroundColor: COLORS.white, borderRadius: 20, overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2, marginBottom: 20 },
-  tableHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
-  tableTitle: { fontSize: 16, fontWeight: '700', color: COLORS.dark },
-  tableContent: { padding: 0 },
-  tableHeaderRow: { flexDirection: 'row', paddingHorizontal: 20, paddingVertical: 14, backgroundColor: '#F8FAFC' },
-  tableHeaderCell: { fontSize: 11, fontWeight: '700', color: COLORS.gray, textTransform: 'uppercase', letterSpacing: 0.5 },
-  tableRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: '#F8FAFC' },
-  tableRowAlt: { backgroundColor: '#FAFBFC' },
-  tableCell: {},
-  tableCellText: { fontSize: 14, color: COLORS.dark },
-  rankBadge: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  rankText: { fontSize: 11, fontWeight: '700' },
-  salesCards: { flexDirection: 'row', gap: 16, marginBottom: 20 },
-  salesCard: { flex: 1, backgroundColor: COLORS.white, borderRadius: 20, padding: 24, alignItems: 'center' },
-  salesIcon: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  salesValue: { fontSize: 24, fontWeight: '800', color: COLORS.dark },
-  salesLabel: { fontSize: 13, color: COLORS.gray, marginTop: 4 },
-  paymentCards: { flexDirection: 'row', gap: 12, marginBottom: 20 },
-  paymentCard: { flex: 1, backgroundColor: COLORS.white, borderRadius: 16, padding: 16, alignItems: 'center' },
-  paymentIcon: { width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
-  paymentValue: { fontSize: 18, fontWeight: '800' },
-  paymentLabel: { fontSize: 12, color: COLORS.gray, marginTop: 4 },
-  paymentPercent: { fontSize: 11, color: COLORS.gray, marginTop: 4 },
-  customerCards: { flexDirection: 'row', gap: 16, marginBottom: 20 },
-  customerCard: { flex: 1, backgroundColor: COLORS.white, borderRadius: 20, padding: 24, alignItems: 'center' },
-  customerIcon: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', marginBottom: 16 },
-  customerValue: { fontSize: 28, fontWeight: '800', color: COLORS.dark },
-  customerLabel: { fontSize: 13, color: COLORS.gray, marginTop: 4 },
-  customerInsight: { flexDirection: 'row', alignItems: 'center', width: '100%' },
-  insightCircle: { width: 140, height: 140, borderRadius: 70, alignItems: 'center', justifyContent: 'center' },
-  insightCircleValue: { fontSize: 20, fontWeight: '800' },
-  insightCircleLabel: { fontSize: 11, color: COLORS.gray, marginTop: 4 },
-  insightStats: { flex: 1, marginLeft: 24 },
-  insightStatItem: { marginBottom: 16 },
-  insightStatLabel: { fontSize: 12, color: COLORS.gray },
-  insightStatValue: { fontSize: 24, fontWeight: '700', color: COLORS.dark, marginTop: 4 },
-  emptyState: { alignItems: 'center', padding: 40 },
-  emptyText: { fontSize: 14, color: COLORS.gray, marginTop: 12 },
+  container: {
+    flex: 1,
+    backgroundColor: THEME.surface,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: THEME.textSecondary,
+  },
+  scrollContent: {
+    padding: 20,
+  },
 
-  // Export Preview Modal
-  previewModalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
-  previewModalContainer: { backgroundColor: COLORS.white, borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: '90%' },
-  previewModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, borderBottomWidth: 1, borderBottomColor: '#F1F5F9' },
-  previewModalTitle: { fontSize: 18, fontWeight: '700', color: COLORS.dark },
-  previewCloseBtn: { padding: 4 },
-  previewContent: { padding: 20, maxHeight: 450 },
-  previewReportHeader: { borderRadius: 16, padding: 20, marginBottom: 20 },
-  previewReportTitle: { fontSize: 20, fontWeight: '800', color: COLORS.white },
-  previewReportPeriod: { fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 4 },
-  previewMetricsRow: { flexDirection: 'row', gap: 12, marginBottom: 20 },
-  previewMetricCard: { flex: 1, backgroundColor: '#F8FAFC', borderRadius: 12, padding: 16, alignItems: 'center' },
-  previewMetricValue: { fontSize: 16, fontWeight: '800', color: COLORS.dark },
-  previewMetricLabel: { fontSize: 11, color: COLORS.gray, marginTop: 4 },
-  previewSection: { marginBottom: 20 },
-  previewSectionTitle: { fontSize: 14, fontWeight: '700', color: COLORS.dark, marginBottom: 12 },
-  previewTable: { backgroundColor: '#F8FAFC', borderRadius: 12, overflow: 'hidden' },
-  previewTableRow: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#E5E7EB' },
-  previewTableLabel: { fontSize: 13, color: COLORS.gray },
-  previewTableValue: { fontSize: 13, fontWeight: '600', color: COLORS.dark },
-  previewTimestamp: { fontSize: 11, color: COLORS.gray, textAlign: 'center', marginTop: 10 },
-  previewFooter: { padding: 20, borderTopWidth: 1, borderTopColor: '#F1F5F9', backgroundColor: '#FAFBFC' },
-  previewFooterTitle: { fontSize: 12, fontWeight: '600', color: COLORS.gray, marginBottom: 12, textAlign: 'center' },
-  previewExportButtons: { flexDirection: 'row', gap: 12 },
-  previewExportBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 14, borderRadius: 12 },
-  previewExportBtnText: { fontSize: 15, fontWeight: '700' },
+  // Header
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: THEME.textPrimary,
+    letterSpacing: -0.5,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: THEME.textSecondary,
+    marginTop: 4,
+  },
+  exportBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: THEME.background,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: THEME.border,
+  },
+  exportBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: THEME.primary,
+  },
 
-  // Legacy Export Modal (kept for compatibility)
-  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-  exportModal: { backgroundColor: COLORS.white, borderRadius: 24, padding: 24, width: '100%', maxWidth: 400 },
-  exportModalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  exportModalTitle: { fontSize: 20, fontWeight: '700', color: COLORS.dark },
-  exportModalSubtitle: { fontSize: 14, color: COLORS.gray, marginBottom: 24 },
-  exportOption: { flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: '#F8FAFC', borderRadius: 16, marginBottom: 12, gap: 16 },
-  exportOptionIcon: { width: 48, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  exportOptionContent: { flex: 1 },
-  exportOptionTitle: { fontSize: 16, fontWeight: '600', color: COLORS.dark },
-  exportOptionDesc: { fontSize: 13, color: COLORS.gray, marginTop: 2 },
+  // Period Filter
+  periodContainer: {
+    marginBottom: 20,
+  },
+  periodScroll: {
+    gap: 8,
+  },
+  periodPill: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    backgroundColor: THEME.background,
+    borderWidth: 1,
+    borderColor: THEME.border,
+  },
+  periodPillActive: {
+    backgroundColor: THEME.primarySoft,
+    borderColor: THEME.primarySoft,
+  },
+  periodText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: THEME.textSecondary,
+  },
+  periodTextActive: {
+    color: THEME.primary,
+  },
+
+  // Metrics Grid
+  metricsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 20,
+  },
+  metricsGridDesktop: {
+    flexWrap: 'nowrap',
+  },
+  metricCard: {
+    width: '48%',
+    backgroundColor: THEME.background,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: THEME.border,
+  },
+  metricCardDesktop: {
+    flex: 1,
+    width: 'auto',
+  },
+  metricIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  metricValue: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: THEME.textPrimary,
+  },
+  metricLabel: {
+    fontSize: 13,
+    color: THEME.textSecondary,
+    marginTop: 4,
+  },
+
+  // Content Grid
+  contentGrid: {
+    gap: 16,
+    marginBottom: 16,
+  },
+  contentGridDesktop: {
+    flexDirection: 'row',
+  },
+
+  // Cards
+  card: {
+    backgroundColor: THEME.background,
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: THEME.border,
+    marginBottom: 16,
+  },
+  cardHalf: {
+    flex: 1,
+    marginBottom: 0,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: THEME.textPrimary,
+    marginBottom: 16,
+  },
+  viewAllText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: THEME.primary,
+  },
+
+  // Pie Chart
+  pieContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  pieCenter: {
+    alignItems: 'center',
+  },
+  pieCenterValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: THEME.textPrimary,
+  },
+  pieCenterLabel: {
+    fontSize: 11,
+    color: THEME.textTertiary,
+  },
+
+  // Payment List
+  paymentList: {
+    gap: 12,
+  },
+  paymentItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  paymentDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginRight: 12,
+  },
+  paymentInfo: {
+    flex: 1,
+  },
+  paymentLabel: {
+    fontSize: 13,
+    color: THEME.textSecondary,
+  },
+  paymentAmount: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: THEME.textPrimary,
+    marginTop: 2,
+  },
+  paymentPercent: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: THEME.textSecondary,
+  },
+
+  // Product List
+  productList: {
+    gap: 12,
+  },
+  productRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  productRank: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    backgroundColor: THEME.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  productRankTop: {
+    backgroundColor: THEME.warningBg,
+  },
+  productRankText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: THEME.textTertiary,
+  },
+  productRankTextTop: {
+    color: THEME.warning,
+  },
+  productInfo: {
+    flex: 1,
+  },
+  productName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: THEME.textPrimary,
+  },
+  productQty: {
+    fontSize: 12,
+    color: THEME.textTertiary,
+    marginTop: 2,
+  },
+  productRevenue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: THEME.success,
+  },
+
+  // Chart
+  chartContainer: {
+    alignItems: 'center',
+    paddingTop: 10,
+  },
+
+  // Empty State
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: 32,
+  },
+  emptyText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: THEME.textSecondary,
+    marginTop: 12,
+  },
+  emptySubtext: {
+    fontSize: 13,
+    color: THEME.textTertiary,
+    marginTop: 4,
+    textAlign: 'center',
+  },
+
+  // Summary Card
+  summaryCard: {
+    backgroundColor: THEME.primaryUltrasoft,
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: THEME.primarySoft,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  summaryItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  summaryDivider: {
+    width: 1,
+    height: 40,
+    backgroundColor: THEME.primarySoft,
+  },
+  summaryLabel: {
+    fontSize: 12,
+    color: THEME.textSecondary,
+  },
+  summaryValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: THEME.textPrimary,
+    marginTop: 4,
+  },
+
+  // Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: THEME.background,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 40,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: THEME.textPrimary,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: THEME.textSecondary,
+    marginBottom: 24,
+  },
+  exportOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: THEME.surface,
+    borderRadius: 16,
+    marginBottom: 12,
+  },
+  exportOptionIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 16,
+  },
+  exportOptionInfo: {
+    flex: 1,
+  },
+  exportOptionTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: THEME.textPrimary,
+  },
+  exportOptionDesc: {
+    fontSize: 13,
+    color: THEME.textSecondary,
+    marginTop: 2,
+  },
 });
