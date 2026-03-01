@@ -254,11 +254,12 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 - [x] **OFFLINE MODE FOUNDATION (COMPLETED Mar 1, 2026)** - Created OfflineDB, SyncService, OfflineStatusIndicator, OfflineSettings components
 
 ### P1 - In Progress
+- [ ] **Connect Bulk Import SKU Generator to Backend Settings** - Use SKU format from admin business settings
 - [ ] **Tigo SMS Testing** - User deferred ("We will test later"), requires VPN access
-- [ ] Language Selector integration (blocked - `import.meta` bundler error)
 - [ ] UniTxt admin dashboard for SMS campaigns
 
 ### P2 - Future/Backlog
+- [ ] Fix LanguageSelector component crash (import.meta related - separate from main fix)
 - [ ] Deploy to VPN-connected server
 - [ ] Test live SMS sending
 - [ ] Fix sales_staff/front_desk roles customer permissions
