@@ -478,8 +478,9 @@ export default function ProductSwitcher({ currentProductId }: ProductSwitcherPro
                         styles.appItem,
                         isCurrent && styles.appItemActiveSpace,
                       ]}
-                      onPress={() => {
-                        console.log('App pressed:', app.name, 'isCurrent:', isCurrent);
+                      onPress={(e) => {
+                        e.stopPropagation();
+                        console.log('App pressed:', app.name, 'isCurrent:', isCurrent, 'hasAccess:', hasAccess);
                         if (!isCurrent) {
                           handleAppSelect(app);
                         }
