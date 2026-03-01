@@ -439,9 +439,9 @@ export default function ProductSwitcher({ currentProductId }: ProductSwitcherPro
         >
           {menuMode === 'compact' ? (
             /* COMPACT MODE - Quick Switcher */
-            <Pressable 
+            <View 
               style={[styles.dropdown, isMobile && styles.dropdownMobile]}
-              onPress={() => {/* Prevent closing when clicking inside dropdown */}}
+              onStartShouldSetResponder={() => true}
             >
               {/* Space Background */}
               <LinearGradient
