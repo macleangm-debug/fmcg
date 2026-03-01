@@ -835,29 +835,56 @@ export default function Cart() {
     }
   };
 
-  const PaymentMethodButton = ({ method, icon, label }: { method: PaymentMethod; icon: string; label: string }) => (
-    <TouchableOpacity
-      style={[
-        styles.paymentButton,
-        paymentMethod === method && styles.paymentButtonActive,
-      ]}
-      onPress={() => setPaymentMethod(method)}
-    >
-      <Ionicons
-        name={icon as any}
-        size={24}
-        color={paymentMethod === method ? '#2563EB' : '#6B7280'}
-      />
-      <Text
+  const PaymentMethodButton = ({ method, icon, label }: { method: PaymentMethod; icon: string; label: string }) => {
+    const requiresInternet = method !== 'cash';
+    const isDisabledOffline = requiresInternet && !isOnline;
+    
+    return (
+      <TouchableOpacity
         style={[
-          styles.paymentButtonText,
-          paymentMethod === method && styles.paymentButtonTextActive,
+          styles.paymentButton,
+          paymentMethod === method && styles.paymentButtonActive,
+          isDisabledOffline && styles.paymentButtonDisabled,
         ]}
+        onPress={() => {
+          if (isDisabledOffline) {
+            Alert.alert(
+              'Internet Required',
+              `${label} payments require an internet connection to verify the transaction.`,
+              [{ text: 'OK' }]
+            );
+            return;
+          }
+          setPaymentMethod(method);
+        }}
       >
-        {label}
-      </Text>
-    </TouchableOpacity>
-  );
+        <View style={{ position: 'relative' }}>
+          <Ionicons
+            name={icon as any}
+            size={24}
+            color={isDisabledOffline ? '#D1D5DB' : (paymentMethod === method ? '#2563EB' : '#6B7280')}
+          />
+          {isDisabledOffline && (
+            <View style={styles.offlineIndicatorBadge}>
+              <Ionicons name="cloud-offline" size={10} color="#F59E0B" />
+            </View>
+          )}
+        </View>
+        <Text
+          style={[
+            styles.paymentButtonText,
+            paymentMethod === method && styles.paymentButtonTextActive,
+            isDisabledOffline && styles.paymentButtonTextDisabled,
+          ]}
+        >
+          {label}
+        </Text>
+        {isDisabledOffline && (
+          <Text style={styles.offlineLabel}>Offline</Text>
+        )}
+      </TouchableOpacity>
+    );
+  };
 
   if (items.length === 0 && !showProductsModal) {
     return (
