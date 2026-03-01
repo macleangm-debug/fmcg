@@ -280,6 +280,11 @@ export default function AppSidebarLayout({
               </View>
             )}
 
+            {/* Offline Status Indicator */}
+            <View style={styles.offlineSection}>
+              <OfflineStatusIndicator showInHeader />
+            </View>
+
             {/* Help Section */}
             {showHelpButton && (
               <View style={styles.helpSection}>
