@@ -5,6 +5,10 @@ const { FileStore } = require('metro-cache');
 
 const config = getDefaultConfig(__dirname);
 
+// Fix for "Cannot use import.meta outside a module" error
+// This disables package exports resolution which can cause ESM/CJS conflicts
+config.resolver.unstable_enablePackageExports = false;
+
 // Use a stable on-disk store (shared across web/android)
 const root = process.env.METRO_CACHE_ROOT || path.join(__dirname, '.metro-cache');
 config.cacheStores = [
