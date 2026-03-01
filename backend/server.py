@@ -4990,7 +4990,7 @@ async def get_reports_summary(
     
     return {
         "period": period,
-        "date_range": {"start": start.isoformat(), "end": now.isoformat()},
+        "date_range": {"start": start.isoformat(), "end": end.isoformat()},
         "total_revenue": total_revenue,
         "total_orders": total_orders,
         "total_items_sold": total_items,
