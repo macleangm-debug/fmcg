@@ -258,6 +258,7 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 - [x] **IMPORT.META ERROR FIX (COMPLETED Mar 1, 2026)** - Fixed metro.config.js to disable package exports, resolves ESM/CJS conflicts
 - [x] **SETTINGS PAGE CRASH FIX (COMPLETED Mar 1, 2026)** - Fixed null safety issues with useLocalSearchParams and useOfflineStore
 - [x] **OFFLINE MODE FOUNDATION (COMPLETED Mar 1, 2026)** - Created OfflineDB, SyncService, OfflineStatusIndicator, OfflineSettings components
+- [x] **OFFLINE CHECKOUT PAYMENT RESTRICTIONS (COMPLETED Mar 1, 2026)** - Cash-only offline, Card/Mobile require internet
 
 ### P1 - In Progress
 - [ ] **Connect Bulk Import SKU Generator to Backend Settings** - Use SKU format from admin business settings
