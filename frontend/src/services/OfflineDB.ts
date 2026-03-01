@@ -249,10 +249,10 @@ export async function clearCategoryCache(): Promise<void> {
 
 export async function clearAllOfflineData(): Promise<void> {
   await Promise.all([
-    db.mutationQueue.clear(),
-    db.products.clear(),
-    db.customers.clear(),
-    db.categories.clear()
+    getDB().mutationQueue.clear(),
+    getDB().products.clear(),
+    getDB().customers.clear(),
+    getDB().categories.clear()
   ]);
 }
 
