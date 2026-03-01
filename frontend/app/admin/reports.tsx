@@ -98,6 +98,16 @@ export default function ReportsPage() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [customDateRange, setCustomDateRange] = useState({ start: new Date(), end: new Date() });
 
+  // Handle period change
+  const handlePeriodChange = useCallback((newPeriod: Period) => {
+    if (newPeriod === 'custom') {
+      setShowDatePicker(true);
+    } else {
+      setLoading(true);
+      setPeriod(newPeriod);
+    }
+  }, []);
+
   const fetchReports = useCallback(async () => {
     try {
       let start: string, end: string;
