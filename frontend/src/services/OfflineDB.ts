@@ -84,8 +84,19 @@ class RetailProOfflineDB extends Dexie {
   }
 }
 
-// Create singleton instance
-const db = new RetailProOfflineDB();
+// Create singleton instance - only in browser environment
+let db: RetailProOfflineDB | null = null;
+
+function getDB(): RetailProOfflineDB {
+  if (!db) {
+    if (typeof window === 'undefined') {
+      // Return a mock for SSR - this should never actually be called during SSR
+      throw new Error('OfflineDB cannot be used during server-side rendering');
+    }
+    db = new RetailProOfflineDB();
+  }
+  return db;
+}
 
 // ============== OFFLINE SETTINGS ==============
 
