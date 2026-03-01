@@ -470,7 +470,7 @@ const BulkProductImportModal: React.FC<BulkProductImportModalProps> = ({
                         </View>
                       </View>
                       
-                      <View style={styles.fieldRow}>
+                      <View style={[styles.fieldRow, { zIndex: 10 }]}>
                         <View style={styles.fieldHalf}>
                           <Text style={styles.fieldLabel}>Stock Qty</Text>
                           <TextInput
@@ -482,7 +482,7 @@ const BulkProductImportModal: React.FC<BulkProductImportModalProps> = ({
                             placeholderTextColor="#9CA3AF"
                           />
                         </View>
-                        <View style={styles.fieldHalf}>
+                        <View style={[styles.fieldHalf, { zIndex: showCategoryPicker === row.id ? 100 : 1 }]}>
                           <Text style={styles.fieldLabel}>Category *</Text>
                           <TouchableOpacity
                             style={styles.categorySelect}
