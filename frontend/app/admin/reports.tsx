@@ -639,14 +639,16 @@ export default function ReportsPage() {
       {/* Date Picker Modal */}
       <DatePickerModal
         visible={showDatePicker}
-        onClose={() => setShowDatePicker(false)}
-        onSelect={(start, end) => {
+        onCancel={() => setShowDatePicker(false)}
+        onApply={(start, end) => {
           setCustomDateRange({ start, end });
           setPeriod('custom');
           setShowDatePicker(false);
         }}
         initialStartDate={customDateRange.start}
         initialEndDate={customDateRange.end}
+        primaryColor="#1B4332"
+        primaryLightColor="#D8F3DC"
       />
 
       {/* Export Modal */}
