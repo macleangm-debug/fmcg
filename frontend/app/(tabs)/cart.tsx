@@ -867,32 +867,19 @@ export default function Cart() {
         {/* Customer Selection Required - Empty Cart View */}
         <View style={styles.customerFirstContainer}>
           <View style={styles.customerFirstIcon}>
-            <View style={styles.customerFirstIconInner}>
-              <Ionicons name="person" size={40} color="#2563EB" />
-              <View style={styles.customerFirstIconBadge}>
-                <Ionicons name="add" size={12} color="#2563EB" />
-              </View>
-            </View>
+            <Ionicons name="person-add-outline" size={32} color="#9CA3AF" />
           </View>
-          <Text style={styles.customerFirstTitle}>Select a Customer First</Text>
+          <Text style={styles.customerFirstTitle}>Select a Customer</Text>
           <Text style={styles.customerFirstSubtitle}>
             Choose or add a customer to start the sale
           </Text>
           
-          {/* Customer Selection Button - Clean Style */}
           <TouchableOpacity
             style={styles.customerFirstButton}
-            onPress={() => {
-              setShowCustomerModal(true);
-            }}
+            onPress={() => setShowCustomerModal(true)}
             activeOpacity={0.8}
           >
-            <View style={styles.customerFirstBtnIcon}>
-              <Ionicons name="person" size={16} color="#FFFFFF" />
-              <View style={styles.customerFirstBtnBadge}>
-                <Ionicons name="add" size={8} color="#FFFFFF" />
-              </View>
-            </View>
+            <Ionicons name="person-add" size={18} color="#FFFFFF" />
             <Text style={styles.customerFirstButtonText}>Select Customer</Text>
           </TouchableOpacity>
         </View>
