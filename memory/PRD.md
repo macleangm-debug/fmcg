@@ -23,6 +23,11 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
   - Integrated into cart.tsx (offline_detected, first_sale_complete)
   - Integrated into admin/products.tsx (first_product_add)
   - Integrated into mobile products.tsx (first_product_add)
+- ✅ **Quick Export Dropdown (COMPLETED Mar 2, 2026)** - Added dropdown arrow on Export button for one-click PDF/CSV downloads without modal
+  - Split Export button into main action + dropdown toggle
+  - "Quick Export" dropdown with Download PDF, Download Excel (CSV), and "Export with Preview..." options
+  - PDF opens print dialog, CSV downloads directly
+  - Maintains existing Export modal for preview functionality
 - ✅ **Testing Verified** - iteration_19.json (100% frontend pass rate)
 
 ### March 2, 2026 (Session 4) - E2E ORDER FLOW & OFFLINE INTEGRATION ✅

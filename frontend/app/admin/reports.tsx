@@ -6,6 +6,7 @@ import {
   ScrollView,
   RefreshControl,
   TouchableOpacity,
+  Pressable,
   ActivityIndicator,
   Platform,
   useWindowDimensions,
@@ -95,6 +96,8 @@ export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState<ReportTab>('overview');
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [showExportModal, setShowExportModal] = useState(false);
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
+  const [quickExporting, setQuickExporting] = useState<'pdf' | 'excel' | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [customDateRange, setCustomDateRange] = useState({ start: new Date(), end: new Date() });
 
@@ -324,6 +327,133 @@ export default function ReportsPage() {
         };
     }
   }, [activeTab, reportData, activeBusiness, formatCurrency, totalPayments, getDisplayDateRange]);
+
+  // Quick export handler (direct PDF/Excel without modal) - MUST be defined before any early returns
+  const handleQuickExport = useCallback(async (format: 'pdf' | 'excel') => {
+    setShowExportDropdown(false);
+    setQuickExporting(format);
+    
+    const config = getExportConfig();
+    const isWeb = Platform.OS === 'web';
+    
+    try {
+      if (format === 'excel') {
+        // Generate CSV for quick export
+        let csv = `${config.businessName}\n`;
+        csv += `${config.reportTitle}\n`;
+        csv += `Period: ${config.dateRange}\n`;
+        csv += `Generated: ${new Date().toLocaleDateString()}\n\n`;
+        
+        csv += `KEY METRICS\n`;
+        config.metrics.forEach(m => {
+          csv += `${m.label},${m.value}\n`;
+        });
+        csv += '\n';
+        
+        if (config.tables) {
+          config.tables.forEach(table => {
+            csv += `${table.title}\n`;
+            csv += table.columns.map(c => c.label).join(',') + '\n';
+            table.rows.forEach(row => {
+              csv += table.columns.map(c => {
+                const val = row[c.key];
+                return typeof val === 'string' && val.includes(',') ? `"${val}"` : val;
+              }).join(',') + '\n';
+            });
+            csv += '\n';
+          });
+        }
+        
+        if (isWeb) {
+          const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${config.reportTitle.toLowerCase().replace(/\s+/g, '-')}-${new Date().toISOString().split('T')[0]}.csv`;
+          a.click();
+          URL.revokeObjectURL(url);
+        }
+      } else {
+        // Generate simple PDF for quick export
+        const htmlContent = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8">
+            <title>${config.reportTitle}</title>
+            <style>
+              body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 40px; color: #111827; }
+              .header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 2px solid #1B4332; }
+              .logo { width: 48px; height: 48px; background: #1B4332; color: white; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: bold; }
+              .title { font-size: 24px; font-weight: 700; color: #1B4332; }
+              .subtitle { font-size: 14px; color: #6B7280; }
+              .date-badge { background: #D8F3DC; padding: 6px 12px; border-radius: 16px; font-size: 12px; color: #1B4332; margin-top: 8px; display: inline-block; }
+              .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin: 24px 0; }
+              .metric { background: #F9FAFB; padding: 16px; border-radius: 8px; text-align: center; }
+              .metric-value { font-size: 24px; font-weight: 700; color: #1B4332; }
+              .metric-label { font-size: 12px; color: #6B7280; margin-top: 4px; }
+              table { width: 100%; border-collapse: collapse; margin-top: 24px; }
+              th { background: #1B4332; color: white; padding: 12px; text-align: left; font-size: 12px; }
+              td { padding: 12px; border-bottom: 1px solid #E5E7EB; font-size: 13px; }
+              tr:nth-child(even) { background: #F9FAFB; }
+              .footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #E5E7EB; font-size: 11px; color: #9CA3AF; text-align: center; }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <div class="logo">${config.businessInitials}</div>
+              <div>
+                <div class="title">${config.businessName}</div>
+                <div class="subtitle">${config.reportTitle}</div>
+                <div class="date-badge">📅 ${config.dateRange}</div>
+              </div>
+            </div>
+            
+            <div class="metrics">
+              ${config.metrics.map(m => `
+                <div class="metric">
+                  <div class="metric-value">${m.value}</div>
+                  <div class="metric-label">${m.label}</div>
+                </div>
+              `).join('')}
+            </div>
+            
+            ${config.tables ? config.tables.map(table => `
+              <h3>${table.title}</h3>
+              <table>
+                <thead>
+                  <tr>${table.columns.map(c => `<th>${c.label}</th>`).join('')}</tr>
+                </thead>
+                <tbody>
+                  ${table.rows.slice(0, 10).map(row => `
+                    <tr>${table.columns.map(c => `<td>${row[c.key]}</td>`).join('')}</tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            `).join('') : ''}
+            
+            <div class="footer">
+              Generated by ${config.appName} • ${new Date().toLocaleString()}
+            </div>
+          </body>
+          </html>
+        `;
+        
+        if (isWeb) {
+          const printWindow = window.open('', '_blank', 'width=800,height=600');
+          if (printWindow) {
+            printWindow.document.write(htmlContent);
+            printWindow.document.close();
+            setTimeout(() => printWindow.print(), 500);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Quick export error:', error);
+    } finally {
+      setQuickExporting(null);
+    }
+  }, [getExportConfig]);
 
   // Loading state
   if (loading) {
@@ -1018,6 +1148,14 @@ export default function ReportsPage() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Dropdown backdrop */}
+      {showExportDropdown && (
+        <Pressable 
+          style={styles.dropdownBackdrop} 
+          onPress={() => setShowExportDropdown(false)}
+        />
+      )}
+      
       <ScrollView
         showsVerticalScrollIndicator={false}
         refreshControl={
@@ -1034,14 +1172,74 @@ export default function ReportsPage() {
               <Text style={styles.dateRangeText}>{getDisplayDateRange()}</Text>
             </View>
           </View>
-          <TouchableOpacity 
-            style={styles.exportBtn} 
-            onPress={() => setShowExportModal(true)}
-            data-testid="export-btn"
-          >
-            <Ionicons name="download-outline" size={18} color={THEME.surface} />
-            <Text style={styles.exportBtnText}>Export {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</Text>
-          </TouchableOpacity>
+          
+          {/* Export Button with Dropdown */}
+          <View style={styles.exportContainer}>
+            <TouchableOpacity 
+              style={styles.exportBtn} 
+              onPress={() => setShowExportModal(true)}
+              data-testid="export-btn"
+            >
+              {quickExporting ? (
+                <ActivityIndicator size="small" color={THEME.surface} />
+              ) : (
+                <Ionicons name="download-outline" size={18} color={THEME.surface} />
+              )}
+              <Text style={styles.exportBtnText}>Export {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}</Text>
+            </TouchableOpacity>
+            
+            {/* Dropdown Arrow Button */}
+            <TouchableOpacity 
+              style={styles.exportDropdownBtn}
+              onPress={() => setShowExportDropdown(!showExportDropdown)}
+              data-testid="export-dropdown-btn"
+            >
+              <Ionicons 
+                name={showExportDropdown ? "chevron-up" : "chevron-down"} 
+                size={16} 
+                color={THEME.surface} 
+              />
+            </TouchableOpacity>
+            
+            {/* Dropdown Menu */}
+            {showExportDropdown && (
+              <View style={styles.exportDropdown}>
+                <Text style={styles.exportDropdownTitle}>Quick Export</Text>
+                <TouchableOpacity 
+                  style={styles.exportDropdownItem}
+                  onPress={() => handleQuickExport('pdf')}
+                  disabled={quickExporting !== null}
+                  data-testid="quick-export-pdf"
+                >
+                  <Ionicons name="document-text-outline" size={18} color={THEME.danger} />
+                  <Text style={styles.exportDropdownItemText}>Download PDF</Text>
+                  {quickExporting === 'pdf' && <ActivityIndicator size="small" color={THEME.primary} />}
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.exportDropdownItem}
+                  onPress={() => handleQuickExport('excel')}
+                  disabled={quickExporting !== null}
+                  data-testid="quick-export-excel"
+                >
+                  <Ionicons name="grid-outline" size={18} color={THEME.success} />
+                  <Text style={styles.exportDropdownItemText}>Download Excel (CSV)</Text>
+                  {quickExporting === 'excel' && <ActivityIndicator size="small" color={THEME.primary} />}
+                </TouchableOpacity>
+                <View style={styles.exportDropdownDivider} />
+                <TouchableOpacity 
+                  style={styles.exportDropdownItem}
+                  onPress={() => {
+                    setShowExportDropdown(false);
+                    setShowExportModal(true);
+                  }}
+                  data-testid="export-with-preview"
+                >
+                  <Ionicons name="eye-outline" size={18} color={THEME.primary} />
+                  <Text style={styles.exportDropdownItemText}>Export with Preview...</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
         </View>
 
         {/* Period Filter */}
@@ -1136,6 +1334,14 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: 20,
   },
+  dropdownBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 90,
+  },
 
   // Header with date badge
   header: {
@@ -1178,12 +1384,77 @@ const styles = StyleSheet.create({
     backgroundColor: THEME.primary,
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 10,
+    borderTopLeftRadius: 10,
+    borderBottomLeftRadius: 10,
+    borderTopRightRadius: 0,
+    borderBottomRightRadius: 0,
   },
   exportBtnText: {
     fontSize: 14,
     fontWeight: '600',
     color: THEME.surface,
+  },
+  exportContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
+    zIndex: 100,
+  },
+  exportDropdownBtn: {
+    backgroundColor: THEME.primaryLight,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    borderTopRightRadius: 10,
+    borderBottomRightRadius: 10,
+    borderLeftWidth: 1,
+    borderLeftColor: THEME.primary + '50',
+  },
+  exportDropdown: {
+    position: 'absolute',
+    top: '100%',
+    right: 0,
+    marginTop: 8,
+    backgroundColor: THEME.surface,
+    borderRadius: 12,
+    padding: 8,
+    minWidth: 220,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: THEME.border,
+    zIndex: 101,
+  },
+  exportDropdownTitle: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: THEME.textTertiary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  exportDropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  exportDropdownItemText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: THEME.textPrimary,
+    flex: 1,
+  },
+  exportDropdownDivider: {
+    height: 1,
+    backgroundColor: THEME.border,
+    marginVertical: 8,
+    marginHorizontal: 12,
   },
 
   // Filter Bar
