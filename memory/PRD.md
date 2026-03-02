@@ -11,6 +11,20 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 
 ## What's Been Implemented
 
+### March 2, 2026 (Session 5) - JUST-IN-TIME PROMPTS COMPLETE ✅
+- ✅ **JIT Contextual Prompts Feature (COMPLETED)** - Implemented "Just-in-Time" contextual prompts to guide users through settings
+  - Created reusable `JustInTimePrompts.tsx` component with modal overlay, icon, title, description, primary/secondary buttons, and skip link
+  - Added `useJustInTimePrompt()` hook for managing prompt state
+  - Implemented AsyncStorage tracking with `jit_prompts_shown` key to remember shown prompts
+  - Three prompt types configured:
+    - `first_sale_complete` - Triggers after completing first sale (suggests receipt printer setup)
+    - `offline_detected` - Triggers when going offline without offline mode enabled
+    - `first_product_add` - Triggers after adding first product (suggests SKU format setup)
+  - Integrated into cart.tsx (offline_detected, first_sale_complete)
+  - Integrated into admin/products.tsx (first_product_add)
+  - Integrated into mobile products.tsx (first_product_add)
+- ✅ **Testing Verified** - iteration_19.json (100% frontend pass rate)
+
 ### March 2, 2026 (Session 4) - E2E ORDER FLOW & OFFLINE INTEGRATION ✅
 - ✅ **E2E Order Flow Tested** - Full order flow from login to checkout verified (iteration_18.json)
   - Admin login shows correct "ADMIN" role
@@ -315,9 +329,10 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 - [x] **SETTINGS PAGE CRASH FIX (COMPLETED Mar 1, 2026)** - Fixed null safety issues with useLocalSearchParams and useOfflineStore
 - [x] **OFFLINE MODE FOUNDATION (COMPLETED Mar 1, 2026)** - Created OfflineDB, SyncService, OfflineStatusIndicator, OfflineSettings components
 - [x] **OFFLINE CHECKOUT PAYMENT RESTRICTIONS (COMPLETED Mar 1, 2026)** - Cash-only offline, Card/Mobile require internet
+- [x] **JUST-IN-TIME CONTEXTUAL PROMPTS (COMPLETED Mar 2, 2026)** - Reusable JIT prompt system with AsyncStorage tracking, integrated into cart and products pages
 
-### P1 - In Progress
-- [ ] **Connect Bulk Import SKU Generator to Backend Settings** - Use SKU format from admin business settings
+### P1 - Upcoming Tasks
+- [ ] **Test Full Wizard Flow E2E** - Test the complete setup wizard experience for new users
 - [ ] **Tigo SMS Testing** - User deferred ("We will test later"), requires VPN access
 - [ ] UniTxt admin dashboard for SMS campaigns
 
@@ -350,6 +365,7 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 ---
 
 ## Test Reports
+- `/app/test_reports/iteration_19.json` - **JIT Contextual Prompts (Mar 2, 2026)** - Just-in-Time prompts feature verified (100% frontend pass), component structure, AsyncStorage tracking, integration in cart.tsx and admin/products.tsx
 - `/app/test_reports/iteration_18.json` - **E2E Order Flow Test (Mar 2, 2026)** - Full order creation flow verified with admin role fix (100% backend, 95% frontend pass, Order ORD-000011 created)
 - `/app/test_reports/iteration_17.json` - **SKU Connection & Session Fix (Mar 2, 2026)** - Backend /api/auth/me returns correct role, wizard flow tested (100% backend, 85% frontend pass)
 - `/app/test_reports/iteration_16.json` - **Reports Redesign & Settings Simplification (Mar 2, 2026)** - All tab-specific content, date range badge, wizard, card-based settings verified (100% frontend pass) (Cash allowed, Card/Mobile blocked offline)
