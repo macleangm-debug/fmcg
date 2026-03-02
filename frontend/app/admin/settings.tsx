@@ -177,6 +177,8 @@ export default function Settings() {
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [activeTab, setActiveTab] = useState<'general' | 'app' | 'apps' | 'pos' | 'locations' | 'subscription' | 'referral'>('general');
   const [viewMode, setViewMode] = useState<'simple' | 'advanced'>(params?.view === 'advanced' ? 'advanced' : 'simple');
+  const [showSetupGuide, setShowSetupGuide] = useState(false);
+  const [currentSetupStep, setCurrentSetupStep] = useState(1);
   const { width } = useWindowDimensions();
   const isWeb = Platform.OS === 'web' && width >= 768;
 
