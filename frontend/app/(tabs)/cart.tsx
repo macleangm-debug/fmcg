@@ -492,6 +492,25 @@ export default function Cart() {
     }
   }, [isSalesRole]);
 
+  // Monitor offline status and show prompt when going offline
+  useEffect(() => {
+    const checkOfflinePrompt = async () => {
+      if (!isOnline && !offlineModeEnabled) {
+        // User went offline but offline mode is not enabled
+        showPrompt('offline_detected', {
+          onSetup: async () => {
+            // Enable offline mode
+            const { setOfflineModeEnabled } = await import('../../src/services/OfflineDB');
+            await setOfflineModeEnabled(true);
+            Alert.alert('Offline Mode Enabled', 'You can now make cash sales while offline. Orders will sync when you reconnect.');
+          },
+        });
+      }
+    };
+    
+    checkOfflinePrompt();
+  }, [isOnline, offlineModeEnabled]);
+
   const openCustomerModal = () => {
     setPhoneSearch('');
     setSearchResult(null);
