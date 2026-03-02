@@ -1762,7 +1762,7 @@ async def login(credentials: UserLogin):
 @api_router.get("/auth/me", response_model=UserResponse)
 async def get_current_user_info(current_user: dict = Depends(get_current_user)):
     """Get current authenticated user's information - refreshes user data from database"""
-    user = await db.users.find_one({"_id": ObjectId(current_user["user_id"])})
+    user = await db.users.find_one({"_id": ObjectId(current_user["id"])})
     
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
