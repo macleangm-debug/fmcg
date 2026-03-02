@@ -149,13 +149,35 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         const userStr = await AsyncStorage.getItem('user');
         
         if (token && userStr) {
-          const user = JSON.parse(userStr);
-          set({
-            token,
-            user,
-            isAuthenticated: true,
-            isLoading: false,
-          });
+          // Validate token with backend to get fresh user data
+          try {
+            const response = await axios.get(`${API_URL}/api/auth/me`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+            
+            const freshUser = response.data;
+            
+            // Update stored user with fresh data from backend
+            await AsyncStorage.setItem('user', JSON.stringify(freshUser));
+            
+            set({
+              token,
+              user: freshUser,
+              isAuthenticated: true,
+              isLoading: false,
+            });
+          } catch (error) {
+            // Token might be expired or invalid
+            // Clear storage and set as not authenticated
+            await AsyncStorage.removeItem('token');
+            await AsyncStorage.removeItem('user');
+            set({
+              token: null,
+              user: null,
+              isAuthenticated: false,
+              isLoading: false,
+            });
+          }
         } else {
           set({ isLoading: false });
         }
