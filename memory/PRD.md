@@ -314,6 +314,7 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 ---
 
 ## Test Reports
+- `/app/test_reports/iteration_16.json` - **Reports Redesign & Settings Simplification (Mar 2, 2026)** - All tab-specific content, date range badge, wizard, card-based settings verified (100% frontend pass)
 - `/app/test_reports/iteration_15.json` - **Offline Payment Restrictions (Mar 1, 2026)** - Code review verified all offline payment features implemented correctly (Cash allowed, Card/Mobile blocked offline)
 - `/app/test_reports/iteration_14.json` - **Reports Interactivity & Offline Mode (Mar 1, 2026)** - Import.meta fix, Reports page filters/tabs, Settings POS offline mode all verified (100% backend, 100% frontend pass)
 - `/app/test_reports/iteration_13.json` - **Pre-fix testing (Mar 1, 2026)** - Backend 100% pass, Frontend blocked by import.meta error (now fixed)
