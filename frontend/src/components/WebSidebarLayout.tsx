@@ -593,7 +593,7 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
             </View>
             <View style={styles.userDetails}>
               <Text style={[styles.userName, { color: '#FFFFFF' }]} numberOfLines={1}>{user?.name || 'User'}</Text>
-              <Text style={[styles.userRole, { color: 'rgba(255, 255, 255, 0.7)' }]}>{userRole.replace('_', ' ').toUpperCase()}</Text>
+              <Text style={[styles.userRole, { color: 'rgba(255, 255, 255, 0.7)' }]}>{displayRole}</Text>
             </View>
           </View>
         </View>
