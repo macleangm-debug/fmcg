@@ -28,6 +28,12 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
   - "Quick Export" dropdown with Download PDF, Download Excel (CSV), and "Export with Preview..." options
   - PDF opens print dialog, CSV downloads directly
   - Maintains existing Export modal for preview functionality
+- ✅ **Responsive Modal Pattern (COMPLETED Mar 2, 2026)** - Implemented mobile-first modal behavior
+  - Mobile (phones): Bottom sheet that slides up from the bottom with drag handle
+  - Desktop/Tablet: Centered modal (standard behavior)
+  - Created reusable `ResponsiveModal.tsx` component at `/app/frontend/src/components/common/`
+  - Updated `ExportReportModal.tsx` to use responsive bottom sheet on mobile
+  - Animation support with spring animation for smooth slide-up effect
 - ✅ **Testing Verified** - iteration_19.json (100% frontend pass rate)
 
 ### March 2, 2026 (Session 4) - E2E ORDER FLOW & OFFLINE INTEGRATION ✅

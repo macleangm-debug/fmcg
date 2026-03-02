@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,8 +9,12 @@ import {
   StyleSheet,
   Platform,
   Alert,
+  useWindowDimensions,
+  Animated,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import * as FileSystem from 'expo-file-system';
@@ -103,6 +107,41 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
   const [exporting, setExporting] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [exportedFormat, setExportedFormat] = useState<'pdf' | 'excel'>('pdf');
+
+  const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  
+  // Responsive: bottom sheet on mobile, centered modal on desktop/tablet
+  const isMobile = Platform.OS !== 'web' || width < 768;
+  const isBottomSheet = isMobile;
+  
+  // Animation for slide up (bottom sheet)
+  const slideAnim = useRef(new Animated.Value(height)).current;
+  
+  useEffect(() => {
+    if (visible && isBottomSheet) {
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        tension: 65,
+        friction: 11,
+      }).start();
+    } else {
+      slideAnim.setValue(height);
+    }
+  }, [visible, isBottomSheet, height]);
+  
+  const handleClose = () => {
+    if (isBottomSheet) {
+      Animated.timing(slideAnim, {
+        toValue: height,
+        duration: 250,
+        useNativeDriver: true,
+      }).start(() => onClose());
+    } else {
+      onClose();
+    }
+  };
 
   const isWeb = Platform.OS === 'web';
   const primaryColor = config.primaryColor || COLORS.primary;
@@ -660,53 +699,30 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
     }
   };
 
-  return (
+  // Render modal content (shared between both layouts)
+  const renderModalContent = () => (
     <>
-      <Modal
-        visible={visible}
-        transparent
-        animationType="fade"
-        onRequestClose={onClose}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.exportModalBox}>
-            {/* Header */}
-            <View style={styles.exportModalHeader}>
-              <View style={styles.exportModalHeaderLeft}>
-                <View style={[styles.exportModalIcon, { backgroundColor: COLORS.primaryLight }]}>
-                  <Ionicons name="analytics" size={24} color={primaryColor} />
-                </View>
-                <View>
-                  <Text style={styles.exportModalTitle}>{config.reportTitle}</Text>
-                  <Text style={styles.exportModalSubtitle}>Export your report data</Text>
-                </View>
-              </View>
-              <TouchableOpacity onPress={onClose} style={styles.exportModalClose}>
-                <Ionicons name="close" size={24} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
+      {/* Preview Toggle */}
+      <View style={styles.previewToggleRow}>
+        <TouchableOpacity 
+          style={[styles.previewToggleBtnBase, exportPreviewMode === 'pdf' && styles.previewToggleBtnActive]}
+          onPress={() => setExportPreviewMode('pdf')}
+        >
+          <Ionicons name="document-outline" size={16} color={exportPreviewMode === 'pdf' ? '#FFFFFF' : '#64748B'} />
+          <Text style={[styles.previewToggleText, exportPreviewMode === 'pdf' && styles.previewToggleTextActive]}>PDF Preview</Text>
+        </TouchableOpacity>
+        <TouchableOpacity 
+          style={[styles.previewToggleBtnBase, exportPreviewMode === 'excel' && styles.previewToggleBtnActive]}
+          onPress={() => setExportPreviewMode('excel')}
+        >
+          <Ionicons name="grid-outline" size={16} color={exportPreviewMode === 'excel' ? '#FFFFFF' : '#64748B'} />
+          <Text style={[styles.previewToggleText, exportPreviewMode === 'excel' && styles.previewToggleTextActive]}>Excel Preview</Text>
+        </TouchableOpacity>
+      </View>
 
-            {/* Preview Toggle */}
-            <View style={styles.previewToggleRow}>
-              <TouchableOpacity 
-                style={[styles.previewToggleBtnBase, exportPreviewMode === 'pdf' && styles.previewToggleBtnActive]}
-                onPress={() => setExportPreviewMode('pdf')}
-              >
-                <Ionicons name="document-outline" size={16} color={exportPreviewMode === 'pdf' ? '#FFFFFF' : '#64748B'} />
-                <Text style={[styles.previewToggleText, exportPreviewMode === 'pdf' && styles.previewToggleTextActive]}>PDF Preview</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.previewToggleBtnBase, exportPreviewMode === 'excel' && styles.previewToggleBtnActive]}
-                onPress={() => setExportPreviewMode('excel')}
-              >
-                <Ionicons name="grid-outline" size={16} color={exportPreviewMode === 'excel' ? '#FFFFFF' : '#64748B'} />
-                <Text style={[styles.previewToggleText, exportPreviewMode === 'excel' && styles.previewToggleTextActive]}>Excel Preview</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Preview Content */}
-            <ScrollView style={{ maxHeight: 350 }} showsVerticalScrollIndicator={false}>
-              {exportPreviewMode === 'excel' ? (
+      {/* Preview Content */}
+      <ScrollView style={{ maxHeight: isBottomSheet ? 280 : 350 }} showsVerticalScrollIndicator={false}>
+        {exportPreviewMode === 'excel' ? (
                 <View style={styles.csvPreviewContainer}>
                   <View style={styles.csvPreviewHeader}>
                     <View style={styles.csvPreviewLogoRow}>
@@ -872,8 +888,110 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
                 <Text style={styles.exportBtnText}>Export Excel</Text>
               </TouchableOpacity>
             </View>
+          </>
+        );
+
+  // Bottom Sheet Modal (Mobile)
+  if (isBottomSheet) {
+    return (
+      <>
+        <Modal
+          visible={visible}
+          transparent
+          animationType="fade"
+          onRequestClose={handleClose}
+          statusBarTranslucent
+        >
+          <View style={styles.bottomSheetOverlay}>
+            <Pressable style={styles.bottomSheetBackdrop} onPress={handleClose} />
+            
+            <Animated.View 
+              style={[
+                styles.bottomSheetContainer,
+                { 
+                  transform: [{ translateY: slideAnim }],
+                  paddingBottom: insets.bottom + 16,
+                }
+              ]}
+            >
+              {/* Drag Handle */}
+              <View style={styles.handleContainer}>
+                <View style={styles.handle} />
+              </View>
+              
+              {/* Header */}
+              <View style={styles.exportModalHeader}>
+                <View style={styles.exportModalHeaderLeft}>
+                  <View style={[styles.exportModalIcon, { backgroundColor: COLORS.primaryLight }]}>
+                    <Ionicons name="analytics" size={24} color={primaryColor} />
+                  </View>
+                  <View>
+                    <Text style={styles.exportModalTitle}>{config.reportTitle}</Text>
+                    <Text style={styles.exportModalSubtitle}>Export your report data</Text>
+                  </View>
+                </View>
+                <TouchableOpacity onPress={handleClose} style={styles.exportModalClose}>
+                  <Ionicons name="close" size={24} color="#6B7280" />
+                </TouchableOpacity>
+              </View>
+              
+              {renderModalContent()}
+            </Animated.View>
           </View>
-        </View>
+        </Modal>
+
+        {/* Success Toast */}
+        {showSuccess && (
+          <View style={styles.successToast}>
+            <View style={styles.successToastContent}>
+              <Ionicons name="checkmark-circle" size={24} color="#10B981" />
+              <Text style={styles.successToastText}>
+                {exportedFormat === 'pdf' ? 'PDF' : 'Excel'} exported successfully!
+              </Text>
+            </View>
+          </View>
+        )}
+      </>
+    );
+  }
+
+  // Centered Modal (Desktop/Tablet)
+  return (
+    <>
+      <Modal
+        visible={visible}
+        transparent
+        animationType="fade"
+        onRequestClose={handleClose}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={handleClose}
+        >
+          <View 
+            style={styles.exportModalBox}
+            onStartShouldSetResponder={() => true}
+          >
+            {/* Header */}
+            <View style={styles.exportModalHeader}>
+              <View style={styles.exportModalHeaderLeft}>
+                <View style={[styles.exportModalIcon, { backgroundColor: COLORS.primaryLight }]}>
+                  <Ionicons name="analytics" size={24} color={primaryColor} />
+                </View>
+                <View>
+                  <Text style={styles.exportModalTitle}>{config.reportTitle}</Text>
+                  <Text style={styles.exportModalSubtitle}>Export your report data</Text>
+                </View>
+              </View>
+              <TouchableOpacity onPress={handleClose} style={styles.exportModalClose}>
+                <Ionicons name="close" size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+            
+            {renderModalContent()}
+          </View>
+        </TouchableOpacity>
       </Modal>
 
       {/* Success Toast */}
@@ -892,6 +1010,39 @@ export const ExportReportModal: React.FC<ExportReportModalProps> = ({
 };
 
 const styles = StyleSheet.create({
+  // Bottom Sheet Styles
+  bottomSheetOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  bottomSheetBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  bottomSheetContainer: {
+    backgroundColor: COLORS.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '85%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 16,
+  },
+  handleContainer: {
+    alignItems: 'center',
+    paddingTop: 12,
+    paddingBottom: 4,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#D1D5DB',
+    borderRadius: 2,
+  },
+  
+  // Centered Modal Styles
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
