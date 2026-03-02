@@ -11,6 +11,20 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 
 ## What's Been Implemented
 
+### March 2, 2026 (Session 4) - E2E ORDER FLOW & OFFLINE INTEGRATION ✅
+- ✅ **E2E Order Flow Tested** - Full order flow from login to checkout verified (iteration_18.json)
+  - Admin login shows correct "ADMIN" role
+  - Customer selection and creation works
+  - Product browser loads and caching works
+  - Order creation successful (ORD-000011)
+- ✅ **Enhanced Offline Mode Integration**:
+  - Products now cached in IndexedDB when loaded online
+  - Products loaded from cache when offline
+  - Orders queued in both legacy offlineStore AND new OfflineDB for redundancy
+  - Automatic cache refresh on product load
+- ✅ **Backend Refactoring Assessment** - Noted that routes already partially modularized in /app/backend/routes/
+  - Full refactoring deferred due to risk/complexity
+
 ### March 2, 2026 (Session 3) - SKU CONNECTION & SESSION FIX ✅
 - ✅ **Verified Bulk Import SKU Connection** - Already connected to backend via `businessSettingsApi.get()` (fetches sku_format, sku_prefix, sku_digits)
 - ✅ **Added /api/auth/me Endpoint** - New backend endpoint to refresh user data from database
