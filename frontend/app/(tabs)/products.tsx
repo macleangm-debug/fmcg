@@ -97,6 +97,9 @@ export default function Products() {
 
   // Bulk Import modal
   const [showBulkImportModal, setShowBulkImportModal] = useState(false);
+  
+  // Just-in-time prompts
+  const { activePrompt, isVisible: showJitPrompt, showPrompt, hidePrompt } = useJustInTimePrompt();
 
   const resetProductForm = () => {
     setNewProductName('');
