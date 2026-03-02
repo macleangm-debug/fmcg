@@ -291,8 +291,8 @@ const SimpleSettingsView: React.FC<SimpleSettingsViewProps> = ({
                 <TouchableOpacity 
                   style={styles.wizardPrimaryBtn}
                   onPress={() => {
+                    // Navigate to the settings tab but keep wizard visible
                     wizardSteps[wizardStep].action?.();
-                    setShowWizard(false);
                   }}
                 >
                   <Text style={styles.wizardPrimaryBtnText}>Set Up Now</Text>
