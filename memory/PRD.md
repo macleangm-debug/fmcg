@@ -11,6 +11,15 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 
 ## What's Been Implemented
 
+### March 2, 2026 (Session 2) - BUG FIXES & WIZARD IMPROVEMENTS ✅
+- ✅ **Fixed Offline Toggle Error** - Changed from `setOfflineModeEnabled(value)` to `updateSettings({ enabled: value })` to match offlineStore API
+- ✅ **Fixed Pending Transactions Display** - Changed from `pendingTransactions` to `pendingOperations` to match store structure
+- ✅ **Improved Setup Wizard** - Wizard now stays visible as a floating guide banner when user clicks "Set Up Now"
+  - Green banner shows "Step X of 3: [Step Name]" with guidance text
+  - "Next Step" button to progress through setup steps
+  - X button to dismiss the guide
+  - User can complete settings while seeing the guide
+
 ### March 2, 2026 - REPORTS PAGE REDESIGN & SETTINGS SIMPLIFICATION ✅
 - ✅ **REPORTS PAGE IMPROVEMENTS**:
   - Prominent date range badge with green background (`#D8F3DC`)
