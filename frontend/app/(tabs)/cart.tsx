@@ -821,11 +821,11 @@ export default function Cart() {
         const response = await ordersApi.create(orderData);
         orderNumber = response.data.order_number;
       } else if (offlineModeEnabled) {
-        // Offline mode - queue for later sync
+        // Offline mode - queue for later sync using both stores for redundancy
         isOfflineOrder = true;
         orderNumber = `OFF-${Date.now().toString(36).toUpperCase()}`;
         
-        // Add to pending transactions
+        // Add to legacy pending transactions
         addPendingTransaction({
           type: 'sale',
           data: {
@@ -834,6 +834,19 @@ export default function Cart() {
             created_at: new Date().toISOString(),
           },
         });
+        
+        // Also queue in new OfflineDB for better persistence
+        try {
+          const { queueMutation } = await import('../../src/services/OfflineDB');
+          await queueMutation('order', 'create', {
+            ...orderData,
+            offline_order_number: orderNumber,
+            created_at: new Date().toISOString(),
+          });
+          console.log('Order queued in OfflineDB:', orderNumber);
+        } catch (dbError) {
+          console.log('OfflineDB queue failed, using legacy store:', dbError);
+        }
       } else {
         throw new Error('You are offline. Please check your internet connection.');
       }
