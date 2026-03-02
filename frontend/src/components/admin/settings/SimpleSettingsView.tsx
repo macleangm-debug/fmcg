@@ -7,7 +7,7 @@
  * - First-time setup wizard
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -20,9 +20,12 @@ import {
   ActivityIndicator,
   Platform,
   useWindowDimensions,
+  Animated,
+  Pressable,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useBusinessStore } from '../../../store/businessStore';
 import { useAuthStore } from '../../../store/authStore';
 
@@ -98,8 +101,10 @@ const SimpleSettingsView: React.FC<SimpleSettingsViewProps> = ({
   onNavigateToFullSettings,
   isFirstTimeUser = false,
 }) => {
-  const { width } = useWindowDimensions();
+  const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const isDesktop = Platform.OS === 'web' && width > 1024;
+  const isMobile = Platform.OS !== 'web' || width < 768;
   const router = useRouter();
   
   const { activeBusiness, businessSettings } = useBusinessStore();
@@ -109,6 +114,34 @@ const SimpleSettingsView: React.FC<SimpleSettingsViewProps> = ({
   const [wizardStep, setWizardStep] = useState(0);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [guidedMode, setGuidedMode] = useState(false); // Keeps wizard visible as floating guide
+
+  // Animation for bottom sheet
+  const slideAnim = useRef(new Animated.Value(height)).current;
+  
+  useEffect(() => {
+    if (showWizard && isMobile) {
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        tension: 65,
+        friction: 11,
+      }).start();
+    } else {
+      slideAnim.setValue(height);
+    }
+  }, [showWizard, isMobile, height]);
+
+  const handleCloseWizard = () => {
+    if (isMobile) {
+      Animated.timing(slideAnim, {
+        toValue: height,
+        duration: 250,
+        useNativeDriver: true,
+      }).start(() => setShowWizard(false));
+    } else {
+      setShowWizard(false);
+    }
+  };
 
   // Check what's been set up
   const hasBusinessInfo = !!(activeBusiness?.name && activeBusiness?.phone);
@@ -223,97 +256,137 @@ const SimpleSettingsView: React.FC<SimpleSettingsViewProps> = ({
     },
   ];
 
-  // Wizard Modal
-  const renderWizard = () => (
-    <Modal
-      visible={showWizard}
-      animationType="fade"
-      transparent
-    >
-      <View style={styles.wizardOverlay}>
-        <View style={styles.wizardContainer}>
-          {/* Progress dots */}
-          <View style={styles.wizardProgress}>
-            {wizardSteps.map((_, idx) => (
-              <View 
-                key={idx}
-                style={[
-                  styles.wizardDot,
-                  idx === wizardStep && styles.wizardDotActive,
-                  idx < wizardStep && styles.wizardDotComplete,
-                ]}
-              />
-            ))}
-          </View>
+  // Wizard content component (shared between layouts)
+  const renderWizardContent = () => (
+    <>
+      {/* Progress dots */}
+      <View style={styles.wizardProgress}>
+        {wizardSteps.map((_, idx) => (
+          <View 
+            key={idx}
+            style={[
+              styles.wizardDot,
+              idx === wizardStep && styles.wizardDotActive,
+              idx < wizardStep && styles.wizardDotComplete,
+            ]}
+          />
+        ))}
+      </View>
 
-          {/* Content */}
-          <View style={styles.wizardContent}>
-            <View style={[styles.wizardIcon, { backgroundColor: THEME.primaryLight }]}>
-              <Ionicons 
-                name={wizardSteps[wizardStep].icon as any} 
-                size={48} 
-                color={THEME.primary} 
-              />
-            </View>
-            <Text style={styles.wizardTitle}>{wizardSteps[wizardStep].title}</Text>
-            <Text style={styles.wizardDescription}>{wizardSteps[wizardStep].description}</Text>
-          </View>
+      {/* Content */}
+      <View style={styles.wizardContent}>
+        <View style={[styles.wizardIcon, { backgroundColor: THEME.primaryLight }]}>
+          <Ionicons 
+            name={wizardSteps[wizardStep].icon as any} 
+            size={48} 
+            color={THEME.primary} 
+          />
+        </View>
+        <Text style={styles.wizardTitle}>{wizardSteps[wizardStep].title}</Text>
+        <Text style={styles.wizardDescription}>{wizardSteps[wizardStep].description}</Text>
+      </View>
 
-          {/* Actions */}
-          <View style={styles.wizardActions}>
-            {wizardStep > 0 && wizardStep < wizardSteps.length - 1 && (
-              <TouchableOpacity 
-                style={styles.wizardSecondaryBtn}
-                onPress={() => setWizardStep(wizardStep - 1)}
-              >
-                <Text style={styles.wizardSecondaryBtnText}>Back</Text>
-              </TouchableOpacity>
-            )}
-            
-            {wizardStep === 0 && (
-              <TouchableOpacity 
-                style={styles.wizardPrimaryBtn}
-                onPress={() => setWizardStep(1)}
-              >
-                <Text style={styles.wizardPrimaryBtnText}>Let's Go!</Text>
-                <Ionicons name="arrow-forward" size={18} color="#FFF" />
-              </TouchableOpacity>
-            )}
-            
-            {wizardStep > 0 && wizardStep < wizardSteps.length - 1 && (
-              <>
-                <TouchableOpacity 
-                  style={styles.wizardSkipBtn}
-                  onPress={() => setWizardStep(wizardStep + 1)}
-                >
-                  <Text style={styles.wizardSkipBtnText}>Skip</Text>
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  style={styles.wizardPrimaryBtn}
-                  onPress={() => {
-                    // Navigate to the settings tab but keep wizard visible
-                    wizardSteps[wizardStep].action?.();
-                  }}
-                >
-                  <Text style={styles.wizardPrimaryBtnText}>Set Up Now</Text>
-                </TouchableOpacity>
-              </>
-            )}
-            
-            {wizardStep === wizardSteps.length - 1 && (
-              <TouchableOpacity 
-                style={styles.wizardPrimaryBtn}
-                onPress={() => setShowWizard(false)}
-              >
-                <Text style={styles.wizardPrimaryBtnText}>Start Using Soko</Text>
-                <Ionicons name="checkmark" size={18} color="#FFF" />
-              </TouchableOpacity>
-            )}
+      {/* Actions */}
+      <View style={styles.wizardActions}>
+        {wizardStep > 0 && wizardStep < wizardSteps.length - 1 && (
+          <TouchableOpacity 
+            style={styles.wizardSecondaryBtn}
+            onPress={() => setWizardStep(wizardStep - 1)}
+          >
+            <Text style={styles.wizardSecondaryBtnText}>Back</Text>
+          </TouchableOpacity>
+        )}
+        
+        {wizardStep === 0 && (
+          <TouchableOpacity 
+            style={styles.wizardPrimaryBtn}
+            onPress={() => setWizardStep(1)}
+          >
+            <Text style={styles.wizardPrimaryBtnText}>Let's Go!</Text>
+            <Ionicons name="arrow-forward" size={18} color="#FFF" />
+          </TouchableOpacity>
+        )}
+        
+        {wizardStep > 0 && wizardStep < wizardSteps.length - 1 && (
+          <>
+            <TouchableOpacity 
+              style={styles.wizardSkipBtn}
+              onPress={() => setWizardStep(wizardStep + 1)}
+            >
+              <Text style={styles.wizardSkipBtnText}>Skip</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.wizardPrimaryBtn}
+              onPress={() => {
+                // Navigate to the settings tab but keep wizard visible
+                wizardSteps[wizardStep].action?.();
+              }}
+            >
+              <Text style={styles.wizardPrimaryBtnText}>Set Up Now</Text>
+            </TouchableOpacity>
+          </>
+        )}
+        
+        {wizardStep === wizardSteps.length - 1 && (
+          <TouchableOpacity 
+            style={styles.wizardPrimaryBtn}
+            onPress={handleCloseWizard}
+          >
+            <Text style={styles.wizardPrimaryBtnText}>Start Using Soko</Text>
+            <Ionicons name="checkmark" size={18} color="#FFF" />
+          </TouchableOpacity>
+        )}
+      </View>
+    </>
+  );
+
+  // Wizard Modal - Responsive (bottom sheet on mobile, centered on desktop)
+  const renderWizard = () => {
+    // Mobile: Bottom sheet
+    if (isMobile) {
+      return (
+        <Modal
+          visible={showWizard}
+          animationType="fade"
+          transparent
+          statusBarTranslucent
+        >
+          <View style={styles.bottomSheetOverlay}>
+            <Pressable style={styles.bottomSheetBackdrop} onPress={handleCloseWizard} />
+            <Animated.View 
+              style={[
+                styles.bottomSheetContainer,
+                { 
+                  transform: [{ translateY: slideAnim }],
+                  paddingBottom: insets.bottom + 20,
+                }
+              ]}
+            >
+              <View style={styles.handleContainer}>
+                <View style={styles.handle} />
+              </View>
+              {renderWizardContent()}
+            </Animated.View>
+          </View>
+        </Modal>
+      );
+    }
+
+    // Desktop: Centered modal
+    return (
+      <Modal
+        visible={showWizard}
+        animationType="fade"
+        transparent
+      >
+        <View style={styles.wizardOverlay}>
+          <View style={styles.wizardContainer}>
+            {renderWizardContent()}
           </View>
         </View>
-      </View>
-    </Modal>
-  );
+      </Modal>
+    );
+  };
 
   return (
     <View style={styles.container}>
@@ -435,6 +508,43 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 20,
+  },
+  
+  // Bottom Sheet styles (for mobile wizard)
+  bottomSheetOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  bottomSheetBackdrop: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  bottomSheetContainer: {
+    backgroundColor: THEME.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 24,
+    paddingTop: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 16,
+  },
+  handleContainer: {
+    alignItems: 'center',
+    paddingTop: 8,
+    paddingBottom: 12,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#D1D5DB',
+    borderRadius: 2,
   },
 
   // Progress Card
