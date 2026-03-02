@@ -962,62 +962,86 @@ export default function Settings() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>{isOnboarding ? 'Complete Setup' : 'Settings'}</Text>
-        <View style={{ width: 40 }} />
+        {/* View Mode Toggle */}
+        <TouchableOpacity 
+          style={styles.viewModeToggle}
+          onPress={() => setViewMode(viewMode === 'simple' ? 'advanced' : 'simple')}
+        >
+          <Ionicons 
+            name={viewMode === 'simple' ? 'options-outline' : 'grid-outline'} 
+            size={18} 
+            color="#6B7280" 
+          />
+          <Text style={styles.viewModeText}>
+            {viewMode === 'simple' ? 'Advanced' : 'Simple'}
+          </Text>
+        </TouchableOpacity>
       </View>
 
-      {/* Onboarding Welcome Banner */}
-      {isOnboarding && (
-        <View style={styles.onboardingBanner}>
-          <View style={styles.onboardingIconContainer}>
-            <Ionicons name="checkmark-circle" size={32} color="#10B981" />
-          </View>
-          <View style={styles.onboardingTextContainer}>
-            <Text style={styles.onboardingTitle}>Welcome to RetailPro! 🎉</Text>
-            <Text style={styles.onboardingSubtitle}>
-              Complete your business setup below to get started. Set your currency, country, and other details.
-            </Text>
-          </View>
-        </View>
-      )}
+      {/* Simple View Mode */}
+      {viewMode === 'simple' && !isOnboarding ? (
+        <SimpleSettingsView 
+          onNavigateToFullSettings={(tab) => {
+            if (tab) setActiveTab(tab as any);
+            setViewMode('advanced');
+          }}
+          isFirstTimeUser={!business?.name}
+        />
+      ) : (
+        <>
+          {/* Onboarding Welcome Banner */}
+          {isOnboarding && (
+            <View style={styles.onboardingBanner}>
+              <View style={styles.onboardingIconContainer}>
+                <Ionicons name="checkmark-circle" size={32} color="#10B981" />
+              </View>
+              <View style={styles.onboardingTextContainer}>
+                <Text style={styles.onboardingTitle}>Welcome to RetailPro!</Text>
+                <Text style={styles.onboardingSubtitle}>
+                  Complete your business setup below to get started. Set your currency, country, and other details.
+                </Text>
+              </View>
+            </View>
+          )}
 
-      {/* Tab Selector - Scrollable on mobile */}
-      <View style={styles.tabScrollWrapper}>
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={[styles.tabContainer, isWeb && styles.tabContainerWeb]}
-        >
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'general' && styles.tabActive]}
-            onPress={() => setActiveTab('general')}
-          >
-            <Ionicons
-              name="settings-outline"
-              size={18}
-              color={activeTab === 'general' ? '#2563EB' : '#6B7280'}
-            />
-            <Text style={[styles.tabText, activeTab === 'general' && styles.tabTextActive]}>
-              General
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'app' && styles.tabActive]}
-            onPress={() => setActiveTab('app')}
-          >
-            <Ionicons
-              name="storefront-outline"
-              size={18}
-              color={activeTab === 'app' ? '#2563EB' : '#6B7280'}
-            />
-            <Text style={[styles.tabText, activeTab === 'app' && styles.tabTextActive]}>
-              RetailPro
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.tab, activeTab === 'apps' && styles.tabActive]}
-            onPress={() => setActiveTab('apps')}
-          >
-            <Ionicons
+          {/* Tab Selector - Scrollable on mobile */}
+          <View style={styles.tabScrollWrapper}>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={[styles.tabContainer, isWeb && styles.tabContainerWeb]}
+            >
+              <TouchableOpacity
+                style={[styles.tab, activeTab === 'general' && styles.tabActive]}
+                onPress={() => setActiveTab('general')}
+              >
+                <Ionicons
+                  name="settings-outline"
+                  size={18}
+                  color={activeTab === 'general' ? '#2563EB' : '#6B7280'}
+                />
+                <Text style={[styles.tabText, activeTab === 'general' && styles.tabTextActive]}>
+                  General
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.tab, activeTab === 'app' && styles.tabActive]}
+                onPress={() => setActiveTab('app')}
+              >
+                <Ionicons
+                  name="storefront-outline"
+                  size={18}
+                  color={activeTab === 'app' ? '#2563EB' : '#6B7280'}
+                />
+                <Text style={[styles.tabText, activeTab === 'app' && styles.tabTextActive]}>
+                  RetailPro
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.tab, activeTab === 'apps' && styles.tabActive]}
+                onPress={() => setActiveTab('apps')}
+              >
+                <Ionicons
               name="apps-outline"
               size={18}
               color={activeTab === 'apps' ? '#2563EB' : '#6B7280'}
