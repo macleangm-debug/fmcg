@@ -981,14 +981,64 @@ export default function Settings() {
       {/* Simple View Mode */}
       {viewMode === 'simple' && !isOnboarding ? (
         <SimpleSettingsView 
-          onNavigateToFullSettings={(tab) => {
+          onNavigateToFullSettings={(tab, keepWizard) => {
             if (tab) setActiveTab(tab as any);
             setViewMode('advanced');
+            // If keepWizard is true, show a floating guide banner
+            if (keepWizard) {
+              setShowSetupGuide(true);
+              setCurrentSetupStep(tab === 'general' ? 1 : tab === 'app' ? 2 : 1);
+            }
           }}
           isFirstTimeUser={!business?.name}
         />
       ) : (
         <>
+          {/* Setup Guide Banner - Shows when navigating from wizard */}
+          {showSetupGuide && (
+            <View style={styles.setupGuideBanner}>
+              <View style={styles.setupGuideContent}>
+                <View style={[styles.setupGuideIcon, { backgroundColor: '#D8F3DC' }]}>
+                  <Ionicons name={currentSetupStep === 1 ? 'business-outline' : 'cash-outline'} size={20} color="#1B4332" />
+                </View>
+                <View style={styles.setupGuideText}>
+                  <Text style={styles.setupGuideTitle}>
+                    Step {currentSetupStep} of 3: {currentSetupStep === 1 ? 'Business Information' : 'Currency Settings'}
+                  </Text>
+                  <Text style={styles.setupGuideSubtitle}>
+                    {currentSetupStep === 1 
+                      ? 'Fill in your business details below' 
+                      : 'Set your currency and tax rate'}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.setupGuideActions}>
+                <TouchableOpacity 
+                  style={styles.setupGuideNextBtn}
+                  onPress={() => {
+                    if (currentSetupStep < 3) {
+                      setCurrentSetupStep(currentSetupStep + 1);
+                      setActiveTab(currentSetupStep === 1 ? 'app' : 'general');
+                    } else {
+                      setShowSetupGuide(false);
+                    }
+                  }}
+                >
+                  <Text style={styles.setupGuideNextText}>
+                    {currentSetupStep < 3 ? 'Next Step' : 'Done'}
+                  </Text>
+                  <Ionicons name={currentSetupStep < 3 ? 'arrow-forward' : 'checkmark'} size={16} color="#1B4332" />
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.setupGuideCloseBtn}
+                  onPress={() => setShowSetupGuide(false)}
+                >
+                  <Ionicons name="close" size={20} color="#6B7280" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
           {/* Onboarding Welcome Banner */}
           {isOnboarding && (
             <View style={styles.onboardingBanner}>
