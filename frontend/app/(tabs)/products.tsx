@@ -860,6 +860,15 @@ export default function Products() {
         onImport={handleBulkImport}
         formatCurrency={formatCurrency}
       />
+      
+      {/* Just-in-Time Prompts */}
+      {activePrompt && (
+        <JustInTimePrompt
+          visible={showJitPrompt}
+          config={activePrompt}
+          onDismiss={hidePrompt}
+        />
+      )}
     </SafeAreaView>
   );
 }
