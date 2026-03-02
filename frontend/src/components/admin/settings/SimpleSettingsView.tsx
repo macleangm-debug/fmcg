@@ -90,7 +90,7 @@ const SettingsCard: React.FC<SettingsCardProps> = ({
 );
 
 interface SimpleSettingsViewProps {
-  onNavigateToFullSettings: (tab?: string) => void;
+  onNavigateToFullSettings: (tab?: string, keepWizard?: boolean) => void;
   isFirstTimeUser?: boolean;
 }
 
@@ -108,6 +108,7 @@ const SimpleSettingsView: React.FC<SimpleSettingsViewProps> = ({
   const [showWizard, setShowWizard] = useState(isFirstTimeUser);
   const [wizardStep, setWizardStep] = useState(0);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [guidedMode, setGuidedMode] = useState(false); // Keeps wizard visible as floating guide
 
   // Check what's been set up
   const hasBusinessInfo = !!(activeBusiness?.name && activeBusiness?.phone);
@@ -128,13 +129,21 @@ const SimpleSettingsView: React.FC<SimpleSettingsViewProps> = ({
       title: 'Business Information',
       description: 'Add your business name, phone, and address so customers can find you.',
       icon: 'business-outline',
-      action: () => onNavigateToFullSettings('general'),
+      tab: 'general',
+      action: () => {
+        setGuidedMode(true);
+        onNavigateToFullSettings('general', true);
+      },
     },
     {
       title: 'Currency Settings',
       description: 'Set your currency so prices display correctly.',
       icon: 'cash-outline',
-      action: () => onNavigateToFullSettings('app'),
+      tab: 'app',
+      action: () => {
+        setGuidedMode(true);
+        onNavigateToFullSettings('app', true);
+      },
     },
     {
       title: 'You\'re All Set!',
