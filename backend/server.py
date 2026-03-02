@@ -1759,6 +1759,36 @@ async def login(credentials: UserLogin):
     )
 
 
+@api_router.get("/auth/me", response_model=UserResponse)
+async def get_current_user_info(current_user: dict = Depends(get_current_user)):
+    """Get current authenticated user's information - refreshes user data from database"""
+    user = await db.users.find_one({"_id": ObjectId(current_user["user_id"])})
+    
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    business_id = user.get("business_id")
+    business_name = None
+    
+    # Get business name if user belongs to a business
+    if business_id:
+        business = await db.businesses.find_one({"_id": ObjectId(business_id)})
+        if business:
+            business_name = business.get("name")
+    
+    return UserResponse(
+        id=str(user["_id"]),
+        email=user["email"],
+        name=user["name"],
+        role=user["role"],
+        phone=user.get("phone"),
+        is_active=user.get("is_active", True),
+        created_at=user.get("created_at", datetime.utcnow()),
+        business_id=business_id,
+        business_name=business_name
+    )
+
+
 # Simple User Registration Model
 class SimpleUserRegister(BaseModel):
     name: str
