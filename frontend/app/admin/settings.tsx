@@ -1630,8 +1630,8 @@ export default function Settings() {
                   <Text style={styles.formHint}>Continue selling even without internet connection</Text>
                 </View>
                 <Switch
-                  value={useOfflineStore.getState().offlineModeEnabled}
-                  onValueChange={(value) => useOfflineStore.getState().setOfflineModeEnabled(value)}
+                  value={useOfflineStore.getState()?.settings?.enabled || false}
+                  onValueChange={(value) => useOfflineStore.getState().updateSettings({ enabled: value })}
                   trackColor={{ false: '#E5E7EB', true: '#10B981' }}
                   thumbColor="#FFFFFF"
                 />
@@ -1642,7 +1642,7 @@ export default function Settings() {
               <View style={styles.formInputContainer}>
                 <Ionicons name="cloud-outline" size={18} color="#9CA3AF" style={{ marginRight: 10 }} />
                 <Text style={styles.formInputText}>
-                  {useOfflineStore.getState()?.isOnline ? 'Online' : 'Offline'} • {useOfflineStore.getState()?.pendingTransactions?.length || 0} pending orders
+                  {useOfflineStore.getState()?.isOnline ? 'Online' : 'Offline'} • {useOfflineStore.getState()?.pendingOperations?.length || 0} pending orders
                 </Text>
               </View>
               
@@ -1655,7 +1655,7 @@ export default function Settings() {
                   <Text style={styles.formOutlineButtonText}>Refresh Product Cache</Text>
                 </TouchableOpacity>
                 
-                {(useOfflineStore.getState()?.pendingTransactions?.length || 0) > 0 && (
+                {(useOfflineStore.getState()?.pendingOperations?.length || 0) > 0 && (
                   <TouchableOpacity
                     style={styles.formOutlineButton}
                     onPress={() => syncService.manualSync()}
