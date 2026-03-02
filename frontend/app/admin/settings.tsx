@@ -4577,6 +4577,67 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: '#6B7280',
   },
+  // Setup Guide Banner
+  setupGuideBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#D8F3DC',
+    marginHorizontal: 16,
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#1B4332' + '30',
+  },
+  setupGuideContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    gap: 12,
+  },
+  setupGuideIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  setupGuideText: {
+    flex: 1,
+  },
+  setupGuideTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1B4332',
+  },
+  setupGuideSubtitle: {
+    fontSize: 12,
+    color: '#2D6A4F',
+    marginTop: 2,
+  },
+  setupGuideActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  setupGuideNextBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  setupGuideNextText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1B4332',
+  },
+  setupGuideCloseBtn: {
+    padding: 4,
+  },
   // Onboarding Banner Styles
   onboardingBanner: {
     flexDirection: 'row',
