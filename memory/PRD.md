@@ -349,9 +349,15 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 - [x] **JUST-IN-TIME CONTEXTUAL PROMPTS (COMPLETED Mar 2, 2026)** - Reusable JIT prompt system with AsyncStorage tracking, integrated into cart and products pages
 
 ### P1 - Upcoming Tasks
-- [ ] **Test Full Wizard Flow E2E** - Test the complete setup wizard experience for new users
+- [x] **Test Full Wizard Flow E2E (COMPLETED Mar 2, 2026)** - Tested all 4 steps: Welcome -> Business Info -> Currency -> Complete
+- [x] **Apply Responsive Modal to Remaining Modals (COMPLETED Mar 2, 2026)** - Updated SimpleSettingsView wizard
 - [ ] **Tigo SMS Testing** - User deferred ("We will test later"), requires VPN access
 - [ ] UniTxt admin dashboard for SMS campaigns
+
+### P2 - Backlog Tasks
+- [ ] **Backend server.py Refactoring** - 22,000+ lines with 357 inline routes. Should move routes to /routes directory. High risk, requires careful planning.
+- [ ] **LanguageSelector Component** - Not currently used in app (no imports found). Issue may be resolved.
+- [ ] Refactor oversized cart.tsx and dashboard.tsx
 
 ### P2 - Future/Backlog
 - [ ] Fix LanguageSelector component crash (import.meta related - separate from main fix)
@@ -382,6 +388,7 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 ---
 
 ## Test Reports
+- `/app/test_reports/iteration_20.json` - **Responsive Modal Pattern (Mar 2, 2026)** - Verified desktop centered modals and mobile bottom sheets (100% frontend pass)
 - `/app/test_reports/iteration_19.json` - **JIT Contextual Prompts (Mar 2, 2026)** - Just-in-Time prompts feature verified (100% frontend pass), component structure, AsyncStorage tracking, integration in cart.tsx and admin/products.tsx
 - `/app/test_reports/iteration_18.json` - **E2E Order Flow Test (Mar 2, 2026)** - Full order creation flow verified with admin role fix (100% backend, 95% frontend pass, Order ORD-000011 created)
 - `/app/test_reports/iteration_17.json` - **SKU Connection & Session Fix (Mar 2, 2026)** - Backend /api/auth/me returns correct role, wizard flow tested (100% backend, 85% frontend pass)
