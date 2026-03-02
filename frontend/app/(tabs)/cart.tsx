@@ -248,26 +248,98 @@ export default function Cart() {
   // Format currency without abbreviation for payments
   const formatFullCurrency = (amount: number) => formatCurrency(amount, false);
 
-  // Load products for sales staff
+  // Load products for sales staff - with offline caching support
   const loadProducts = async () => {
     setLoadingProducts(true);
     try {
-      const [productsRes, categoriesRes] = await Promise.all([
-        productsApi.getAll(),
-        categoriesApi.getAll(),
-      ]);
-      console.log('=== CART: Loaded products ===');
-      console.log('Total products:', productsRes.data.length);
-      // Log all products with their variant status
-      productsRes.data.forEach((p: any) => {
-        if (p.has_variants || (p.variants && p.variants.length > 0)) {
-          console.log(`Product with variants: ${p.name}, has_variants=${p.has_variants}, variants_count=${p.variants?.length || 0}`);
+      // Check if online
+      if (isOnline) {
+        // Online: fetch from API and cache
+        const [productsRes, categoriesRes] = await Promise.all([
+          productsApi.getAll(),
+          categoriesApi.getAll(),
+        ]);
+        console.log('=== CART: Loaded products from API ===');
+        console.log('Total products:', productsRes.data.length);
+        
+        // Cache products and categories for offline use
+        try {
+          const { cacheProducts, cacheCategories } = await import('../../src/services/OfflineDB');
+          await Promise.all([
+            cacheProducts(productsRes.data.map((p: any) => ({
+              id: p.id || p._id,
+              name: p.name,
+              price: p.price,
+              sku: p.sku,
+              barcode: p.barcode,
+              stock_quantity: p.stock_quantity,
+              category_id: p.category_id,
+              category_name: p.category?.name,
+              image: p.image,
+            }))),
+            cacheCategories(categoriesRes.data.map((c: any) => ({
+              id: c.id || c._id,
+              name: c.name,
+              description: c.description,
+            }))),
+          ]);
+          console.log('Products cached for offline use');
+        } catch (cacheError) {
+          console.log('Failed to cache products:', cacheError);
         }
-      });
-      setProducts(productsRes.data);
-      setCategories(categoriesRes.data);
+        
+        // Log products with variants
+        productsRes.data.forEach((p: any) => {
+          if (p.has_variants || (p.variants && p.variants.length > 0)) {
+            console.log(`Product with variants: ${p.name}, has_variants=${p.has_variants}, variants_count=${p.variants?.length || 0}`);
+          }
+        });
+        setProducts(productsRes.data);
+        setCategories(categoriesRes.data);
+      } else {
+        // Offline: load from cache
+        console.log('=== CART: Loading products from OFFLINE cache ===');
+        try {
+          const { getCachedProducts, getCachedCategories } = await import('../../src/services/OfflineDB');
+          const [cachedProducts, cachedCategories] = await Promise.all([
+            getCachedProducts(),
+            getCachedCategories(),
+          ]);
+          
+          if (cachedProducts.length > 0) {
+            console.log('Loaded', cachedProducts.length, 'products from cache');
+            setProducts(cachedProducts);
+            setCategories(cachedCategories);
+          } else {
+            console.log('No cached products available');
+            Alert.alert(
+              'Offline Mode',
+              'No products available offline. Please connect to the internet and refresh to cache products.',
+              [{ text: 'OK' }]
+            );
+          }
+        } catch (cacheError) {
+          console.log('Failed to load cached products:', cacheError);
+        }
+      }
     } catch (error) {
       console.log('Failed to load products:', error);
+      // Try loading from cache as fallback
+      if (!isOnline) {
+        try {
+          const { getCachedProducts, getCachedCategories } = await import('../../src/services/OfflineDB');
+          const [cachedProducts, cachedCategories] = await Promise.all([
+            getCachedProducts(),
+            getCachedCategories(),
+          ]);
+          if (cachedProducts.length > 0) {
+            setProducts(cachedProducts);
+            setCategories(cachedCategories);
+          }
+        } catch (cacheError) {
+          console.log('Cache fallback failed:', cacheError);
+        }
+      }
     } finally {
       setLoadingProducts(false);
     }
