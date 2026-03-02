@@ -1,168 +1,155 @@
 <analysis>**original_problem_statement:**
-The initial goal was a UI/UX overhaul for the RetailPro product dashboard and Add New Sale pages. The scope has significantly expanded to include a progressive profiling system, humorous empty-state UIs, a dynamic cross-promotion banner, a customer-first checkout flow, and a bulk product import feature.
+The initial goal was a UI/UX overhaul for the RetailPro product dashboard. This has evolved into a comprehensive feature enhancement, focusing on usability and intuitive design for non-technical users.
 
 Recent user requests have focused on:
-1.  Implementing a Complete Profile prompt during checkout for customers missing an email. **(Completed)**
-2.  Designing and implementing a bulk product import feature, including support for Excel files, manual entry, and SKU format selection. **(Completed)**
-3.  Fixing the empty state UI for various pages to be cleaner and more user-friendly. **(Completed)**
-4.  Fixing critical bugs, including the  rendering, the  modal not opening, and the  on the dashboard showing mocked data. **(Completed)**
-5.  A complete redesign of the Reports page to a professional, Zoho-style analytical interface. **(Completed)**
-6.  Making the new Reports page interactive (date filters, tabs). **(In Progress)**
-7.  Implementing a comprehensive offline mode for the application. **(In Progress)**
-8.  Clarifying why Tigo SMS integration files were not visible on GitHub. **(Resolved, user-side action pending)**
+1.  **Reports Page Interactivity & Clarity**: Making the reports page dynamic with tab-specific content and a more prominent, interactive date range display. **(Completed)**
+2.  **Settings Page Simplification**: Overhauling the complex settings page into a simplified, card-based UI with a guided setup wizard for new users. **(Completed)**
+3.  **Contextual Just-in-Time (JIT) Prompts**: Guiding users to configure settings as they use the application, rather than requiring them to find options manually. **(In Progress)**
+4.  **Offline Mode Enhancements**: Implementing a robust offline checkout flow that restricts non-cash payments and fixing bugs related to the offline mode settings toggle. **(Completed)**
+5.  **Critical Bug Fixes**: Resolving a session persistence issue where an Admin user's role would incorrectly revert to SALES_STAFF. **(Completed)**
+6.  **Backend Connectivity**: Connecting the Bulk Import SKU generator to use formats defined in the admin business settings. **(Verified as Complete)**
 
 **PRODUCT REQUIREMENTS:**
 Refer to  for a complete list. Key active items:
-1.  **P0**: Implement Offline Mode. **(IN PROGRESS)**
-2.  **P0**: Fix Reports page interactivity (date/tab filters). **(IN PROGRESS)**
-3.  **P1**: Connect the Bulk Import SKU generator to use the format defined in the admin business settings. **(NOT STARTED)**
-4.  **P2**: Fix the  component crash. **(NOT STARTED)**
-5.  **P3**: Finalize Deployment and User Verification for Tigo SMS. **(BLOCKED - User Action Pending)**
+1.  **P0**: Complete and test the Just-in-Time contextual prompts feature. **(IN PROGRESS)**
+2.  **P1**: Test the full end-to-end user setup wizard. **(NOT STARTED)**
+3.  **P2**: Refactor the monolithic  into a fully routed structure. **(NOT STARTED)**
+4.  **P2**: Fix the recurring  component crash. **(NOT STARTED)**
 
 **User's preferred language**: English
 
 **what currently exists?**
-The application is a full-stack platform with a React (Expo for Web) frontend and a FastAPI backend.
-- **Key Features**: A redesigned Zoho-style Reports page, a complete Bulk Product Import feature (supporting manual, CSV, and Excel), a fixed Product Switcher, a live-data  on the dashboard, and progressive customer profiling.
-- **Offline Mode Foundation**: Core files for offline functionality (, , UI components) have been created but are not yet fully integrated.
-- **Reports Interactivity Foundation**: The backend endpoint for reports now accepts date ranges, and the frontend has been partially updated to handle state changes, but the full interactivity logic is not yet implemented.
+The application is a full-stack platform with a React frontend and a FastAPI backend.
+- **Key Features**:
+    - A significantly enhanced Reports page with tab-specific data (Overview, Products, Staff, etc.), a dynamic date range display, and tab-specific export buttons.
+    - A completely redesigned Settings page featuring a Simple View with visual cards, a step-by-step setup wizard, and a toggle to access the original Advanced View.
+    - A robust offline mode that caches products, queues offline cash sales for syncing, and restricts non-cash payments during checkout with clear UI indicators.
+    - A new Just-in-Time (JIT) prompt system with a reusable component () and hook (), which has been partially integrated into the Cart and Products pages.
+- **Core Fixes**: The critical session persistence bug has been resolved by adding a token validation endpoint (), ensuring user roles are consistently and correctly displayed.
 
 **Last working item**:
-- **Last item agent was working**: The user requested two major features simultaneously: fixing the interactivity on the new Reports page and implementing a comprehensive offline mode. The agent began work on both, creating the necessary files and starting the integration for the offline mode, while also modifying the frontend and backend for the reports page filters.
+- **Last item agent was working**: The agent was implementing Just-in-Time (JIT) contextual prompts to guide users through settings as they interact with the app. It created a reusable prompt system and began integrating it into the Add Sale page (for first-sale and offline-detection prompts) and the Products page (for first-product-add prompts).
 - **Status**: IN PROGRESS
 - **Agent Testing Done**: N
 - **Which testing method agent to use?**: both
-    - **Frontend**: Test the Reports page filters (date/tabs) and the date picker crash. Test the full offline mode flow: enable via settings, see the UI indicator, create a sale offline, and verify it syncs when back online.
-    - **Backend**: Test the  endpoint with  and  parameters to ensure correct data filtering.
+    - **Frontend**: Test that JIT prompts trigger correctly: 1) after the first sale is completed, 2) when the app goes offline during checkout, and 3) after a new product is added.
+    - **Backend**: N/A
 - **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
-- **Issue 1**: Reports page is not interactive (P0)
+- None. All previously identified issues have been resolved or are being tracked as tasks.
 
 **Issues Detail**:
-- **Issue 1**:
-    - **Description (P0)**: The redesigned Zoho-style reports page at  is static. Clicking on period filters (Today, Week, Month), report tabs (Products, Staff), or using the Apply Range button in the custom date picker does not update the data. The date picker crashes the app.
-    - **Attempted fixes**: Backend endpoint  was updated to accept  and . The frontend component  was partially updated with state management (, ) and a  function. An incorrect prop usage in  was identified.
-    - **Next debug checklist**:
-        1.  In , complete the  hook to refetch data when , , or  changes.
-        2.  Fix the  crash by using the correct  and  props.
-        3.  Wire up the report tabs to update the  state.
-        4.  Ensure the  call correctly passes the date range to the backend.
-    - **Why fix this issue and what will be achieved with the fix?**: The new reports page is a key feature but is currently unusable without interactivity.
-    - **Status**: IN PROGRESS
-    - **Is recurring issue?**: N
-    - **Should Test frontend/backend/both after fix?**: Both
-    - **Blocked on other issue**: None
+- None.
 
 **In progress Task List**:
-- **Task 1**: Implement Offline Mode (P0)
-    - **Where to resume**:
-        - Integrate the  into the UI, likely in .
-        - Add the  component to the main settings page.
-        - Wrap critical API calls (e.g., creating an order in ) with logic from  to check for offline status and queue actions into IndexedDB via .
-    - **What will be achieved with this?**: Users can perform core actions like making sales without an internet connection, with data syncing automatically upon reconnection.
+- **Task 1**: Complete and Test the Just-in-Time (JIT) Prompts Implementation (P0)
+    - **Where to resume**: The core components (, ) and integration logic in  and  are in place. The next step is to perform end-to-end testing to verify that the prompts trigger correctly under the intended conditions.
+    - **What will be achieved with this?**: A more intuitive user experience where users are proactively guided to configure relevant features, reducing the need for manual setup and support.
     - **Status**: IN PROGRESS
-    - **Should Test frontend/backend/both after fix?**: Both
+    - **Should Test frontend/backend/both after fix?**: Frontend
     - **Blocked on something**: None
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks**:
-    - **(P1)** Connect the Bulk Import's SKU generation logic in  to fetch and use the SKU format defined in the admin business settings from the backend.
-    - **(P2)** Fix the recurring  crash.
+    - **(P1)** Test the full wizard flow end-to-end to ensure it correctly guides new users through all essential settings.
+    - **(P2)** Add more comprehensive offline mode integration (e.g., caching other necessary data).
+    - **(P2)** Refactor the backend  by removing duplicate routes and ensuring all endpoints are served from the modular  directory.
 - **Future Tasks**:
     - Finalize Tigo SMS integration (currently blocked).
+    - Fix the recurring  crash.
     - Implement a UniTxt admin dashboard.
-    - Refactor the monolithic  into a routed structure.
     - Refactor the oversized .
 
 **Completed work in this session**
-- **Reports Page Redesign (DONE)**: Fully redesigned  with a Zoho-style analytical layout, while successfully retaining the existing .
-- **Product Switcher Bug (FIXED)**: Resolved the critical issue where the Start Free Trial modal wouldn't appear for unsubscribed apps.
-- ** Live Data (FIXED)**: The Recent Orders component on the dashboard now correctly displays live data from the API.
-- **Bulk Import UX Fixes (DONE)**: Resolved z-index issues with dropdowns and added a Format button with a modal for SKU generation preferences.
-- **Select Customer UI Fix (DONE)**: The empty state on the  page was updated to use the standard, cleaner design.
-- **GitHub Sync Issue Diagnosis (DONE)**: Helped the user understand that their commits were going to a  branch instead of , explaining why the Tigo integration files were not visible in their repository.
+- **Reports Page Major Enhancements (DONE)**: Implemented tab-specific content, a dynamic/prominent date range display, and tab-specific export buttons in .
+- **Settings Page Redesign & Simplification (DONE)**: Created a new Simple View (), a setup wizard, and a view-toggle system in .
+- **Offline Toggle Bug (FIXED)**: Resolved a crash in the settings page when toggling offline mode by using the correct state management methods.
+- **Persistent Setup Wizard (DONE)**: The setup wizard now remains visible as a floating guide during initial configuration.
+- **Session Persistence Bug (FIXED)**: Added a  endpoint in  and updated  to validate user sessions, fixing the bug where the Admin role would incorrectly display as SALES_STAFF.
+- **Bulk Import SKU Connection (VERIFIED)**: Confirmed the feature was already correctly implemented.
+- **Offline Checkout Flow (DONE)**: Implemented logic in  to restrict non-cash payments and display a warning banner when offline.
+- **End-to-End Order Flow Testing (DONE)**: Verified the entire sales process, including the session fix.
 
 **Earlier issues found/mentioned but not fixed**
-- The  component causes a frontend crash with a Cannot use import.meta error. This is a recurring issue from a previous fork.
+- The  component causes a frontend crash with a Cannot use import.meta error. This is a known, recurring issue that has not been prioritized for fixing.
 
 **Known issue recurrence from previous fork**
 - **Issue recurrence in previous fork**: The  crash.
-- **Recurrence count**: 3+
+- **Recurrence count**: 4+
 - **Status**: NOT STARTED
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Offline-First Architecture**: Initiated implementation using IndexedDB (via ) to queue mutations made while offline and a sync service to process them upon reconnection.
-- **Complex UI State Management**: The Reports page requires managing multiple interdependent state variables (tabs, period, custom date range) to trigger API refetches.
-- **React Native Web Event Propagation**: Successfully debugged and fixed pointer event interception in nested  components to resolve the Product Switcher bug.
+- **Contextual UI (Just-in-Time Prompts)**: A system for delivering prompts to users at the moment a feature or setting becomes relevant.
+- **Guided User Onboarding**: Using a multi-step wizard to walk new users through essential application setup.
+- **Conditional UI Rendering**: Toggling between Simple and Advanced views to cater to different user skill levels.
+- **Server-Side Session Validation**: Verifying user auth tokens against a backend endpoint () on app startup to ensure data freshness and prevent role inconsistencies.
 
 **key DB schema**
-- : {email, password, role, subscriptions: [product_id], settings: {sku_format, ...}}
-- : {name, phone, email, ...}
-- , , : Core RetailPro data collections.
+- No changes in this session.
 
 **changes in tech stack**
-- Added  and  to support the new offline mode feature.
+- No new third-party libraries were added.
 
 **All files of reference**
-- **Updated/In Progress**:
-    - : Redesigned, interactivity fix is in progress.
-    - : Updated the  endpoint for date filtering.
-    - : To be updated to include the offline indicator.
-- **Fixed/Completed**:
-    - : Fixed trial modal bug.
-    - : Now uses live data.
-    - : UI/UX fixes implemented.
-- **New (Offline Mode)**:
+- **New**:
     - 
+    - 
+    - 
+- **Significantly Updated/Rewritten**:
+    - 
+    - 
+- **Updated/In Progress**:
+    - 
+    - 
+- **Fixed**:
     - 
     - 
     - 
 
 **Areas that need refactoring**:
--  is extremely large and difficult to maintain.
--  is a monolith and should be broken into a routed structure.
+-  still contains many duplicated routes that exist in the  directory. These should be removed to complete the modularization.
+-  remains very large and could be broken down into smaller components.
 
 **key api endpoints**
-- : Updated to accept  and  query parameters.
-- : (To be used) To fetch SKU format for bulk import.
+- ****: (NEW) Validates the current user's JWT and returns their data, fixing the session persistence issue.
+- ****: Used extensively with  and  parameters for the interactive reports page.
+- ****: Used to fetch SKU format and other business-related settings.
 
 **Critical Info for New Agent**
-- **Your top priorities are the two  items currently in progress**:
-    1.  **Fix Reports Page Interactivity**: This is critical as the new page is unusable. Complete the frontend logic in  to make the filters and tabs fetch new data. Fix the date picker crash.
-    2.  **Implement Offline Mode**: The foundation is laid. Your next steps are to integrate the UI elements (, ) and then wrap critical API calls (like ) with the  to queue actions when the user is offline.
-- **GitHub Sync Awareness**: The user has previously faced issues where their work was saved to a  branch instead of . If they mention missing files on GitHub, guide them to check their selected branch in the Save to Github UI first.
-- After completing the P0 tasks, prioritize connecting the Bulk Import's SKU generator to the backend business settings.
+- **Your immediate priority (P0) is to complete the Just-in-Time (JIT) prompts feature.** The foundational components are built and integrated; you need to test the trigger logic thoroughly and ensure the prompts behave as expected.
+- The user's primary goal is to improve usability for non-technical users. All new features and fixes should be viewed through this lens (e.g., simplicity, proactive guidance).
+- The critical session persistence bug (Admin role showing as SALES_STAFF) has been fixed and verified with E2E tests. You should not need to revisit this.
+- The backend  file is partially refactored. Be aware that many routes are duplicated and a full cleanup is a pending (P2) task.
 
 **documents and test reports created in this job**
-- 
--  (Updated multiple times)
+-  (Updated with completed work and new tasks)
+- Multiple test reports under  were generated by the testing agent to verify fixes and features.
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User**: Reports page filters/tabs don't work, date picker crashes. Also, requested offline mode. **Status**: IN PROGRESS
-2.  **User**: Provided detailed requirements for offline mode (PWA, UI toggle, loyalty handling, sync strategy). **Status**: IN PROGRESS
-3.  **User**: Requested credentials and URL. **Status**: RESOLVED
-4.  **User**: Requested a Zoho-style redesign for the reports page and asked if SKU settings were connected. **Status**: Reports redesign DONE, SKU connection NOT STARTED.
-5.  **User**: Provided feedback on three UI issues: Select Customer empty state, Bulk Import modal (dropdowns/SKU), and the location of the Export modal on the reports page. **Status**: ALL FIXED.
-6.  **User**: Requested credentials and URL. **Status**: RESOLVED
-7.  **User**: Asked how to merge the conflict branch on GitHub. **Status**: RESOLVED
-8.  **User**: Asked if a git conflict was causing sync issues. **Status**: RESOLVED (Agent confirmed the conflict branch was the issue).
-9.  **User**: Asked again if files were on GitHub after saving. **Status**: RESOLVED (Agent guided them to check repo).
-10. **User**: Asked where the Tigo integration files were on GitHub. **Status**: RESOLVED (Agent located files locally and diagnosed the sync issue).
+1.  **User**: Confirmed flow for getting started (Login -> Settings -> Products -> Sell). **Status**: RESOLVED
+2.  **User**: Asked how other settings are implemented and if they appear contextually. **Status**: RESOLVED
+3.  **User**: Requested implementation of just-in-time contextual prompts. **Status**: IN PROGRESS
+4.  **User**: Provided feedback: The setup wizard should remain visible during setup, and there's an error when toggling offline mode. **Status**: FIXED
+5.  **User**: Requested fixes for the wizard and the offline toggle error. **Status**: FIXED
+6.  **User**: Confirmed the implementation plan for the fixes. **Status**: FIXED
+7.  **User**: Provided a list of next tasks: Connect Bulk Import SKU generator, test the wizard flow, and fix the session persistence issue. **Status**: All ADDRESSED (SKU connected, session fixed, wizard testing is an upcoming task).
+8.  **User**: Asked for the URL and login credentials. **Status**: RESOLVED
+9.  **User**: Asked what settings are critical to start using the system. **Status**: RESOLVED
+10. **User**: Confirmed the fastest path to start using the app. **Status**: RESOLVED
 
 **Project Health Check:**
 - **Broken**:
-    - Reports page interactivity ().
-    -  component ().
+    -  component still causes a crash.
 - **Mocked**:
-    - None.  was fixed.
+    - None.
 
 **3rd Party Integrations**
-- **Tigo Bulk SMS (SMPP)**: Integrated, but BLOCKED on user VPN setup. Files are not on  branch.
-- **dexie / dexie-react-hooks**: (Newly added) For offline database storage.
+- **Tigo Bulk SMS (SMPP)**: Integrated, but BLOCKED on user VPN setup.
+- **dexie / dexie-react-hooks**: Used for the offline database.
 - **lucide-react**: For icons.
 - **Zustand**: For state management.
 - **recharts**: For rendering charts.
@@ -170,7 +157,7 @@ The application is a full-stack platform with a React (Expo for Web) frontend an
 - **expo-document-picker**: For picking files on the frontend.
 
 **Testing status**
-- **Testing agent used after significant changes**: YES, to verify the Product Switcher bug fix.
+- **Testing agent used after significant changes**: YES. Used to verify the E2E order flow, the session persistence fix, and the redesigned Settings page.
 - **Troubleshoot agent used after agent stuck in loop**: NO
 - **Test files created**: None.
 - **Known regressions**: None.
@@ -180,6 +167,4 @@ The application is a full-stack platform with a React (Expo for Web) frontend an
 - **Demo User**:  / 
 
 **What agent forgot to execute**
-- The agent started but did not complete the Reports page interactivity fix.
-- The agent started but did not complete the Offline Mode implementation.
-- The agent identified the need to connect the Bulk Import SKU settings to the backend but did not implement it.</analysis>
+- The agent started the implementation of the Just-in-Time prompts feature but did not complete the testing and verification phase. This task is currently in progress.</analysis>
