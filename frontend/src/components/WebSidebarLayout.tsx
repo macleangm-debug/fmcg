@@ -402,7 +402,8 @@ export default function WebSidebarLayout({ children }: WebSidebarLayoutProps) {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [subscriptionPlan, setSubscriptionPlan] = useState<{ name: string; is_trial: boolean } | null>(null);
   
-  const userRole = user?.role || 'sales_staff';
+  const userRole = user?.role || '';
+  const displayRole = userRole ? userRole.replace('_', ' ').toUpperCase() : 'Loading...';
   const currentPath = '/' + segments.join('/');
   
   // Only show sidebar on web with width > 768px
