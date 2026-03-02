@@ -11,6 +11,19 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 
 ## What's Been Implemented
 
+### March 2, 2026 (Session 3) - SKU CONNECTION & SESSION FIX ✅
+- ✅ **Verified Bulk Import SKU Connection** - Already connected to backend via `businessSettingsApi.get()` (fetches sku_format, sku_prefix, sku_digits)
+- ✅ **Added /api/auth/me Endpoint** - New backend endpoint to refresh user data from database
+  - Returns current user with fresh role, email, name from DB
+  - Used by authStore.loadUser() to validate session on app load
+- ✅ **Fixed Session Persistence Issue** - authStore.loadUser() now calls /api/auth/me to validate token and refresh user data
+  - Previously used stale cached data which could show wrong role
+  - Now validates token and fetches fresh user data from backend
+- ✅ **Fixed Role Display** - WebSidebarLayout now shows actual role from user object
+  - Changed from `user?.role || 'sales_staff'` to `user?.role || 'guest'`
+  - Display shows empty string while loading instead of defaulting to SALES_STAFF
+  - User header now correctly shows "ADMIN" for admin@fmcg.com
+
 ### March 2, 2026 (Session 2) - BUG FIXES & WIZARD IMPROVEMENTS ✅
 - ✅ **Fixed Offline Toggle Error** - Changed from `setOfflineModeEnabled(value)` to `updateSettings({ enabled: value })` to match offlineStore API
 - ✅ **Fixed Pending Transactions Display** - Changed from `pendingTransactions` to `pendingOperations` to match store structure
