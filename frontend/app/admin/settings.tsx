@@ -165,7 +165,7 @@ interface SubscriptionInfo {
 
 export default function Settings() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ onboarding?: string; tab?: string }>();
+  const params = useLocalSearchParams<{ onboarding?: string; tab?: string; view?: string }>();
   const { onboarding } = params || {};
   const isOnboarding = onboarding === 'true';
   const { user: currentUser } = useAuthStore();
@@ -176,6 +176,7 @@ export default function Settings() {
   const [business, setBusiness] = useState<BusinessInfo | null>(null);
   const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [activeTab, setActiveTab] = useState<'general' | 'app' | 'apps' | 'pos' | 'locations' | 'subscription' | 'referral'>('general');
+  const [viewMode, setViewMode] = useState<'simple' | 'advanced'>(params?.view === 'advanced' ? 'advanced' : 'simple');
   const { width } = useWindowDimensions();
   const isWeb = Platform.OS === 'web' && width >= 768;
 
