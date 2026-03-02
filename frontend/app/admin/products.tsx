@@ -33,6 +33,11 @@ import WebModal from '../../src/components/WebModal';
 import ConfirmationModal from '../../src/components/ConfirmationModal';
 import ImportExportModal from '../../src/components/ImportExportModal';
 import BulkProductImportModal from '../../src/components/products/BulkProductImportModal';
+import { 
+  JustInTimePrompt, 
+  useJustInTimePrompt,
+  hasPromptBeenShown 
+} from '../../src/components/common/JustInTimePrompts';
 
 interface VariantOption {
   name: string;
@@ -122,6 +127,9 @@ export default function ProductManagement() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const { formatCurrency, formatNumber, settings } = useBusinessStore();
   const { productsView, setProductsView } = useViewSettingsStore();
+  
+  // Just-in-time prompts
+  const { activePrompt, isVisible: showJitPrompt, showPrompt, hidePrompt } = useJustInTimePrompt();
   
   const PAGE_SIZE = 20;
 
@@ -630,6 +638,16 @@ export default function ProductManagement() {
           title: 'Product Added!',
           subtitle: `"${formName}" has been added to your inventory`
         });
+        
+        // Show SKU format prompt after first product add
+        const alreadyShown = await hasPromptBeenShown('first_product_add');
+        if (!alreadyShown && products.length === 0) {
+          setTimeout(() => {
+            showPrompt('first_product_add', {
+              onSetup: () => router.push('/admin/settings?tab=app'),
+            });
+          }, 1500);
+        }
       }
 
       resetForm();
@@ -1702,6 +1720,15 @@ export default function ProductManagement() {
         onImport={handleBulkImport}
         formatCurrency={formatCurrency}
       />
+      
+      {/* Just-in-Time Prompts */}
+      {activePrompt && (
+        <JustInTimePrompt
+          visible={showJitPrompt}
+          config={activePrompt}
+          onDismiss={hidePrompt}
+        />
+      )}
     </SafeAreaView>
   );
 }
