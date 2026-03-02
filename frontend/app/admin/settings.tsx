@@ -33,6 +33,7 @@ import LinkedAppsManager from '../../src/components/LinkedAppsManager';
 import PrinterSettings from '../../src/components/PrinterSettings';
 import OfflineIndicator from '../../src/components/OfflineIndicator';
 import OfflineSettings from '../../src/components/admin/settings/OfflineSettings';
+import SimpleSettingsView from '../../src/components/admin/settings/SimpleSettingsView';
 import syncService from '../../src/services/syncService';
 
 // Country data with codes and cities
