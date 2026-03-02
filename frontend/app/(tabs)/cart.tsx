@@ -2328,6 +2328,15 @@ export default function Cart() {
         onImport={handleBulkImport}
         formatCurrency={formatCurrency}
       />
+      
+      {/* Just-in-Time Prompts */}
+      {activePrompt && (
+        <JustInTimePrompt
+          visible={showJitPrompt}
+          config={activePrompt}
+          onDismiss={hidePrompt}
+        />
+      )}
     </SafeAreaView>
   );
 }
