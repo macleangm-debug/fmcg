@@ -32,8 +32,14 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
   - Mobile (phones): Bottom sheet that slides up from the bottom with drag handle
   - Desktop/Tablet: Centered modal (standard behavior)
   - Created reusable `ResponsiveModal.tsx` component at `/app/frontend/src/components/common/`
-  - Updated `ExportReportModal.tsx` to use responsive bottom sheet on mobile
+  - Created `useResponsiveModal.ts` hook at `/app/frontend/src/hooks/`
+  - Updated key modals to use responsive pattern:
+    - `WebModal.tsx` - Core modal component used for Add Product, Add Category, Add Staff, etc.
+    - `ExportReportModal.tsx` - Reports export modal
+    - `ConfirmationModal.tsx` - All confirmation dialogs (delete, warning, etc.)
+    - `CustomerSelectionModal.tsx` - Customer selection in checkout flow
   - Animation support with spring animation for smooth slide-up effect
+  - Safe area padding for mobile devices
 - ✅ **Testing Verified** - iteration_19.json (100% frontend pass rate)
 
 ### March 2, 2026 (Session 4) - E2E ORDER FLOW & OFFLINE INTEGRATION ✅

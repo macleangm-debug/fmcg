@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,7 +9,9 @@ import {
   ActivityIndicator,
   useWindowDimensions,
   Platform,
+  Animated,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 type ModalVariant = 'danger' | 'warning' | 'info' | 'success' | 'link' | 'unlink';
@@ -102,117 +104,189 @@ export default function ConfirmationModal({
   appIcon,
   appColor,
 }: ConfirmationModalProps) {
-  const { width } = useWindowDimensions();
-  const isWeb = Platform.OS === 'web' && width > 768;
+  const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const isDesktop = Platform.OS === 'web' && width > 768;
+  const isMobile = !isDesktop;
   const config = variantConfig[variant];
   const displayIcon = icon || config.defaultIcon;
   
+  // Animation for bottom sheet slide
+  const slideAnim = useRef(new Animated.Value(height)).current;
+  
+  useEffect(() => {
+    if (visible && isMobile) {
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        tension: 65,
+        friction: 11,
+      }).start();
+    } else {
+      slideAnim.setValue(height);
+    }
+  }, [visible, isMobile, height]);
+  
+  const handleCancel = () => {
+    if (isMobile) {
+      Animated.timing(slideAnim, {
+        toValue: height,
+        duration: 250,
+        useNativeDriver: true,
+      }).start(() => onCancel());
+    } else {
+      onCancel();
+    }
+  };
+  
   // Check if this is an app link/unlink modal
   const isAppModal = variant === 'link' || variant === 'unlink';
+  
+  // Render modal content (shared between layouts)
+  const renderContent = () => (
+    <>
+      {/* Accent Top Bar */}
+      <View style={[styles.accentBar, { backgroundColor: config.accentGradientStart }]} />
+      
+      {/* Header with Icon */}
+      {isAppModal && appIcon ? (
+        <View style={styles.appIconHeader}>
+          <View style={[styles.appIconLarge, { backgroundColor: appColor || config.iconBg }]}>
+            <Ionicons name={appIcon} size={36} color={appColor ? '#FFFFFF' : config.iconColor} />
+          </View>
+          <View style={styles.connectionIcon}>
+            <Ionicons 
+              name={variant === 'link' ? 'add-circle' : 'remove-circle'} 
+              size={24} 
+              color={config.iconColor} 
+            />
+          </View>
+        </View>
+      ) : (
+        <View style={[styles.iconContainer, { backgroundColor: config.iconBg }]}>
+          <Ionicons name={displayIcon} size={28} color={config.iconColor} />
+        </View>
+      )}
 
+      {/* Title */}
+      <Text style={styles.title}>{title}</Text>
+
+      {/* Message with better formatting */}
+      {isAppModal ? (
+        <View style={styles.benefitsContainer}>
+          {message.split('\n').map((line, index) => {
+            const isBullet = line.startsWith('•');
+            return (
+              <View key={index} style={styles.benefitRow}>
+                {isBullet ? (
+                  <>
+                    <View style={[styles.benefitDot, { backgroundColor: config.iconColor }]} />
+                    <Text style={styles.benefitText}>{line.replace('• ', '')}</Text>
+                  </>
+                ) : (
+                  <Text style={[styles.message, { marginBottom: 8 }]}>{line}</Text>
+                )}
+              </View>
+            );
+          })}
+        </View>
+      ) : (
+        <Text style={styles.message}>{message}</Text>
+      )}
+
+      {/* Buttons */}
+      <View style={styles.buttonRow}>
+        <Pressable
+          style={({ pressed }) => [
+            styles.button,
+            styles.cancelButton,
+            pressed && styles.cancelButtonPressed,
+          ]}
+          onPress={handleCancel}
+          disabled={loading}
+        >
+          <Text style={styles.cancelButtonText}>{cancelLabel}</Text>
+        </Pressable>
+
+        <Pressable
+          style={({ pressed }) => [
+            styles.button,
+            styles.confirmButton,
+            { backgroundColor: pressed ? config.buttonHover : config.buttonBg },
+            loading && styles.buttonDisabled,
+          ]}
+          onPress={onConfirm}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <View style={styles.confirmButtonContent}>
+              <Ionicons 
+                name={variant === 'link' ? 'link' : variant === 'unlink' ? 'unlink' : 'checkmark'} 
+                size={16} 
+                color="#FFFFFF" 
+              />
+              <Text style={styles.confirmButtonText}>{confirmLabel}</Text>
+            </View>
+          )}
+        </Pressable>
+      </View>
+    </>
+  );
+
+  // Mobile: Bottom sheet
+  if (isMobile) {
+    return (
+      <Modal
+        visible={visible}
+        transparent
+        animationType="fade"
+        statusBarTranslucent
+        onRequestClose={handleCancel}
+      >
+        <View style={styles.bottomSheetOverlay}>
+          <Pressable style={styles.bottomSheetBackdrop} onPress={handleCancel} />
+          
+          <Animated.View 
+            style={[
+              styles.bottomSheetContainer,
+              { 
+                transform: [{ translateY: slideAnim }],
+                paddingBottom: insets.bottom + 20,
+              }
+            ]}
+          >
+            {/* Drag Handle */}
+            <View style={styles.handleContainer}>
+              <View style={styles.handle} />
+            </View>
+            
+            {renderContent()}
+          </Animated.View>
+        </View>
+      </Modal>
+    );
+  }
+
+  // Desktop: Centered modal
   return (
     <Modal
       visible={visible}
       transparent
       animationType="fade"
-      onRequestClose={onCancel}
+      onRequestClose={handleCancel}
     >
       <TouchableOpacity 
         style={styles.overlay} 
         activeOpacity={1} 
-        onPress={onCancel}
+        onPress={handleCancel}
       >
         <View 
-          style={[styles.container, isWeb && styles.containerWeb]}
+          style={[styles.container, styles.containerWeb]}
           onStartShouldSetResponder={() => true}
         >
-          {/* Accent Top Bar */}
-          <View style={[styles.accentBar, { backgroundColor: config.accentGradientStart }]} />
-          
-          {/* Header with Icon */}
-          {isAppModal && appIcon ? (
-            <View style={styles.appIconHeader}>
-              <View style={[styles.appIconLarge, { backgroundColor: appColor || config.iconBg }]}>
-                <Ionicons name={appIcon} size={36} color={appColor ? '#FFFFFF' : config.iconColor} />
-              </View>
-              <View style={styles.connectionIcon}>
-                <Ionicons 
-                  name={variant === 'link' ? 'add-circle' : 'remove-circle'} 
-                  size={24} 
-                  color={config.iconColor} 
-                />
-              </View>
-            </View>
-          ) : (
-            <View style={[styles.iconContainer, { backgroundColor: config.iconBg }]}>
-              <Ionicons name={displayIcon} size={28} color={config.iconColor} />
-            </View>
-          )}
-
-          {/* Title */}
-          <Text style={styles.title}>{title}</Text>
-
-          {/* Message with better formatting */}
-          {isAppModal ? (
-            <View style={styles.benefitsContainer}>
-              {message.split('\n').map((line, index) => {
-                const isBullet = line.startsWith('•');
-                return (
-                  <View key={index} style={styles.benefitRow}>
-                    {isBullet ? (
-                      <>
-                        <View style={[styles.benefitDot, { backgroundColor: config.iconColor }]} />
-                        <Text style={styles.benefitText}>{line.replace('• ', '')}</Text>
-                      </>
-                    ) : (
-                      <Text style={[styles.message, { marginBottom: 8 }]}>{line}</Text>
-                    )}
-                  </View>
-                );
-              })}
-            </View>
-          ) : (
-            <Text style={styles.message}>{message}</Text>
-          )}
-
-          {/* Buttons */}
-          <View style={styles.buttonRow}>
-            <Pressable
-              style={({ pressed }) => [
-                styles.button,
-                styles.cancelButton,
-                pressed && styles.cancelButtonPressed,
-              ]}
-              onPress={onCancel}
-              disabled={loading}
-            >
-              <Text style={styles.cancelButtonText}>{cancelLabel}</Text>
-            </Pressable>
-
-            <Pressable
-              style={({ pressed }) => [
-                styles.button,
-                styles.confirmButton,
-                { backgroundColor: pressed ? config.buttonHover : config.buttonBg },
-                loading && styles.buttonDisabled,
-              ]}
-              onPress={onConfirm}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <View style={styles.confirmButtonContent}>
-                  <Ionicons 
-                    name={variant === 'link' ? 'link' : variant === 'unlink' ? 'unlink' : 'checkmark'} 
-                    size={16} 
-                    color="#FFFFFF" 
-                  />
-                  <Text style={styles.confirmButtonText}>{confirmLabel}</Text>
-                </View>
-              )}
-            </Pressable>
-          </View>
+          {renderContent()}
         </View>
       </TouchableOpacity>
     </Modal>
@@ -220,6 +294,40 @@ export default function ConfirmationModal({
 }
 
 const styles = StyleSheet.create({
+  // Bottom Sheet styles
+  bottomSheetOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  bottomSheetBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  },
+  bottomSheetContainer: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 16,
+  },
+  handleContainer: {
+    alignItems: 'center',
+    paddingTop: 12,
+    paddingBottom: 4,
+    width: '100%',
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#D1D5DB',
+    borderRadius: 2,
+  },
+  
+  // Centered modal styles
   overlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',

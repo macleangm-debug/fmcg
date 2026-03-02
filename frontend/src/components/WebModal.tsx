@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
   View,
   Modal,
@@ -10,8 +10,10 @@ import {
   Platform,
   useWindowDimensions,
   TouchableWithoutFeedback,
+  Animated,
+  Pressable,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
 interface WebModalProps {
@@ -35,18 +37,49 @@ export default function WebModal({
   icon,
   iconColor = '#2563EB',
 }: WebModalProps) {
-  const { width } = useWindowDimensions();
-  const isWeb = Platform.OS === 'web' && width > 768;
+  const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const isDesktop = Platform.OS === 'web' && width > 768;
+  const isMobile = !isDesktop;
+  
+  // Animation for bottom sheet slide
+  const slideAnim = useRef(new Animated.Value(height)).current;
+  
+  useEffect(() => {
+    if (visible && isMobile) {
+      Animated.spring(slideAnim, {
+        toValue: 0,
+        useNativeDriver: true,
+        tension: 65,
+        friction: 11,
+      }).start();
+    } else {
+      slideAnim.setValue(height);
+    }
+  }, [visible, isMobile, height]);
+  
+  const handleClose = () => {
+    if (isMobile) {
+      Animated.timing(slideAnim, {
+        toValue: height,
+        duration: 250,
+        useNativeDriver: true,
+      }).start(() => onClose());
+    } else {
+      onClose();
+    }
+  };
 
-  if (isWeb) {
+  // Desktop: Centered modal
+  if (isDesktop) {
     return (
       <Modal
         visible={visible}
         animationType="fade"
         transparent={true}
-        onRequestClose={onClose}
+        onRequestClose={handleClose}
       >
-        <TouchableWithoutFeedback onPress={onClose}>
+        <TouchableWithoutFeedback onPress={handleClose}>
           <View style={styles.overlay}>
             <TouchableWithoutFeedback onPress={(e) => e.stopPropagation()}>
               <View style={[styles.webModalContainer, { maxWidth }]}>
@@ -64,7 +97,7 @@ export default function WebModal({
                     </View>
                   </View>
                   <TouchableOpacity 
-                    onPress={onClose}
+                    onPress={handleClose}
                     style={styles.closeButton}
                   >
                     <Ionicons name="close" size={24} color="#6B7280" />
@@ -88,45 +121,70 @@ export default function WebModal({
     );
   }
 
-  // Mobile: Full screen modal with professional styling
+  // Mobile: Bottom sheet modal
   return (
     <Modal
       visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={onClose}
+      animationType="fade"
+      transparent={true}
+      statusBarTranslucent
+      onRequestClose={handleClose}
     >
-      <SafeAreaView style={styles.mobileContainer}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={{ flex: 1 }}
+      <View style={styles.bottomSheetOverlay}>
+        <Pressable style={styles.bottomSheetBackdrop} onPress={handleClose} />
+        
+        <Animated.View 
+          style={[
+            styles.bottomSheetContainer,
+            { 
+              transform: [{ translateY: slideAnim }],
+              paddingBottom: insets.bottom,
+            }
+          ]}
         >
-          {/* Mobile Header */}
-          <View style={styles.mobileHeader}>
-            <TouchableOpacity 
-              onPress={onClose}
-              style={styles.mobileCloseButton}
-            >
-              <Ionicons name="close" size={24} color="#111827" />
-            </TouchableOpacity>
-            <View style={styles.mobileTitleContainer}>
-              <Text style={styles.mobileTitle}>{title}</Text>
-              {subtitle && <Text style={styles.mobileSubtitle}>{subtitle}</Text>}
+          {/* Drag Handle */}
+          <View style={styles.handleContainer}>
+            <View style={styles.handle} />
+          </View>
+          
+          {/* Header */}
+          <View style={styles.bottomSheetHeader}>
+            <View style={styles.headerLeft}>
+              {icon && (
+                <View style={[styles.iconContainer, { backgroundColor: `${iconColor}15` }]}>
+                  <Ionicons name={icon} size={22} color={iconColor} />
+                </View>
+              )}
+              <View style={styles.titleContainer}>
+                <Text style={styles.bottomSheetTitle}>{title}</Text>
+                {subtitle && <Text style={styles.bottomSheetSubtitle}>{subtitle}</Text>}
+              </View>
             </View>
-            <View style={{ width: 44 }} />
+            <TouchableOpacity 
+              onPress={handleClose}
+              style={styles.closeButton}
+            >
+              <Ionicons name="close" size={24} color="#6B7280" />
+            </TouchableOpacity>
           </View>
           
           {/* Content */}
-          <ScrollView 
-            style={styles.mobileContent}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={{ flex: 1, maxHeight: height * 0.7 }}
           >
-            {children}
-            <View style={{ height: 40 }} />
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </SafeAreaView>
+            <ScrollView 
+              style={styles.bottomSheetContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              bounces={false}
+            >
+              {children}
+              <View style={{ height: 24 }} />
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </Animated.View>
+      </View>
     </Modal>
   );
 }
@@ -156,6 +214,60 @@ export function ModalDivider() {
 }
 
 const styles = StyleSheet.create({
+  // Bottom Sheet styles
+  bottomSheetOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  bottomSheetBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  bottomSheetContainer: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '90%',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 16,
+  },
+  handleContainer: {
+    alignItems: 'center',
+    paddingTop: 12,
+    paddingBottom: 4,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#D1D5DB',
+    borderRadius: 2,
+  },
+  bottomSheetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  bottomSheetTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  bottomSheetSubtitle: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  bottomSheetContent: {
+    padding: 20,
+  },
+  
   // Web overlay styles
   overlay: {
     flex: 1,
