@@ -169,6 +169,10 @@ export default function Cart() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   
+  // Just-in-time prompts
+  const { activePrompt, isVisible: showJitPrompt, showPrompt, hidePrompt } = useJustInTimePrompt();
+  const [saleCount, setSaleCount] = useState(0);
+  
   // Logout confirmation modal
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   
