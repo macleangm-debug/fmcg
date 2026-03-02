@@ -136,6 +136,16 @@ export default function Products() {
       loadProducts(); // Refresh products list
       setSuccessMessage('Product added successfully!');
       setShowSuccessModal(true);
+      
+      // Show SKU format prompt after first product add
+      const alreadyShown = await hasPromptBeenShown('first_product_add');
+      if (!alreadyShown && products.length === 0) {
+        setTimeout(() => {
+          showPrompt('first_product_add', {
+            onSetup: () => router.push('/admin/settings?tab=app'),
+          });
+        }, 1500);
+      }
     } catch (error: any) {
       setProductFormError(error?.message || 'Failed to add product');
     } finally {
