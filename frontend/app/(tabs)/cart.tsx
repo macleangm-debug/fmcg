@@ -34,6 +34,11 @@ import BulkProductImportModal from '../../src/components/products/BulkProductImp
 import { useModal } from '../../src/context/ModalContext';
 import { printerService, ReceiptData } from '../../src/services/printerService';
 import syncService from '../../src/services/syncService';
+import { 
+  JustInTimePrompt, 
+  useJustInTimePrompt, 
+  hasPromptBeenShown 
+} from '../../src/components/common/JustInTimePrompts';
 
 const isWeb = Platform.OS === 'web';
 
