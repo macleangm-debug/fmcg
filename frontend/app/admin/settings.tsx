@@ -4474,6 +4474,8 @@ export default function Settings() {
           </View>
         </View>
       </Modal>
+        </>
+      )}
     </SafeAreaView>
   );
 }
