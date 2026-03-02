@@ -922,6 +922,19 @@ export default function Cart() {
           },
         ]
       );
+      
+      // Update sale count and trigger JIT prompts
+      const newSaleCount = saleCount + 1;
+      setSaleCount(newSaleCount);
+      
+      // Show first sale prompt after first successful sale
+      if (newSaleCount === 1) {
+        setTimeout(() => {
+          showPrompt('first_sale_complete', {
+            onSetup: () => router.push('/admin/settings?tab=pos'),
+          });
+        }, 1500);
+      }
     } catch (error: any) {
       Alert.alert('Error', error.message || error.response?.data?.detail || 'Failed to create order');
     } finally {
