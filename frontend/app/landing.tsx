@@ -376,7 +376,10 @@ export default function LandingPage() {
       {/* New Marketing Navigation with Search & Mega Dropdown */}
       <MarketingNav />
       
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ flexGrow: 1 }}
+      >
         {/* Hero Section */}
         <Animated.View style={[styles.hero, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
           <LinearGradient
@@ -869,6 +872,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: THEME.text,
+    ...(Platform.OS === 'web' ? { minHeight: '100vh' } : {}),
   },
   // Navigation
   nav: {
