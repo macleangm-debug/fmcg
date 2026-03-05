@@ -1490,6 +1490,37 @@ class BusinessDetailsBase(BaseModel):
 class BusinessDetailsResponse(BusinessDetailsBase):
     id: str
 
+# Invoice Product Models (moved here to avoid forward reference issues)
+class InvoiceVariantOption(BaseModel):
+    name: str  # e.g., "Size", "Color"
+    values: str  # Comma-separated values e.g., "S, M, L, XL" or "Red, Blue, Green"
+
+class InvoiceProductCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    sku: Optional[str] = None
+    price: float
+    type: str = "product"  # product or service
+    unit: str = "pcs"
+    is_taxable: bool = True
+    tax_rate: float = 0
+    category: Optional[str] = None
+    has_variants: bool = False  # Whether product has variants
+    variants: Optional[List[InvoiceVariantOption]] = None  # List of variant options
+    
+class InvoiceProductUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    sku: Optional[str] = None
+    price: Optional[float] = None
+    type: Optional[str] = None
+    unit: Optional[str] = None
+    is_taxable: Optional[bool] = None
+    tax_rate: Optional[float] = None
+    category: Optional[str] = None
+    has_variants: Optional[bool] = None
+    variants: Optional[List[InvoiceVariantOption]] = None
+
 # ============== HELPER FUNCTIONS ==============
 def hash_password(password: str) -> str:
     return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
@@ -7001,7 +7032,7 @@ async def get_invoice_products(
 
 @api_router.post("/invoices/products")
 async def create_invoice_product(
-    product: "InvoiceProductCreate",
+    product: InvoiceProductCreate,
     current_user: dict = Depends(get_current_user)
 ):
     """Create a new product/service for invoicing"""
@@ -7019,7 +7050,7 @@ async def create_invoice_product(
 @api_router.put("/invoices/products/{product_id}")
 async def update_invoice_product(
     product_id: str,
-    product: "InvoiceProductUpdate",
+    product: InvoiceProductUpdate,
     current_user: dict = Depends(get_current_user)
 ):
     """Update a product/service"""
@@ -9149,36 +9180,8 @@ async def update_invoice_settings(
 
 # ============== INVOICE PRODUCTS/SERVICES ENDPOINTS ==============
 
-# Variant option model for invoice products (e.g., {"name": "Size", "values": "S, M, L, XL"})
-class InvoiceVariantOption(BaseModel):
-    name: str  # e.g., "Size", "Color"
-    values: str  # Comma-separated values e.g., "S, M, L, XL" or "Red, Blue, Green"
-
-class InvoiceProductCreate(BaseModel):
-    name: str
-    description: Optional[str] = None
-    sku: Optional[str] = None
-    price: float
-    type: str = "product"  # product or service
-    unit: str = "pcs"
-    is_taxable: bool = True
-    tax_rate: float = 0
-    category: Optional[str] = None
-    has_variants: bool = False  # Whether product has variants
-    variants: Optional[List[InvoiceVariantOption]] = None  # List of variant options
-    
-class InvoiceProductUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    sku: Optional[str] = None
-    price: Optional[float] = None
-    type: Optional[str] = None
-    unit: Optional[str] = None
-    is_taxable: Optional[bool] = None
-    tax_rate: Optional[float] = None
-    category: Optional[str] = None
-    has_variants: Optional[bool] = None
-    variants: Optional[List[InvoiceVariantOption]] = None
+# NOTE: InvoiceVariantOption, InvoiceProductCreate, and InvoiceProductUpdate models
+# are defined earlier in the file (around line 1494) to avoid forward reference issues
 
 # NOTE: The actual product endpoint routes are defined earlier in the file (around line 3245)
 # to avoid route conflicts with /invoices/{invoice_id}

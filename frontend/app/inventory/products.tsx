@@ -31,6 +31,7 @@ import ViewToggle from '../../src/components/ViewToggle';
 import WebModal from '../../src/components/WebModal';
 import ConfirmationModal from '../../src/components/ConfirmationModal';
 import ImportExportModal from '../../src/components/ImportExportModal';
+import ActionSheetModal, { ActionSheetItem, SuccessModal } from '../../src/components/common/ActionSheetModal';
 
 interface VariantOption {
   name: string;
@@ -229,7 +230,7 @@ export default function ProductManagement() {
         params: { category: categoryName }
       });
       setFormSku(response.data.sku);
-      setSkuAutoGenerate(true);
+      setGlobalSkuAutoGenerate(true);
     } catch (error) {
       console.log('Failed to generate SKU:', error);
       // Fallback to simple generation
@@ -1652,109 +1653,54 @@ export default function ProductManagement() {
       </WebModal>
 
       {/* Success Confirmation Modal */}
-      <Modal
+      <SuccessModal
         visible={showSuccessModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowSuccessModal(false)}
-      >
-        <Pressable 
-          style={styles.successModalOverlay}
-          onPress={() => setShowSuccessModal(false)}
-        >
-          <View style={styles.successModalContent}>
-            <View style={styles.successIconContainer}>
-              <Ionicons name="checkmark-circle" size={64} color="#10B981" />
-            </View>
-            <Text style={styles.successTitle}>{successMessage.title}</Text>
-            <Text style={styles.successSubtitle}>{successMessage.subtitle}</Text>
-            <View style={styles.successActions}>
-              <Pressable
-                style={styles.successAddAnotherBtn}
-                onPress={() => {
-                  setShowSuccessModal(false);
-                  resetForm();
-                  setShowAddModal(true);
-                }}
-              >
-                <Ionicons name="add-circle-outline" size={20} color="#2563EB" />
-                <Text style={styles.successAddAnotherText}>Add Another</Text>
-              </Pressable>
-              <Pressable
-                style={styles.successDoneBtn}
-                onPress={() => setShowSuccessModal(false)}
-              >
-                <Text style={styles.successDoneText}>Done</Text>
-              </Pressable>
-            </View>
-          </View>
-        </Pressable>
-      </Modal>
+        onClose={() => setShowSuccessModal(false)}
+        title={successMessage.title}
+        subtitle={successMessage.subtitle}
+        onAddAnother={() => {
+          resetForm();
+          setShowAddModal(true);
+        }}
+        testId="inventory-success-modal"
+      />
 
       {/* Mobile Action Menu Modal */}
-      <Modal
+      <ActionSheetModal
         visible={showActionMenu}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowActionMenu(false)}
+        onClose={() => setShowActionMenu(false)}
+        title={selectedProduct?.name}
+        testId="inventory-action-menu"
       >
-        <Pressable 
-          style={styles.actionMenuOverlay}
-          onPress={() => setShowActionMenu(false)}
-        >
-          <View style={styles.actionMenuContainer}>
-            <View style={styles.actionMenuHeader}>
-              <Text style={styles.actionMenuTitle} numberOfLines={1}>
-                {selectedProduct?.name}
-              </Text>
-              <TouchableOpacity onPress={() => setShowActionMenu(false)}>
-                <Ionicons name="close" size={24} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
-            
-            <TouchableOpacity
-              style={styles.actionMenuItem}
-              onPress={() => {
-                setShowActionMenu(false);
-                if (selectedProduct) handleEditProduct(selectedProduct);
-              }}
-            >
-              <View style={[styles.actionMenuIcon, { backgroundColor: '#EEF2FF' }]}>
-                <Ionicons name="pencil-outline" size={20} color="#4F46E5" />
-              </View>
-              <Text style={styles.actionMenuItemText}>Edit Product</Text>
-              <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.actionMenuItem}
-              onPress={() => {
-                if (selectedProduct) handleOpenChangeCategory(selectedProduct);
-              }}
-            >
-              <View style={[styles.actionMenuIcon, { backgroundColor: '#FEF3C7' }]}>
-                <Ionicons name="folder-outline" size={20} color="#D97706" />
-              </View>
-              <Text style={styles.actionMenuItemText}>Change Category</Text>
-              <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.actionMenuItem}
-              onPress={() => {
-                setShowActionMenu(false);
-                if (selectedProduct) handleDeleteProduct(selectedProduct);
-              }}
-            >
-              <View style={[styles.actionMenuIcon, { backgroundColor: '#FEE2E2' }]}>
-                <Ionicons name="trash-outline" size={20} color="#DC2626" />
-              </View>
-              <Text style={[styles.actionMenuItemText, { color: '#DC2626' }]}>Delete Product</Text>
-              <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
-            </TouchableOpacity>
-          </View>
-        </Pressable>
-      </Modal>
+        <ActionSheetItem
+          icon="pencil-outline"
+          label="Edit Product"
+          iconColor="#4F46E5"
+          iconBg="#EEF2FF"
+          onPress={() => {
+            setShowActionMenu(false);
+            if (selectedProduct) handleEditProduct(selectedProduct);
+          }}
+        />
+        <ActionSheetItem
+          icon="folder-outline"
+          label="Change Category"
+          iconColor="#D97706"
+          iconBg="#FEF3C7"
+          onPress={() => {
+            if (selectedProduct) handleOpenChangeCategory(selectedProduct);
+          }}
+        />
+        <ActionSheetItem
+          icon="trash-outline"
+          label="Delete Product"
+          danger
+          onPress={() => {
+            setShowActionMenu(false);
+            if (selectedProduct) handleDeleteProduct(selectedProduct);
+          }}
+        />
+      </ActionSheetModal>
 
       {/* Change Category Modal */}
       <WebModal

@@ -7,10 +7,10 @@ import {
   TouchableOpacity,
   TextInput,
   Alert,
-  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import WebModal from '../../src/components/WebModal';
 
 const COLORS = {
   primary: '#F59E0B',
@@ -150,65 +150,60 @@ export default function TemplatesPage() {
       </View>
 
       {/* Add Template Modal */}
-      <Modal visible={showAddModal} transparent animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>New Template</Text>
-              <TouchableOpacity onPress={() => setShowAddModal(false)}>
-                <Ionicons name="close" size={24} color={COLORS.gray} />
-              </TouchableOpacity>
-            </View>
+      <WebModal 
+        visible={showAddModal} 
+        onClose={() => setShowAddModal(false)}
+        title="New Template"
+        icon="document-text-outline"
+        iconColor={COLORS.primary}
+      >
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Template Name</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="e.g., Welcome Message"
+            value={newTemplate.name}
+            onChangeText={(text) => setNewTemplate({ ...newTemplate, name: text })}
+          />
+        </View>
 
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Template Name</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g., Welcome Message"
-                value={newTemplate.name}
-                onChangeText={(text) => setNewTemplate({ ...newTemplate, name: text })}
-              />
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Message Type</Text>
-              <View style={styles.typeSelector}>
-                <TouchableOpacity
-                  style={[styles.typeOption, newTemplate.type === 'sms' && styles.typeOptionActive]}
-                  onPress={() => setNewTemplate({ ...newTemplate, type: 'sms' })}
-                >
-                  <Ionicons name="chatbubble" size={18} color={newTemplate.type === 'sms' ? COLORS.white : COLORS.blue} />
-                  <Text style={[styles.typeOptionText, newTemplate.type === 'sms' && styles.typeOptionTextActive]}>SMS</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.typeOption, newTemplate.type === 'whatsapp' && styles.typeOptionActiveGreen]}
-                  onPress={() => setNewTemplate({ ...newTemplate, type: 'whatsapp' })}
-                >
-                  <Ionicons name="logo-whatsapp" size={18} color={newTemplate.type === 'whatsapp' ? COLORS.white : COLORS.success} />
-                  <Text style={[styles.typeOptionText, newTemplate.type === 'whatsapp' && styles.typeOptionTextActive]}>WhatsApp</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View style={styles.formGroup}>
-              <Text style={styles.label}>Template Content</Text>
-              <TextInput
-                style={styles.textArea}
-                placeholder="Enter your message template...\n\nUse {name}, {phone}, etc. for personalization"
-                multiline
-                numberOfLines={4}
-                textAlignVertical="top"
-                value={newTemplate.content}
-                onChangeText={(text) => setNewTemplate({ ...newTemplate, content: text })}
-              />
-            </View>
-
-            <TouchableOpacity style={styles.saveBtn} onPress={handleSaveTemplate}>
-              <Text style={styles.saveBtnText}>Save Template</Text>
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Message Type</Text>
+          <View style={styles.typeSelector}>
+            <TouchableOpacity
+              style={[styles.typeOption, newTemplate.type === 'sms' && styles.typeOptionActive]}
+              onPress={() => setNewTemplate({ ...newTemplate, type: 'sms' })}
+            >
+              <Ionicons name="chatbubble" size={18} color={newTemplate.type === 'sms' ? COLORS.white : COLORS.blue} />
+              <Text style={[styles.typeOptionText, newTemplate.type === 'sms' && styles.typeOptionTextActive]}>SMS</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.typeOption, newTemplate.type === 'whatsapp' && styles.typeOptionActiveGreen]}
+              onPress={() => setNewTemplate({ ...newTemplate, type: 'whatsapp' })}
+            >
+              <Ionicons name="logo-whatsapp" size={18} color={newTemplate.type === 'whatsapp' ? COLORS.white : COLORS.success} />
+              <Text style={[styles.typeOptionText, newTemplate.type === 'whatsapp' && styles.typeOptionTextActive]}>WhatsApp</Text>
             </TouchableOpacity>
           </View>
         </View>
-      </Modal>
+
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Template Content</Text>
+          <TextInput
+            style={styles.textArea}
+            placeholder="Enter your message template...\n\nUse {name}, {phone}, etc. for personalization"
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+            value={newTemplate.content}
+            onChangeText={(text) => setNewTemplate({ ...newTemplate, content: text })}
+          />
+        </View>
+
+        <TouchableOpacity style={styles.saveBtn} onPress={handleSaveTemplate}>
+          <Text style={styles.saveBtnText}>Save Template</Text>
+        </TouchableOpacity>
+      </WebModal>
     </SafeAreaView>
   );
 }

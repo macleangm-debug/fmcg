@@ -32,6 +32,7 @@ import ViewToggle from '../../src/components/ViewToggle';
 import WebModal from '../../src/components/WebModal';
 import ConfirmationModal from '../../src/components/ConfirmationModal';
 import ImportExportModal from '../../src/components/ImportExportModal';
+import { SuccessModal } from '../../src/components/common/ActionSheetModal';
 
 interface VariantOption {
   name: string;
@@ -1387,44 +1388,17 @@ export default function ProductManagement() {
       </WebModal>
 
       {/* Success Confirmation Modal */}
-      <Modal
+      <SuccessModal
         visible={showSuccessModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowSuccessModal(false)}
-      >
-        <Pressable 
-          style={styles.successModalOverlay}
-          onPress={() => setShowSuccessModal(false)}
-        >
-          <View style={styles.successModalContent}>
-            <View style={styles.successIconContainer}>
-              <Ionicons name="checkmark-circle" size={64} color="#10B981" />
-            </View>
-            <Text style={styles.successTitle}>{successMessage.title}</Text>
-            <Text style={styles.successSubtitle}>{successMessage.subtitle}</Text>
-            <View style={styles.successActions}>
-              <Pressable
-                style={styles.successAddAnotherBtn}
-                onPress={() => {
-                  setShowSuccessModal(false);
-                  resetForm();
-                  setShowAddModal(true);
-                }}
-              >
-                <Ionicons name="add-circle-outline" size={20} color="#7C3AED" />
-                <Text style={styles.successAddAnotherText}>Add Another</Text>
-              </Pressable>
-              <Pressable
-                style={styles.successDoneBtn}
-                onPress={() => setShowSuccessModal(false)}
-              >
-                <Text style={styles.successDoneText}>Done</Text>
-              </Pressable>
-            </View>
-          </View>
-        </Pressable>
-      </Modal>
+        onClose={() => setShowSuccessModal(false)}
+        title={successMessage.title}
+        subtitle={successMessage.subtitle}
+        onAddAnother={() => {
+          resetForm();
+          setShowAddModal(true);
+        }}
+        testId="invoicing-success-modal"
+      />
 
       {/* Delete Confirmation Modal */}
       <ConfirmationModal

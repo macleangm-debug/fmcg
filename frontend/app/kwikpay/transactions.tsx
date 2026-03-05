@@ -8,7 +8,6 @@ import {
   RefreshControl,
   ActivityIndicator,
   TextInput,
-  Modal,
   useWindowDimensions,
   Platform,
   Alert,
@@ -19,6 +18,7 @@ import { useRouter } from 'expo-router';
 import { useBusinessStore } from '../../src/store/businessStore';
 import { useAuthStore } from '../../src/store/authStore';
 import ConfirmationModal from '../../src/components/ConfirmationModal';
+import WebModal from '../../src/components/WebModal';
 import api from '../../src/api/client';
 import { useKwikPayWebSocket } from '../../src/hooks/useKwikPayWebSocket';
 
@@ -463,78 +463,69 @@ export default function TransactionsPage() {
       </ScrollView>
 
       {/* Transaction Detail Modal */}
-      <Modal
+      <WebModal
         visible={showDetailModal}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowDetailModal(false)}
+        onClose={() => setShowDetailModal(false)}
+        title="Transaction Details"
+        icon="receipt-outline"
+        iconColor={COLORS.primary}
+        maxWidth={480}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Transaction Details</Text>
-              <TouchableOpacity onPress={() => setShowDetailModal(false)}>
-                <Ionicons name="close" size={24} color={COLORS.dark} />
-              </TouchableOpacity>
+        {selectedTransaction && (
+          <>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Reference</Text>
+              <Text style={styles.detailValue}>{selectedTransaction.reference || selectedTransaction.id}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Amount</Text>
+              <Text style={styles.detailValueLarge}>
+                {formatAmount(selectedTransaction.amount || 0, selectedTransaction.currency)}
+              </Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Status</Text>
+              <View style={[styles.statusBadge, { backgroundColor: getStatusBg(selectedTransaction.status) }]}>
+                <Text style={[styles.statusText, { color: getStatusColor(selectedTransaction.status) }]}>
+                  {(selectedTransaction.status || 'Unknown').charAt(0).toUpperCase() + (selectedTransaction.status || 'unknown').slice(1)}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Method</Text>
+              <Text style={styles.detailValue}>{selectedTransaction.method || 'Unknown'}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Provider</Text>
+              <Text style={styles.detailValue}>{selectedTransaction.provider || 'KwikPay'}</Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Customer Email</Text>
+              <Text style={styles.detailValue}>{selectedTransaction.customer_email || 'N/A'}</Text>
+            </View>
+            {selectedTransaction.customer_phone && (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Customer Phone</Text>
+                <Text style={styles.detailValue}>{selectedTransaction.customer_phone}</Text>
+              </View>
+            )}
+            <View style={styles.detailRow}>
+              <Text style={styles.detailLabel}>Date</Text>
+              <Text style={styles.detailValue}>{selectedTransaction.created_at}</Text>
             </View>
 
-            {selectedTransaction && (
-              <ScrollView style={styles.modalBody}>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Reference</Text>
-                  <Text style={styles.detailValue}>{selectedTransaction.reference || selectedTransaction.id}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Amount</Text>
-                  <Text style={styles.detailValueLarge}>
-                    {formatAmount(selectedTransaction.amount || 0, selectedTransaction.currency)}
-                  </Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Status</Text>
-                  <View style={[styles.statusBadge, { backgroundColor: getStatusBg(selectedTransaction.status) }]}>
-                    <Text style={[styles.statusText, { color: getStatusColor(selectedTransaction.status) }]}>
-                      {(selectedTransaction.status || 'Unknown').charAt(0).toUpperCase() + (selectedTransaction.status || 'unknown').slice(1)}
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Method</Text>
-                  <Text style={styles.detailValue}>{selectedTransaction.method || 'Unknown'}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Provider</Text>
-                  <Text style={styles.detailValue}>{selectedTransaction.provider || 'KwikPay'}</Text>
-                </View>
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Customer Email</Text>
-                  <Text style={styles.detailValue}>{selectedTransaction.customer_email || 'N/A'}</Text>
-                </View>
-                {selectedTransaction.customer_phone && (
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Customer Phone</Text>
-                    <Text style={styles.detailValue}>{selectedTransaction.customer_phone}</Text>
-                  </View>
-                )}
-                <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Date</Text>
-                  <Text style={styles.detailValue}>{selectedTransaction.created_at}</Text>
-                </View>
-
-                {(selectedTransaction.status || '').toLowerCase() === 'succeeded' && (
-                  <TouchableOpacity
-                    style={styles.refundButton}
-                    onPress={() => handleRefundPress(selectedTransaction)}
-                  >
-                    <Ionicons name="return-down-back" size={18} color={COLORS.white} />
-                    <Text style={styles.refundButtonText}>Process Refund</Text>
-                  </TouchableOpacity>
-                )}
-              </ScrollView>
+            {(selectedTransaction.status || '').toLowerCase() === 'succeeded' && (
+              <TouchableOpacity
+                style={styles.refundButton}
+                onPress={() => handleRefundPress(selectedTransaction)}
+              >
+                <Ionicons name="return-down-back" size={18} color={COLORS.white} />
+                <Text style={styles.refundButtonText}>Process Refund</Text>
+              </TouchableOpacity>
             )}
-          </View>
-        </View>
-      </Modal>
+          </>
+        )}
+      </WebModal>
 
       {/* Delete Confirmation Modal */}
       <ConfirmationModal
