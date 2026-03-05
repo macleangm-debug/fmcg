@@ -11,6 +11,26 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 
 ## What's Been Implemented
 
+### March 5, 2026 - RESPONSIVE MODAL PATTERN EXTENDED TO ALL PRODUCTS ✅
+- ✅ **ActionSheetModal Component (COMPLETED)** - Created new reusable component at `/app/frontend/src/components/common/ActionSheetModal.tsx`
+  - Desktop (>768px): Centered modal with semi-transparent backdrop
+  - Mobile (<=768px): Bottom sheet with drag handle, slides up from bottom
+  - Includes `ActionSheetItem` for action menu items
+  - Includes `SuccessModal` for success confirmation dialogs
+- ✅ **Inventory Products Page Updated** - `/app/frontend/app/inventory/products.tsx`
+  - Mobile action menu now uses ActionSheetModal (bottom sheet on mobile)
+  - Success modal now uses SuccessModal component (responsive)
+  - Fixed bug: `setSkuAutoGenerate` -> `setGlobalSkuAutoGenerate`
+- ✅ **Invoicing Products Page Updated** - `/app/frontend/app/invoicing/products.tsx`
+  - Success modal now uses SuccessModal component (responsive)
+- ✅ **UniTxt Templates Page Updated** - `/app/frontend/app/unitxt/templates.tsx`
+  - Add Template modal now uses WebModal (responsive bottom sheet on mobile)
+- ✅ **KwikPay Transactions Page Updated** - `/app/frontend/app/kwikpay/transactions.tsx`
+  - Transaction Detail modal now uses WebModal (responsive bottom sheet on mobile)
+- ✅ **Backend Fix** - Fixed `InvoiceProductCreate` forward reference error in server.py
+  - Moved model definitions before their usage (line 1494)
+- ✅ **Testing Verified** - iteration_21.json (100% frontend pass rate)
+
 ### March 2, 2026 (Session 5) - JUST-IN-TIME PROMPTS COMPLETE ✅
 - ✅ **JIT Contextual Prompts Feature (COMPLETED)** - Implemented "Just-in-Time" contextual prompts to guide users through settings
   - Created reusable `JustInTimePrompts.tsx` component with modal overlay, icon, title, description, primary/secondary buttons, and skip link
