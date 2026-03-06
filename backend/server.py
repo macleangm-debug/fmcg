@@ -3702,6 +3702,92 @@ async def bulk_import_products(
         "errors": errors if errors else None
     }
 
+# Product Update
+@api_router.put("/products/{product_id}", response_model=ProductResponse)
+async def update_product(
+    product_id: str,
+    product: ProductUpdate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update an existing product"""
+    if current_user["role"] not in ["admin", "manager", "superadmin"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    business_id = current_user.get("business_id")
+    
+    # Check product exists and belongs to business
+    existing = await db.products.find_one({
+        "_id": ObjectId(product_id),
+        "business_id": business_id
+    })
+    if not existing:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    # Update the product
+    update_data = product.dict(exclude_unset=True)
+    update_data["updated_at"] = datetime.utcnow()
+    
+    await db.products.update_one(
+        {"_id": ObjectId(product_id)},
+        {"$set": update_data}
+    )
+    
+    # Get updated product with category name
+    updated = await db.products.find_one({"_id": ObjectId(product_id)})
+    category_name = None
+    if updated.get("category_id"):
+        category = await db.categories.find_one({"_id": ObjectId(updated["category_id"])})
+        category_name = category["name"] if category else None
+    
+    return ProductResponse(
+        id=str(updated["_id"]),
+        name=updated["name"],
+        description=updated.get("description"),
+        category_id=updated.get("category_id"),
+        price=updated["price"],
+        cost_price=updated.get("cost_price"),
+        sku=updated.get("sku"),
+        barcode=updated.get("barcode"),
+        stock_quantity=updated.get("stock_quantity", 0),
+        low_stock_threshold=updated.get("low_stock_threshold", 10),
+        tax_rate=updated.get("tax_rate", 0),
+        image=updated.get("image"),
+        is_active=updated.get("is_active", True),
+        track_stock=updated.get("track_stock", True),
+        unit_of_measure=updated.get("unit_of_measure"),
+        has_variants=updated.get("has_variants", False),
+        variant_options=updated.get("variant_options"),
+        variants=updated.get("variants"),
+        category_name=category_name,
+        created_at=updated.get("created_at", datetime.utcnow()),
+        business_id=business_id
+    )
+
+# Product Delete
+@api_router.delete("/products/{product_id}")
+async def delete_product(
+    product_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete a product"""
+    if current_user["role"] not in ["admin", "manager", "superadmin"]:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    business_id = current_user.get("business_id")
+    
+    # Check product exists and belongs to business
+    existing = await db.products.find_one({
+        "_id": ObjectId(product_id),
+        "business_id": business_id
+    })
+    if not existing:
+        raise HTTPException(status_code=404, detail="Product not found")
+    
+    # Delete the product
+    await db.products.delete_one({"_id": ObjectId(product_id)})
+    
+    return {"message": "Product deleted successfully", "id": product_id}
+
 # Categories - Multi-tenant
 @api_router.get("/categories", response_model=List[CategoryResponse])
 async def get_categories(current_user: dict = Depends(get_current_user)):

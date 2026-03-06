@@ -37,8 +37,12 @@ interface QuickAddProductModalProps {
   itemTypeLabel?: string;
   itemTypeOptions?: Array<{ label: string; value: string }>;
   defaultItemType?: string;
+  requireSellingPriceForTypes?: string[]; // Types that require selling price
   // Supplier selection
   suppliers?: Array<{ id: string; name: string }>;
+  // Edit mode support
+  isEditMode?: boolean;
+  initialData?: Partial<ProductData>;
   // Customization
   title?: string;
   saveButtonText?: string;
@@ -95,9 +99,12 @@ const QuickAddProductModal: React.FC<QuickAddProductModalProps> = ({
   itemTypeLabel = 'Item Type',
   itemTypeOptions,
   defaultItemType = 'product',
+  requireSellingPriceForTypes,
   suppliers = [],
-  title = 'Quick Add Product',
-  saveButtonText = 'Add Product',
+  isEditMode = false,
+  initialData,
+  title,
+  saveButtonText,
   successCallback,
   appType = 'retailpro',
 }) => {
@@ -107,6 +114,14 @@ const QuickAddProductModal: React.FC<QuickAddProductModalProps> = ({
   
   // Get the appropriate type options
   const typeOptions = itemTypeOptions || (appType === 'inventory' ? DEFAULT_INVENTORY_TYPES : DEFAULT_RETAILPRO_TYPES);
+  
+  // Default title and button text based on mode
+  const modalTitle = title || (isEditMode ? 'Edit Product' : 'Quick Add Product');
+  const buttonText = saveButtonText || (isEditMode ? 'Save Changes' : 'Add Product');
+  
+  // Default types requiring price based on app
+  const typesRequiringPrice = requireSellingPriceForTypes || 
+    (appType === 'inventory' ? ['product'] : ['product', 'service']);
   
   // Form state
   const [name, setName] = useState('');
@@ -130,12 +145,26 @@ const QuickAddProductModal: React.FC<QuickAddProductModalProps> = ({
   
   const currency = currencySymbol || business?.currency_symbol || 'TSh';
   
-  // Reset form when modal opens/closes
+  // Reset form when modal opens/closes OR populate for edit mode
   useEffect(() => {
     if (!visible) {
       resetForm();
+    } else if (isEditMode && initialData) {
+      // Populate form with existing data for edit mode
+      setName(initialData.name || '');
+      setPrice(initialData.price?.toString() || '');
+      setCostPrice(initialData.cost_price?.toString() || '');
+      setStockQty(initialData.stock_quantity?.toString() || '');
+      setMinStock(initialData.min_stock?.toString() || '');
+      setCategoryId(initialData.category_id || null);
+      setUnit(initialData.unit || 'pcs');
+      setSupplier(initialData.supplier || '');
+      setSupplierId(initialData.supplier_id || null);
+      setLocation(initialData.location || '');
+      setSku(initialData.sku || '');
+      setItemType(initialData.item_type || defaultItemType);
     }
-  }, [visible]);
+  }, [visible, isEditMode, initialData]);
   
   const resetForm = () => {
     setName('');
@@ -234,10 +263,12 @@ const QuickAddProductModal: React.FC<QuickAddProductModalProps> = ({
     <WebModal
       visible={visible}
       onClose={onClose}
-      title={title}
-      subtitle={isInventoryMode 
-        ? 'Add item with essential details. Edit more later.'
-        : 'Add product with minimal info. Edit details later.'
+      title={modalTitle}
+      subtitle={isEditMode
+        ? 'Update product details below.'
+        : (isInventoryMode 
+          ? 'Add item with essential details. Edit more later.'
+          : 'Add product with minimal info. Edit details later.')
       }
       icon={isInventoryMode ? 'cube-outline' : 'pricetag-outline'}
       iconColor={isInventoryMode ? '#059669' : '#2563EB'}
@@ -251,14 +282,16 @@ const QuickAddProductModal: React.FC<QuickAddProductModalProps> = ({
         {/* Info Banner */}
         <View style={[styles.banner, isInventoryMode && styles.bannerInventory]}>
           <Ionicons 
-            name="flash" 
+            name={isEditMode ? "create" : "flash"} 
             size={16} 
             color={isInventoryMode ? '#059669' : '#F59E0B'} 
           />
           <Text style={[styles.bannerText, isInventoryMode && styles.bannerTextInventory]}>
-            {isInventoryMode 
-              ? 'Quick add with essentials. Full details available in edit mode.'
-              : 'Add product with minimal info. Edit details later.'
+            {isEditMode
+              ? 'Update the fields you want to change.'
+              : (isInventoryMode 
+                ? 'Quick add with essentials. Full details available in edit mode.'
+                : 'Add product with minimal info. Edit details later.')
             }
           </Text>
         </View>
@@ -550,7 +583,7 @@ const QuickAddProductModal: React.FC<QuickAddProductModalProps> = ({
             ) : (
               <>
                 <Ionicons name="checkmark" size={18} color="#FFFFFF" />
-                <Text style={styles.saveBtnText}>{saveButtonText}</Text>
+                <Text style={styles.saveBtnText}>{buttonText}</Text>
               </>
             )}
           </TouchableOpacity>

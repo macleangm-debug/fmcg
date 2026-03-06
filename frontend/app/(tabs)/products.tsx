@@ -24,6 +24,8 @@ import { useBusinessStore } from '../../src/store/businessStore';
 import EmptyState from '../../src/components/EmptyState';
 import Input from '../../src/components/Input';
 import BulkProductImportModal from '../../src/components/products/BulkProductImportModal';
+import QuickAddProductModal, { ProductData } from '../../src/components/products/QuickAddProductModal';
+import WebModal from '../../src/components/WebModal';
 import { 
   JustInTimePrompt, 
   useJustInTimePrompt,
@@ -42,6 +44,11 @@ interface Product {
   category_id: string;
   category_name?: string;
   tax_rate: number;
+  cost_price?: number;
+  sku?: string;
+  min_stock?: number;
+  unit?: string;
+  item_type?: string;
 }
 
 interface Category {
@@ -86,14 +93,19 @@ export default function Products() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
 
-  // Quick Add Product modal
+  // Quick Add Product modal - using reusable component
   const [showAddProductModal, setShowAddProductModal] = useState(false);
-  const [newProductName, setNewProductName] = useState('');
-  const [newProductPrice, setNewProductPrice] = useState('');
-  const [newProductStock, setNewProductStock] = useState('');
-  const [newProductCategory, setNewProductCategory] = useState<string | null>(null);
-  const [savingProduct, setSavingProduct] = useState(false);
-  const [productFormError, setProductFormError] = useState('');
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  
+  // Product Detail modal
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  
+  // Delete confirmation modal
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Bulk Import modal
   const [showBulkImportModal, setShowBulkImportModal] = useState(false);
@@ -101,41 +113,43 @@ export default function Products() {
   // Just-in-time prompts
   const { activePrompt, isVisible: showJitPrompt, showPrompt, hidePrompt } = useJustInTimePrompt();
 
-  const resetProductForm = () => {
-    setNewProductName('');
-    setNewProductPrice('');
-    setNewProductStock('');
-    setNewProductCategory(null);
-    setProductFormError('');
-  };
+  // Load products helper
+  const loadProducts = useCallback(() => {
+    fetchData();
+  }, [selectedCategory, search]);
 
-  const handleQuickAddProduct = async () => {
-    if (!newProductName.trim()) {
-      setProductFormError('Product name is required');
-      return;
-    }
-    if (!newProductPrice || parseFloat(newProductPrice) <= 0) {
-      setProductFormError('Valid price is required');
-      return;
-    }
-
-    setSavingProduct(true);
-    setProductFormError('');
-
-    try {
-      await productsApi.create({
-        name: newProductName.trim(),
-        price: parseFloat(newProductPrice),
-        stock_quantity: parseInt(newProductStock) || 0,
-        category_id: newProductCategory,
+  // Handle product save (add or edit)
+  const handleSaveProduct = async (productData: ProductData) => {
+    if (isEditMode && editingProduct) {
+      // Update existing product
+      await productsApi.update(editingProduct.id, {
+        name: productData.name,
+        price: productData.price,
+        cost_price: productData.cost_price,
+        stock_quantity: productData.stock_quantity,
+        category_id: productData.category_id,
         tax_rate: 0,
+        sku: productData.sku,
+        min_stock: productData.min_stock,
+        unit: productData.unit,
+        item_type: productData.item_type,
       });
-      
-      setShowAddProductModal(false);
-      resetProductForm();
-      loadProducts(); // Refresh products list
+      setSuccessMessage('Product updated successfully!');
+    } else {
+      // Create new product
+      await productsApi.create({
+        name: productData.name,
+        price: productData.price,
+        cost_price: productData.cost_price,
+        stock_quantity: productData.stock_quantity,
+        category_id: productData.category_id,
+        tax_rate: 0,
+        sku: productData.sku,
+        min_stock: productData.min_stock,
+        unit: productData.unit,
+        item_type: productData.item_type,
+      });
       setSuccessMessage('Product added successfully!');
-      setShowSuccessModal(true);
       
       // Show SKU format prompt after first product add
       const alreadyShown = await hasPromptBeenShown('first_product_add');
@@ -146,10 +160,61 @@ export default function Products() {
           });
         }, 1500);
       }
+    }
+    
+    setShowSuccessModal(true);
+    loadProducts();
+  };
+
+  // Open modal for adding new product
+  const openAddModal = () => {
+    setEditingProduct(null);
+    setIsEditMode(false);
+    setShowAddProductModal(true);
+  };
+
+  // Open modal for editing existing product
+  const openEditModal = (product: Product) => {
+    setEditingProduct(product);
+    setIsEditMode(true);
+    setShowAddProductModal(true);
+  };
+
+  // Close add/edit modal
+  const closeProductModal = () => {
+    setShowAddProductModal(false);
+    setEditingProduct(null);
+    setIsEditMode(false);
+  };
+
+  // Open product detail modal
+  const openDetailModal = (product: Product) => {
+    setSelectedProduct(product);
+    setShowDetailModal(true);
+  };
+
+  // Handle delete confirmation
+  const confirmDelete = (product: Product) => {
+    setDeletingProduct(product);
+    setShowDeleteModal(true);
+  };
+
+  // Execute product deletion
+  const handleDeleteProduct = async () => {
+    if (!deletingProduct) return;
+    
+    setDeleting(true);
+    try {
+      await productsApi.delete(deletingProduct.id);
+      setShowDeleteModal(false);
+      setDeletingProduct(null);
+      loadProducts();
+      setSuccessMessage('Product deleted successfully!');
+      setShowSuccessModal(true);
     } catch (error: any) {
-      setProductFormError(error?.message || 'Failed to add product');
+      Alert.alert('Error', error?.message || 'Failed to delete product');
     } finally {
-      setSavingProduct(false);
+      setDeleting(false);
     }
   };
 
@@ -335,15 +400,16 @@ export default function Products() {
 
   const renderProduct = ({ item }: { item: Product }) => {
     const isOutOfStock = item.stock_quantity <= 0;
+    const isLowStock = item.stock_quantity > 0 && item.stock_quantity <= (item.min_stock || 5);
     
     return (
-      <TouchableOpacity
-        style={[styles.productCard, isOutOfStock && styles.productCardDisabled]}
-        onPress={() => handleAddToCart(item)}
-        activeOpacity={0.7}
-        disabled={isOutOfStock}
-      >
-        <View style={styles.productImageContainer}>
+      <View style={[styles.productCard, isOutOfStock && styles.productCardDisabled]}>
+        {/* Product Image / Tap to view details */}
+        <TouchableOpacity
+          style={styles.productImageContainer}
+          onPress={() => openDetailModal(item)}
+          activeOpacity={0.8}
+        >
           <View style={styles.productImagePlaceholder}>
             <Ionicons name="cube-outline" size={32} color="#9CA3AF" />
           </View>
@@ -352,17 +418,39 @@ export default function Products() {
               <Text style={styles.outOfStockText}>Out of Stock</Text>
             </View>
           )}
-          {item.stock_quantity > 0 && item.stock_quantity <= 5 && (
+          {isLowStock && (
             <View style={styles.lowStockBadge}>
               <Text style={styles.lowStockText}>{item.stock_quantity} left</Text>
             </View>
           )}
-        </View>
+          {/* Action buttons overlay */}
+          <View style={styles.productActionsOverlay}>
+            <TouchableOpacity
+              style={styles.productActionIcon}
+              onPress={() => openEditModal(item)}
+              data-testid={`edit-product-${item.id}`}
+            >
+              <Ionicons name="create-outline" size={16} color="#2563EB" />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.productActionIcon, styles.productActionIconDelete]}
+              onPress={() => confirmDelete(item)}
+              data-testid={`delete-product-${item.id}`}
+            >
+              <Ionicons name="trash-outline" size={16} color="#DC2626" />
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
         
         <View style={styles.productInfo}>
-          <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
+          <TouchableOpacity onPress={() => openDetailModal(item)}>
+            <Text style={styles.productName} numberOfLines={2}>{item.name}</Text>
+          </TouchableOpacity>
           {item.category_name && (
             <Text style={styles.productCategory}>{item.category_name}</Text>
+          )}
+          {item.sku && (
+            <Text style={styles.productSku}>SKU: {item.sku}</Text>
           )}
           <View style={styles.productFooter}>
             <Text style={styles.productPrice}>{formatCurrency(item.price)}</Text>
@@ -370,12 +458,13 @@ export default function Products() {
               style={[styles.addButton, isOutOfStock && styles.addButtonDisabled]}
               onPress={() => handleAddToCart(item)}
               disabled={isOutOfStock}
+              data-testid={`add-to-cart-${item.id}`}
             >
               <Ionicons name="add" size={18} color="#FFFFFF" />
             </TouchableOpacity>
           </View>
         </View>
-      </TouchableOpacity>
+      </View>
     );
   };
 
@@ -459,7 +548,8 @@ export default function Products() {
       <View style={styles.productActions}>
         <TouchableOpacity 
           style={styles.productActionBtn}
-          onPress={() => setShowAddProductModal(true)}
+          onPress={openAddModal}
+          data-testid="add-product-btn"
         >
           <Ionicons name="add-circle-outline" size={18} color="#2563EB" />
           <Text style={styles.productActionBtnText}>Add Product</Text>
@@ -467,6 +557,7 @@ export default function Products() {
         <TouchableOpacity 
           style={[styles.productActionBtn, styles.productActionBtnAlt]}
           onPress={() => setShowBulkImportModal(true)}
+          data-testid="bulk-import-btn"
         >
           <Ionicons name="cloud-upload-outline" size={18} color="#10B981" />
           <Text style={[styles.productActionBtnText, styles.productActionBtnTextAlt]}>Bulk Import</Text>
@@ -504,7 +595,7 @@ export default function Products() {
             title="Your shelves are empty!"
             message={search ? 'Try a different search term' : "Time to stock up! Add products to start selling."}
             actionLabel={!search ? "Add Product" : undefined}
-            onAction={!search ? () => setShowAddProductModal(true) : undefined}
+            onAction={!search ? openAddModal : undefined}
           />
         }
       />
@@ -703,119 +794,189 @@ export default function Products() {
         </View>
       </Modal>
 
-      {/* Quick Add Product Modal */}
-      <Modal
+      {/* Quick Add/Edit Product Modal - Using Reusable Component */}
+      <QuickAddProductModal
         visible={showAddProductModal}
-        transparent={true}
-        animationType="slide"
-        onRequestClose={() => setShowAddProductModal(false)}
+        onClose={closeProductModal}
+        onSave={handleSaveProduct}
+        categories={categories}
+        currencySymbol={settings?.currency_symbol}
+        showCostPrice={true}
+        showMinStock={true}
+        showSku={true}
+        showUnit={true}
+        showItemType={true}
+        isEditMode={isEditMode}
+        initialData={editingProduct ? {
+          name: editingProduct.name,
+          price: editingProduct.price,
+          cost_price: editingProduct.cost_price,
+          stock_quantity: editingProduct.stock_quantity,
+          min_stock: editingProduct.min_stock,
+          category_id: editingProduct.category_id,
+          unit: editingProduct.unit,
+          sku: editingProduct.sku,
+          item_type: editingProduct.item_type,
+        } : undefined}
+        appType="retailpro"
+      />
+
+      {/* Product Detail Modal */}
+      <WebModal
+        visible={showDetailModal}
+        onClose={() => setShowDetailModal(false)}
+        title={selectedProduct?.name || 'Product Details'}
+        subtitle="View product information"
+        icon="cube-outline"
+        iconColor="#2563EB"
+        maxWidth={420}
       >
-        <View style={styles.productModalOverlay}>
-          <View style={styles.productModalContent}>
-            <View style={styles.productModalHeader}>
-              <Text style={styles.productModalTitle}>Quick Add Product</Text>
-              <TouchableOpacity onPress={() => { setShowAddProductModal(false); resetProductForm(); }}>
-                <Ionicons name="close" size={24} color="#6B7280" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.productModalBanner}>
-              <Ionicons name="flash" size={16} color="#F59E0B" />
-              <Text style={styles.productModalBannerText}>Add product with minimal info. Edit details later.</Text>
-            </View>
-
-            {productFormError ? (
-              <View style={styles.productModalError}>
-                <Ionicons name="alert-circle" size={16} color="#DC2626" />
-                <Text style={styles.productModalErrorText}>{productFormError}</Text>
-              </View>
-            ) : null}
-
-            <View style={styles.productModalField}>
-              <Text style={styles.productModalLabel}>Product Name *</Text>
-              <TextInput
-                style={styles.productModalInput}
-                placeholder="e.g., Coca Cola 500ml"
-                value={newProductName}
-                onChangeText={setNewProductName}
-                placeholderTextColor="#9CA3AF"
-                autoFocus
-              />
-            </View>
-
-            <View style={styles.productModalRow}>
-              <View style={[styles.productModalField, { flex: 1 }]}>
-                <Text style={styles.productModalLabel}>Price (TSh) *</Text>
-                <TextInput
-                  style={styles.productModalInput}
-                  placeholder="0.00"
-                  value={newProductPrice}
-                  onChangeText={setNewProductPrice}
-                  keyboardType="numeric"
-                  placeholderTextColor="#9CA3AF"
-                />
-              </View>
-              <View style={[styles.productModalField, { flex: 1, marginLeft: 12 }]}>
-                <Text style={styles.productModalLabel}>Stock Qty</Text>
-                <TextInput
-                  style={styles.productModalInput}
-                  placeholder="0"
-                  value={newProductStock}
-                  onChangeText={setNewProductStock}
-                  keyboardType="numeric"
-                  placeholderTextColor="#9CA3AF"
-                />
+        {selectedProduct && (
+          <View style={styles.detailModalContent}>
+            {/* Product Image Placeholder */}
+            <View style={styles.detailImageContainer}>
+              <View style={styles.detailImagePlaceholder}>
+                <Ionicons name="cube-outline" size={64} color="#9CA3AF" />
               </View>
             </View>
 
-            {categories.length > 0 && (
-              <View style={styles.productModalField}>
-                <Text style={styles.productModalLabel}>Category</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 8 }}>
-                  <TouchableOpacity
-                    style={[styles.productModalChip, !newProductCategory && styles.productModalChipActive]}
-                    onPress={() => setNewProductCategory(null)}
-                  >
-                    <Text style={[styles.productModalChipText, !newProductCategory && styles.productModalChipTextActive]}>None</Text>
-                  </TouchableOpacity>
-                  {categories.map((cat) => (
-                    <TouchableOpacity
-                      key={cat.id}
-                      style={[styles.productModalChip, newProductCategory === cat.id && styles.productModalChipActive]}
-                      onPress={() => setNewProductCategory(cat.id)}
-                    >
-                      <Text style={[styles.productModalChipText, newProductCategory === cat.id && styles.productModalChipTextActive]}>{cat.name}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
+            {/* Product Info */}
+            <View style={styles.detailSection}>
+              <Text style={styles.detailProductName}>{selectedProduct.name}</Text>
+              {selectedProduct.sku && (
+                <Text style={styles.detailSku}>SKU: {selectedProduct.sku}</Text>
+              )}
+            </View>
 
-            <View style={styles.productModalActions}>
+            {/* Price Info */}
+            <View style={styles.detailRow}>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Selling Price</Text>
+                <Text style={styles.detailPrice}>{formatCurrency(selectedProduct.price)}</Text>
+              </View>
+              {selectedProduct.cost_price !== undefined && (
+                <View style={styles.detailItem}>
+                  <Text style={styles.detailLabel}>Cost Price</Text>
+                  <Text style={styles.detailValue}>{formatCurrency(selectedProduct.cost_price)}</Text>
+                </View>
+              )}
+            </View>
+
+            {/* Stock Info */}
+            <View style={styles.detailRow}>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Stock Quantity</Text>
+                <Text style={[
+                  styles.detailValue,
+                  selectedProduct.stock_quantity <= 0 && styles.detailValueDanger,
+                  selectedProduct.stock_quantity > 0 && selectedProduct.stock_quantity <= (selectedProduct.min_stock || 5) && styles.detailValueWarning
+                ]}>
+                  {selectedProduct.stock_quantity} {selectedProduct.unit || 'pcs'}
+                </Text>
+              </View>
+              {selectedProduct.min_stock !== undefined && (
+                <View style={styles.detailItem}>
+                  <Text style={styles.detailLabel}>Min Stock Level</Text>
+                  <Text style={styles.detailValue}>{selectedProduct.min_stock}</Text>
+                </View>
+              )}
+            </View>
+
+            {/* Category & Type */}
+            <View style={styles.detailRow}>
+              {selectedProduct.category_name && (
+                <View style={styles.detailItem}>
+                  <Text style={styles.detailLabel}>Category</Text>
+                  <View style={styles.detailBadge}>
+                    <Text style={styles.detailBadgeText}>{selectedProduct.category_name}</Text>
+                  </View>
+                </View>
+              )}
+              {selectedProduct.item_type && (
+                <View style={styles.detailItem}>
+                  <Text style={styles.detailLabel}>Type</Text>
+                  <View style={[styles.detailBadge, styles.detailBadgeBlue]}>
+                    <Text style={[styles.detailBadgeText, styles.detailBadgeTextBlue]}>
+                      {selectedProduct.item_type === 'service' ? 'Service' : 'Product'}
+                    </Text>
+                  </View>
+                </View>
+              )}
+            </View>
+
+            {/* Action Buttons */}
+            <View style={styles.detailActions}>
               <TouchableOpacity
-                style={styles.productModalCancelBtn}
-                onPress={() => { setShowAddProductModal(false); resetProductForm(); }}
+                style={styles.detailEditBtn}
+                onPress={() => {
+                  setShowDetailModal(false);
+                  openEditModal(selectedProduct);
+                }}
+                data-testid="detail-edit-btn"
               >
-                <Text style={styles.productModalCancelText}>Cancel</Text>
+                <Ionicons name="create-outline" size={18} color="#2563EB" />
+                <Text style={styles.detailEditBtnText}>Edit Product</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.productModalSaveBtn, (!newProductName.trim() || !newProductPrice) && styles.productModalSaveBtnDisabled]}
-                onPress={handleQuickAddProduct}
-                disabled={!newProductName.trim() || !newProductPrice || savingProduct}
+                style={styles.detailDeleteBtn}
+                onPress={() => {
+                  setShowDetailModal(false);
+                  confirmDelete(selectedProduct);
+                }}
+                data-testid="detail-delete-btn"
               >
-                {savingProduct ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <>
-                    <Ionicons name="checkmark" size={18} color="#FFFFFF" />
-                    <Text style={styles.productModalSaveText}>Add Product</Text>
-                  </>
-                )}
+                <Ionicons name="trash-outline" size={18} color="#DC2626" />
               </TouchableOpacity>
             </View>
           </View>
+        )}
+      </WebModal>
+
+      {/* Delete Confirmation Modal */}
+      <WebModal
+        visible={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        title="Delete Product"
+        subtitle="This action cannot be undone"
+        icon="warning-outline"
+        iconColor="#DC2626"
+        maxWidth={400}
+      >
+        <View style={styles.deleteModalContent}>
+          <View style={styles.deleteWarningIcon}>
+            <Ionicons name="alert-circle" size={48} color="#DC2626" />
+          </View>
+          <Text style={styles.deleteWarningText}>
+            Are you sure you want to delete "{deletingProduct?.name}"?
+          </Text>
+          <Text style={styles.deleteWarningSubtext}>
+            This will permanently remove this product from your inventory.
+          </Text>
+          <View style={styles.deleteActions}>
+            <TouchableOpacity
+              style={styles.deleteCancelBtn}
+              onPress={() => setShowDeleteModal(false)}
+            >
+              <Text style={styles.deleteCancelBtnText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.deleteConfirmBtn}
+              onPress={handleDeleteProduct}
+              disabled={deleting}
+              data-testid="confirm-delete-btn"
+            >
+              {deleting ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <>
+                  <Ionicons name="trash-outline" size={18} color="#FFFFFF" />
+                  <Text style={styles.deleteConfirmBtnText}>Delete</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
-      </Modal>
+      </WebModal>
 
       {/* Floating Cart Summary Bar */}
       {items.length > 0 && (
@@ -1038,7 +1199,36 @@ const styles = StyleSheet.create({
   productCategory: {
     fontSize: 11,
     color: '#6B7280',
+    marginBottom: 4,
+  },
+  productSku: {
+    fontSize: 10,
+    color: '#9CA3AF',
     marginBottom: 8,
+  },
+  // Product Card Action Overlay
+  productActionsOverlay: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    flexDirection: 'row',
+    gap: 6,
+  },
+  productActionIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  productActionIconDelete: {
+    backgroundColor: 'rgba(254,226,226,0.95)',
   },
   productFooter: {
     flexDirection: 'row',
@@ -1591,5 +1781,176 @@ const styles = StyleSheet.create({
   },
   productModalSaveBtnDisabled: {
     backgroundColor: '#9CA3AF',
+  },
+  // Product Detail Modal Styles
+  detailModalContent: {
+    paddingBottom: 20,
+  },
+  detailImageContainer: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  detailImagePlaceholder: {
+    width: 120,
+    height: 120,
+    borderRadius: 16,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  detailSection: {
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  detailProductName: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#111827',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  detailSku: {
+    fontSize: 13,
+    color: '#6B7280',
+  },
+  detailRow: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    gap: 16,
+  },
+  detailItem: {
+    flex: 1,
+  },
+  detailLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  detailPrice: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#2563EB',
+  },
+  detailValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  detailValueWarning: {
+    color: '#F59E0B',
+  },
+  detailValueDanger: {
+    color: '#DC2626',
+  },
+  detailBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  detailBadgeBlue: {
+    backgroundColor: '#EFF6FF',
+  },
+  detailBadgeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  detailBadgeTextBlue: {
+    color: '#2563EB',
+  },
+  detailActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 8,
+  },
+  detailEditBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 10,
+    backgroundColor: '#EFF6FF',
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  detailEditBtnText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#2563EB',
+  },
+  detailDeleteBtn: {
+    width: 50,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    borderRadius: 10,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  // Delete Modal Styles
+  deleteModalContent: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  deleteWarningIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#FEF2F2',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 16,
+  },
+  deleteWarningText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  deleteWarningSubtext: {
+    fontSize: 14,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  deleteActions: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  deleteCancelBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 10,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+  },
+  deleteCancelBtnText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  deleteConfirmBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    paddingVertical: 14,
+    borderRadius: 10,
+    backgroundColor: '#DC2626',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  deleteConfirmBtnText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });
