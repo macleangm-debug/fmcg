@@ -23,10 +23,13 @@ import ConfettiCannon from 'react-native-confetti-cannon';
 import { useAuthStore } from '../../src/store/authStore';
 import { useBusinessStore } from '../../src/store/businessStore';
 import { useLocationStore } from '../../src/store/locationStore';
+import { useOnboardingStore } from '../../src/store/onboardingStore';
 import { dashboardApi, retailproApi } from '../../src/api/client';
 import ProductSwitcher from '../../src/components/ProductSwitcher';
 import WebModal from '../../src/components/WebModal';
 import ConfirmationModal from '../../src/components/ConfirmationModal';
+import { QuickStartWizard } from '../../src/components/setup';
+import { JustInTimePrompt, useJustInTimePrompt } from '../../src/components/common/JustInTimePrompts';
 import { PieChart, BarChart, LineChart } from 'react-native-gifted-charts';
 import { format } from 'date-fns';
 import AdvertCarousel, { Advert } from '../../src/components/AdvertCarousel';
@@ -165,14 +168,29 @@ export default function Dashboard() {
   const { width } = useWindowDimensions();
   const isWeb = Platform.OS === 'web' && width > 768;
   const { user, logout } = useAuthStore();
-  const { formatCurrency, formatNumber } = useBusinessStore();
+  const { formatCurrency, formatNumber, business, updateBusiness } = useBusinessStore();
   const { selectedLocationId } = useLocationStore();
+  const { 
+    isNewUser, 
+    setQuickStartComplete, 
+    hasCompletedFirstSale,
+    isPromptDismissed,
+    dismissPrompt,
+    setFirstSaleComplete,
+  } = useOnboardingStore();
+  
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [viewingOrder, setViewingOrder] = useState<Order | null>(null);
+  
+  // QuickStart Wizard State
+  const [showQuickStart, setShowQuickStart] = useState(false);
+  
+  // JIT Prompt State
+  const [showFirstSalePrompt, setShowFirstSalePrompt] = useState(false);
   
   // Linked Apps State - Initialize empty, fetch from API
   const [linkedAppIds, setLinkedAppIds] = useState<string[]>([]);
@@ -552,7 +570,43 @@ export default function Dashboard() {
     fetchStats();
     fetchLinkedApps(); // Fetch linked apps on mount
     fetchAdverts(); // Fetch adverts for carousel
-  }, [selectedLocationId]);
+    
+    // Show QuickStart wizard for new users
+    if (isNewUser) {
+      setTimeout(() => {
+        setShowQuickStart(true);
+      }, 500); // Small delay for smooth UX
+    }
+  }, [selectedLocationId, isNewUser]);
+  
+  // Handle QuickStart completion
+  const handleQuickStartComplete = async (config: any) => {
+    console.log('QuickStart completed:', config);
+    
+    // Update business with quick start config
+    if (config.businessName && business) {
+      await updateBusiness({
+        ...business,
+        name: config.businessName,
+        country: config.countryCode,
+        currency: config.currency,
+        currency_symbol: config.currencySymbol,
+      });
+    }
+    
+    // Mark quick start as complete
+    setQuickStartComplete();
+    setShowQuickStart(false);
+    
+    // If user chose to add sample products, navigate to products
+    if (config.addSampleProducts) {
+      // Could trigger sample product creation here
+      console.log('User wants sample products');
+    }
+    
+    // Refresh stats
+    fetchStats();
+  };
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -1794,6 +1848,35 @@ export default function Dashboard() {
     <SafeAreaView style={styles.container} edges={isWeb ? ['bottom'] : ['top', 'bottom']}>
       {/* Render different dashboards based on platform */}
       {isWeb ? <WebDashboard /> : <MobileDashboard />}
+      
+      {/* QuickStart Wizard for New Users */}
+      <QuickStartWizard
+        visible={showQuickStart}
+        onClose={() => {
+          setShowQuickStart(false);
+          setQuickStartComplete();
+        }}
+        onComplete={handleQuickStartComplete}
+        isNewBusiness={!business?.name}
+      />
+      
+      {/* Just-in-Time Prompt: First Sale Complete */}
+      {showFirstSalePrompt && !isPromptDismissed('first_sale_complete') && (
+        <View style={{ position: 'absolute', top: 80, left: 0, right: 0, zIndex: 1000 }}>
+          <JustInTimePrompt
+            promptType="first_sale_complete"
+            onPrimaryAction={() => {
+              router.push('/admin/settings');
+              setShowFirstSalePrompt(false);
+            }}
+            onSecondaryAction={() => setShowFirstSalePrompt(false)}
+            onDismiss={() => {
+              dismissPrompt('first_sale_complete');
+              setShowFirstSalePrompt(false);
+            }}
+          />
+        </View>
+      )}
 
       {/* Logout Confirmation Modal */}
       <ConfirmationModal

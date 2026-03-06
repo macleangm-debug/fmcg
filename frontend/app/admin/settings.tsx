@@ -34,6 +34,8 @@ import PrinterSettings from '../../src/components/PrinterSettings';
 import OfflineIndicator from '../../src/components/OfflineIndicator';
 import OfflineSettings from '../../src/components/admin/settings/OfflineSettings';
 import SimpleSettingsView from '../../src/components/admin/settings/SimpleSettingsView';
+import { QRCodeSettingsModal } from '../../src/components/settings';
+import type { QRCodeSettings } from '../../src/components/settings';
 import syncService from '../../src/services/syncService';
 
 // Country data with codes and cities
@@ -374,6 +376,15 @@ export default function Settings() {
   const [showCityModal, setShowCityModal] = useState(false);
   const [showCurrencyModal, setShowCurrencyModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // QR Code Settings
+  const [showQRSettings, setShowQRSettings] = useState(false);
+  const [qrCodeSettings, setQRCodeSettings] = useState<QRCodeSettings>({
+    enabled: true,
+    linkType: 'whatsapp',
+    customUrl: '',
+    showOnReceipt: true,
+  });
 
   // Success modal
   const [showSuccessModal, setShowSuccessModal] = useState<{ visible: boolean; tab: string }>({ visible: false, tab: '' });
@@ -1634,6 +1645,24 @@ export default function Settings() {
                   numberOfLines={2}
                   leftIcon={<Ionicons name="receipt-outline" size={20} color="#6B7280" />}
                 />
+                
+                {/* QR Code Settings Button */}
+                <TouchableOpacity
+                  style={styles.settingsOptionRow}
+                  onPress={() => setShowQRSettings(true)}
+                  data-testid="qr-code-settings-btn-mobile"
+                >
+                  <View style={[styles.settingsOptionIcon, { backgroundColor: '#EDE9FE' }]}>
+                    <Ionicons name="qr-code-outline" size={20} color="#7C3AED" />
+                  </View>
+                  <View style={styles.settingsOptionContent}>
+                    <Text style={styles.settingsOptionTitle}>Receipt QR Code</Text>
+                    <Text style={styles.settingsOptionSubtitle}>
+                      {qrCodeSettings.enabled ? `Links to ${qrCodeSettings.linkType}` : 'Disabled'}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+                </TouchableOpacity>
               </View>
 
               <View style={styles.infoCard}>
@@ -3079,6 +3108,24 @@ export default function Settings() {
                     numberOfLines={2}
                     leftIcon={<Ionicons name="receipt-outline" size={20} color="#6B7280" />}
                   />
+                  
+                  {/* QR Code Settings Button */}
+                  <TouchableOpacity
+                    style={styles.settingsOptionRow}
+                    onPress={() => setShowQRSettings(true)}
+                    data-testid="qr-code-settings-btn"
+                  >
+                    <View style={[styles.settingsOptionIcon, { backgroundColor: '#EDE9FE' }]}>
+                      <Ionicons name="qr-code-outline" size={20} color="#7C3AED" />
+                    </View>
+                    <View style={styles.settingsOptionContent}>
+                      <Text style={styles.settingsOptionTitle}>Receipt QR Code</Text>
+                      <Text style={styles.settingsOptionSubtitle}>
+                        {qrCodeSettings.enabled ? `Links to ${qrCodeSettings.linkType}` : 'Disabled'}
+                      </Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+                  </TouchableOpacity>
                 </View>
 
                 <View style={styles.infoCard}>
@@ -4526,6 +4573,19 @@ export default function Settings() {
           </View>
         </View>
       </Modal>
+      
+      {/* QR Code Settings Modal */}
+      <QRCodeSettingsModal
+        visible={showQRSettings}
+        onClose={() => setShowQRSettings(false)}
+        settings={qrCodeSettings}
+        onSave={(newSettings) => {
+          setQRCodeSettings(newSettings);
+          // Save to business settings
+          // TODO: Persist to backend
+        }}
+        businessPhone={business?.phone}
+      />
         </>
       )}
     </SafeAreaView>
@@ -6986,5 +7046,36 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     marginLeft: 8,
+  },
+  // Settings Option Row styles
+  settingsOptionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 4,
+    borderTopWidth: 1,
+    borderTopColor: '#F3F4F6',
+    marginTop: 16,
+  },
+  settingsOptionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  settingsOptionContent: {
+    flex: 1,
+  },
+  settingsOptionTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 2,
+  },
+  settingsOptionSubtitle: {
+    fontSize: 13,
+    color: '#6B7280',
   },
 });

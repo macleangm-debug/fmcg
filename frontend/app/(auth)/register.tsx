@@ -29,6 +29,7 @@ import axios from 'axios';
 import Constants from 'expo-constants';
 import Input from '../../src/components/Input';
 import { useAuthStore } from '../../src/store/authStore';
+import { useOnboardingStore } from '../../src/store/onboardingStore';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -48,6 +49,7 @@ export default function Register() {
   const isLargeScreen = width > 768;
   const isMobile = !isWeb || width < 768;
   const { register, socialLogin, isLoading, error, clearError } = useAuthStore();
+  const { setIsNewUser } = useOnboardingStore();
   
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -219,6 +221,9 @@ export default function Register() {
   };
 
   const handleSuccessfulAuth = () => {
+    // Mark as new user for QuickStartWizard
+    setIsNewUser(true);
+    
     // Web users go back to landing page, mobile users go to mobile home
     if (isWeb) {
       router.replace('/landing');

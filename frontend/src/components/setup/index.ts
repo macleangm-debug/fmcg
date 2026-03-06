@@ -1,10 +1,6 @@
 export { default as QuickStartWizard } from './QuickStartWizard';
 export type { QuickStartConfig } from './QuickStartWizard';
 
-export { default as JustInTimePrompt } from './JustInTimePrompt';
-export { 
-  shouldShowPrompt, 
-  markPromptAsShown, 
-  resetAllPrompts,
-  type JITPromptType,
-} from './JustInTimePrompt';
+// Re-export from common for consistency
+export { JustInTimePrompt, useJustInTimePrompt, hasPromptBeenShown } from '../common/JustInTimePrompts';
+export type { PromptType } from '../common/JustInTimePrompts';
