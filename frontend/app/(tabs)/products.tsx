@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -110,8 +110,52 @@ export default function Products() {
   // Bulk Import modal
   const [showBulkImportModal, setShowBulkImportModal] = useState(false);
   
+  // Product Filters
+  const [itemTypeFilter, setItemTypeFilter] = useState<'all' | 'product' | 'service'>('all');
+  const [stockStatusFilter, setStockStatusFilter] = useState<'all' | 'active' | 'low_stock' | 'out_of_stock'>('all');
+  
   // Just-in-time prompts
   const { activePrompt, isVisible: showJitPrompt, showPrompt, hidePrompt } = useJustInTimePrompt();
+
+  // Filter products based on item type and stock status
+  const filteredProducts = useMemo(() => {
+    let result = products;
+    
+    // Filter by item type
+    if (itemTypeFilter !== 'all') {
+      result = result.filter(p => {
+        const itemType = p.item_type || 'product'; // Default to product if not set
+        return itemType === itemTypeFilter;
+      });
+    }
+    
+    // Filter by stock status (only for products, not services)
+    if (stockStatusFilter !== 'all') {
+      result = result.filter(p => {
+        const isService = p.item_type === 'service';
+        // Services are always "active" - they don't have stock
+        if (isService) {
+          return stockStatusFilter === 'active';
+        }
+        
+        const minStock = p.min_stock || 5;
+        const stock = p.stock_quantity || 0;
+        
+        switch (stockStatusFilter) {
+          case 'active':
+            return stock > minStock;
+          case 'low_stock':
+            return stock > 0 && stock <= minStock;
+          case 'out_of_stock':
+            return stock <= 0;
+          default:
+            return true;
+        }
+      });
+    }
+    
+    return result;
+  }, [products, itemTypeFilter, stockStatusFilter]);
 
   // Load products helper
   const loadProducts = useCallback(() => {
@@ -575,8 +619,80 @@ export default function Products() {
         />
       </View>
 
+      {/* Filter Chips - Row 1: Item Type */}
+      <View style={styles.filterSection}>
+        <View style={styles.filterRow}>
+          <Text style={styles.filterLabel}>Type:</Text>
+          <View style={styles.filterChips}>
+            <TouchableOpacity
+              style={[styles.filterChip, itemTypeFilter === 'all' && styles.filterChipActive]}
+              onPress={() => setItemTypeFilter('all')}
+              data-testid="filter-type-all"
+            >
+              <Text style={[styles.filterChipText, itemTypeFilter === 'all' && styles.filterChipTextActive]}>All</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.filterChip, itemTypeFilter === 'product' && styles.filterChipActive]}
+              onPress={() => setItemTypeFilter('product')}
+              data-testid="filter-type-product"
+            >
+              <Ionicons name="cube-outline" size={14} color={itemTypeFilter === 'product' ? '#FFFFFF' : '#6B7280'} />
+              <Text style={[styles.filterChipText, itemTypeFilter === 'product' && styles.filterChipTextActive]}>Products</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.filterChip, itemTypeFilter === 'service' && styles.filterChipActive]}
+              onPress={() => setItemTypeFilter('service')}
+              data-testid="filter-type-service"
+            >
+              <Ionicons name="construct-outline" size={14} color={itemTypeFilter === 'service' ? '#FFFFFF' : '#6B7280'} />
+              <Text style={[styles.filterChipText, itemTypeFilter === 'service' && styles.filterChipTextActive]}>Services</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Filter Chips - Row 2: Stock Status (only show for non-service filter) */}
+        {itemTypeFilter !== 'service' && (
+          <View style={styles.filterRow}>
+            <Text style={styles.filterLabel}>Stock:</Text>
+            <View style={styles.filterChips}>
+              <TouchableOpacity
+                style={[styles.filterChip, stockStatusFilter === 'all' && styles.filterChipActive]}
+                onPress={() => setStockStatusFilter('all')}
+                data-testid="filter-stock-all"
+              >
+                <Text style={[styles.filterChipText, stockStatusFilter === 'all' && styles.filterChipTextActive]}>All</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.filterChip, styles.filterChipGreen, stockStatusFilter === 'active' && styles.filterChipActiveGreen]}
+                onPress={() => setStockStatusFilter('active')}
+                data-testid="filter-stock-active"
+              >
+                <Ionicons name="checkmark-circle-outline" size={14} color={stockStatusFilter === 'active' ? '#FFFFFF' : '#059669'} />
+                <Text style={[styles.filterChipText, styles.filterChipTextGreen, stockStatusFilter === 'active' && styles.filterChipTextActive]}>Active</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.filterChip, styles.filterChipYellow, stockStatusFilter === 'low_stock' && styles.filterChipActiveYellow]}
+                onPress={() => setStockStatusFilter('low_stock')}
+                data-testid="filter-stock-low"
+              >
+                <Ionicons name="alert-circle-outline" size={14} color={stockStatusFilter === 'low_stock' ? '#FFFFFF' : '#D97706'} />
+                <Text style={[styles.filterChipText, styles.filterChipTextYellow, stockStatusFilter === 'low_stock' && styles.filterChipTextActive]}>Low Stock</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.filterChip, styles.filterChipRed, stockStatusFilter === 'out_of_stock' && styles.filterChipActiveRed]}
+                onPress={() => setStockStatusFilter('out_of_stock')}
+                data-testid="filter-stock-out"
+              >
+                <Ionicons name="close-circle-outline" size={14} color={stockStatusFilter === 'out_of_stock' ? '#FFFFFF' : '#DC2626'} />
+                <Text style={[styles.filterChipText, styles.filterChipTextRed, stockStatusFilter === 'out_of_stock' && styles.filterChipTextActive]}>Out of Stock</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+      </View>
+
       <FlatList
-        data={products}
+        data={filteredProducts}
         renderItem={renderProduct}
         keyExtractor={(item) => item.id}
         numColumns={2}
@@ -592,10 +708,16 @@ export default function Products() {
         ListEmptyComponent={
           <EmptyState
             icon="cube-outline"
-            title="Your shelves are empty!"
-            message={search ? 'Try a different search term' : "Time to stock up! Add products to start selling."}
-            actionLabel={!search ? "Add Product" : undefined}
-            onAction={!search ? openAddModal : undefined}
+            title={itemTypeFilter !== 'all' || stockStatusFilter !== 'all' 
+              ? "No products match your filters" 
+              : "Your shelves are empty!"}
+            message={search 
+              ? 'Try a different search term' 
+              : itemTypeFilter !== 'all' || stockStatusFilter !== 'all'
+                ? 'Try adjusting your filters to see more products.'
+                : "Time to stock up! Add products to start selling."}
+            actionLabel={!search && itemTypeFilter === 'all' && stockStatusFilter === 'all' ? "Add Product" : undefined}
+            onAction={!search && itemTypeFilter === 'all' && stockStatusFilter === 'all' ? openAddModal : undefined}
           />
         }
       />
@@ -1123,6 +1245,85 @@ const styles = StyleSheet.create({
   },
   categoryChipTextActive: {
     color: '#FFFFFF',
+  },
+  // Filter Section Styles
+  filterSection: {
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    gap: 8,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  filterLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#6B7280',
+    minWidth: 40,
+  },
+  filterChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    gap: 4,
+  },
+  filterChipActive: {
+    backgroundColor: '#2563EB',
+    borderColor: '#2563EB',
+  },
+  filterChipText: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#6B7280',
+  },
+  filterChipTextActive: {
+    color: '#FFFFFF',
+  },
+  // Colored filter chips
+  filterChipGreen: {
+    borderColor: '#A7F3D0',
+    backgroundColor: '#ECFDF5',
+  },
+  filterChipActiveGreen: {
+    backgroundColor: '#059669',
+    borderColor: '#059669',
+  },
+  filterChipTextGreen: {
+    color: '#059669',
+  },
+  filterChipYellow: {
+    borderColor: '#FDE68A',
+    backgroundColor: '#FFFBEB',
+  },
+  filterChipActiveYellow: {
+    backgroundColor: '#D97706',
+    borderColor: '#D97706',
+  },
+  filterChipTextYellow: {
+    color: '#D97706',
+  },
+  filterChipRed: {
+    borderColor: '#FECACA',
+    backgroundColor: '#FEF2F2',
+  },
+  filterChipActiveRed: {
+    backgroundColor: '#DC2626',
+    borderColor: '#DC2626',
+  },
+  filterChipTextRed: {
+    color: '#DC2626',
   },
   productsList: {
     paddingHorizontal: 16,

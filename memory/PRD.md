@@ -22,6 +22,11 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
     - Added Product Detail Modal showing all product information
     - Added Delete Confirmation Modal with proper UX
   - **New Fields Visible**: cost_price, SKU, min_stock, unit, item_type (Product/Service)
+- ✅ **Product Filters Implemented** - Two rows of horizontal filter chips
+  - **Type Filter Row**: All | Products | Services (with icons)
+  - **Stock Filter Row**: All | Active | Low Stock | Out of Stock (with colored badges)
+  - Services are excluded from stock-based filtering (they don't have inventory)
+  - Low Stock threshold uses each product's individual `min_stock` value
 - ✅ **QuickAddProductModal Edit Mode** - `/app/frontend/src/components/products/QuickAddProductModal.tsx`
   - Added `useEffect` to populate form when `initialData` is provided
   - Dynamic title/button text for Add vs Edit mode
@@ -525,6 +530,47 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 
 ---
 
+## Stock Tracking Architecture (RetailPro ↔ Inventory)
+
+### Standalone Product Behavior
+Each product operates independently by default:
+
+**RetailPro (Standalone)**
+- Tracks: `products.stock_quantity`, `products.min_stock`
+- POS Sale → reduces `product.stock_quantity` → checks `min_stock` → shows low stock warning
+- Services (`item_type = 'service'`) → no stock tracking
+
+**Inventory (Standalone)**
+- Tracks: `inventory_items.quantity`, `inventory_movements`
+- Supports: suppliers, receiving, purchase orders
+- More advanced stock management
+
+### Linked Product Behavior
+When merchant explicitly links RetailPro + Inventory:
+
+**Collection**: `product_inventory_links`
+```javascript
+{
+  business_id: ObjectId,
+  pos_product_id: ObjectId,      // RetailPro product
+  inventory_item_id: ObjectId,   // Inventory item
+  sync_stock: boolean,
+  sync_price: boolean,           // optional, future
+  linked_at: Date
+}
+```
+
+**Behavior When Linked**:
+- POS sale checks if product is linked
+- If linked → reduce `inventory_items.quantity` + create `inventory_movements` record
+- If not linked → only reduce `products.stock_quantity` (RetailPro internal)
+- RetailPro displays stock from Inventory for linked items
+
+### Key Principle
+RetailPro must NOT force merchants to use Inventory. Linking is optional and enhances functionality when merchants choose it.
+
+---
+
 ## Testing Credentials
 - **Admin User**: admin@fmcg.com / Admin@2025
 - **Demo User**: demo@fmcg.com / Demo@2025
@@ -533,6 +579,7 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 ---
 
 ## Test Reports
+- `/app/test_reports/iteration_27.json` - **RetailPro Products Alignment (Mar 6, 2026)** - Product CRUD complete, filters implemented, edit/delete working (12/12 backend pass, frontend verified)
 - `/app/test_reports/iteration_25.json` - **P1 Features Implementation (Mar 6, 2026)** - QuickStartWizard integration, QRCodeSettingsModal, OnboardingStore enhancements (100% pass)
 - `/app/test_reports/iteration_24.json` - **Print Preview & Progressive Setup (Mar 6, 2026)** - Print CSS injection, QuickStartWizard, JustInTimePrompt, WebModal responsive (100% pass)
 - `/app/test_reports/iteration_23.json` - **Receipt Modal Bug Fix (Mar 6, 2026)** - Fixed clearCart() timing issue, receipt modal now displays after sale (Code review 100% pass)
