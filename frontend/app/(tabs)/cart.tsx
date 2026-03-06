@@ -39,6 +39,10 @@ import {
   useJustInTimePrompt, 
   hasPromptBeenShown 
 } from '../../src/components/common/JustInTimePrompts';
+import ReceiptModal from '../../src/components/receipt/ReceiptModal';
+import { ReceiptData as ThermalReceiptData } from '../../src/components/receipt/ThermalReceipt';
+import SalePaymentModal from '../../src/components/checkout/SalePaymentModal';
+import { getPaymentConfigForCountry } from '../../src/config/paymentConfig';
 
 const isWeb = Platform.OS === 'web';
 
@@ -195,6 +199,13 @@ export default function Cart() {
 
   // Bulk Import modal state
   const [showBulkImportModal, setShowBulkImportModal] = useState(false);
+
+  // Receipt Modal state
+  const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [receiptData, setReceiptData] = useState<ThermalReceiptData | null>(null);
+  
+  // Payment Modal state
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   // Barcode scanner state - using global modal context
   const { openBarcodeScanner } = useModal();
@@ -772,8 +783,20 @@ export default function Cart() {
       console.log('Could not fetch customer details, proceeding with checkout');
     }
     
-    // Show confirmation modal
-    setShowConfirmModal(true);
+    // Show payment modal (new flow)
+    setShowPaymentModal(true);
+  };
+
+  // Handle payment confirmation from new SalePaymentModal
+  const handlePaymentConfirm = async (selectedPaymentMethod: string, paymentDetails?: any) => {
+    setShowPaymentModal(false);
+    setPaymentMethod(selectedPaymentMethod as PaymentMethod);
+    
+    // Store payment details for receipt
+    const paymentInfo = paymentDetails || {};
+    
+    // Process the checkout
+    await processCheckoutWithPayment(selectedPaymentMethod, paymentInfo);
   };
 
   const handleSkipProfile = () => {
@@ -804,6 +827,204 @@ export default function Cart() {
   };
 
   const processCheckout = async () => {
+    setShowConfirmModal(false);
+    await processCheckoutWithPayment(paymentMethod, {});
+  };
+
+  // New checkout processor that handles payment and shows receipt
+  const processCheckoutWithPayment = async (selectedPaymentMethod: string, paymentInfo: any) => {
+    setProcessing(true);
+
+    // Build payments array - either split payments or single payment
+    const payments = splitPaymentMode && splitPayments.length > 0
+      ? splitPayments.map(sp => ({
+          method: sp.method,
+          amount: sp.amount,
+        }))
+      : [{
+          method: selectedPaymentMethod,
+          amount: total,
+        }];
+
+    const orderData = {
+      customer_id: customer_id,
+      items: items.map((item) => ({
+        product_id: item.product_id,
+        product_name: item.product_name,
+        quantity: item.quantity,
+        unit_price: item.unit_price,
+        discount: item.discount,
+        tax_amount: item.tax_amount,
+        subtotal: item.subtotal,
+      })),
+      payments,
+      discount_total: promoDiscount,
+      tax_total: tax,
+      subtotal: subtotal,
+      total: total,
+      notes: promotionResult?.applied_promotions?.length 
+        ? `Promotions applied: ${promotionResult.applied_promotions.map(p => p.name).join(', ')}`
+        : undefined,
+    };
+
+    try {
+      let orderNumber: string;
+      let isOfflineOrder = false;
+      
+      // Check if online or offline
+      if (isOnline) {
+        // Online - process normally
+        const response = await ordersApi.create(orderData);
+        orderNumber = response.data.order_number;
+      } else if (offlineModeEnabled) {
+        // Offline mode - queue for later sync using both stores for redundancy
+        isOfflineOrder = true;
+        orderNumber = `OFF-${Date.now().toString(36).toUpperCase()}`;
+        
+        // Add to legacy pending transactions
+        addPendingTransaction({
+          type: 'sale',
+          data: {
+            ...orderData,
+            offline_order_number: orderNumber,
+            created_at: new Date().toISOString(),
+          },
+        });
+        
+        // Also queue in new OfflineDB for better persistence
+        try {
+          const { queueMutation } = await import('../../src/services/OfflineDB');
+          await queueMutation('order', 'create', {
+            ...orderData,
+            offline_order_number: orderNumber,
+            created_at: new Date().toISOString(),
+          });
+          console.log('Order queued in OfflineDB:', orderNumber);
+        } catch (dbError) {
+          console.log('OfflineDB queue failed, using legacy store:', dbError);
+        }
+      } else {
+        throw new Error('You are offline. Please check your internet connection.');
+      }
+      
+      // Create receipt data for the new thermal receipt modal
+      const now = new Date();
+      const thermalReceiptData: ThermalReceiptData = {
+        businessName: settings.name || 'RetailPro',
+        businessAddress: settings.address,
+        businessPhone: settings.phone,
+        businessEmail: settings.email,
+        receiptNumber: orderNumber,
+        date: now.toLocaleDateString(),
+        time: now.toLocaleTimeString(),
+        cashierName: user?.name || 'Staff',
+        items: items.map(item => ({
+          name: item.product_name,
+          quantity: item.quantity,
+          unitPrice: item.unit_price,
+          total: item.subtotal,
+          discount: item.discount,
+        })),
+        subtotal: subtotal,
+        taxTotal: tax,
+        taxRate: 18, // Default tax rate - should come from settings
+        discount: promoDiscount,
+        grandTotal: total,
+        paymentMethod: getPaymentMethodDisplayName(selectedPaymentMethod, paymentInfo),
+        paymentDetails: paymentInfo?.provider || undefined,
+        amountPaid: paymentInfo?.amountReceived || total,
+        change: paymentInfo?.change || 0,
+        customerName: customer_name || undefined,
+        qrCodeData: `order:${orderNumber}`,
+        thankYouMessage: settings.footer_message || 'Thank you for your business!',
+        currency: settings.currency || 'TZS',
+        currencySymbol: settings.currencySymbol || 'TSh',
+      };
+      
+      // Print receipt if printer is configured
+      try {
+        const printerConfig = printerService.getConfig();
+        if (printerConfig?.enabled) {
+          const printReceiptData: ReceiptData = {
+            businessName: settings.name || 'Retail Pro',
+            businessAddress: settings.address,
+            businessPhone: settings.phone,
+            taxId: '',
+            receiptNumber: orderNumber,
+            date: now.toLocaleDateString(),
+            time: now.toLocaleTimeString(),
+            cashier: user?.name || 'Staff',
+            items: items.map(item => ({
+              name: item.product_name,
+              quantity: item.quantity,
+              unitPrice: item.unit_price,
+              total: item.subtotal,
+              discount: item.discount,
+            })),
+            subtotal: subtotal,
+            taxTotal: tax,
+            discount: promoDiscount,
+            grandTotal: total,
+            paymentMethod: selectedPaymentMethod,
+            amountPaid: total,
+            change: 0,
+            customerName: customer_name || undefined,
+          };
+          
+          await printerService.printReceipt(printReceiptData, settings.currency || 'TZS');
+        }
+      } catch (printError) {
+        console.log('Receipt printing failed:', printError);
+        // Don't fail the order if printing fails
+      }
+      
+      // Store items before clearing for receipt
+      const orderItems = [...items];
+      
+      clearCart();
+      setPromotionResult(null);
+      
+      // Store the order total for the referral popup
+      setLastOrderTotal(total);
+      
+      // Set receipt data and show the receipt modal (new flow)
+      setReceiptData(thermalReceiptData);
+      setShowReceiptModal(true);
+      
+      // Update sale count and trigger JIT prompts
+      const newSaleCount = saleCount + 1;
+      setSaleCount(newSaleCount);
+      
+      // Show first sale prompt after first successful sale
+      if (newSaleCount === 1) {
+        setTimeout(() => {
+          showPrompt('first_sale_complete', {
+            onSetup: () => router.push('/admin/settings?tab=pos'),
+          });
+        }, 1500);
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.message || error.response?.data?.detail || 'Failed to create order');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  // Helper to get payment method display name
+  const getPaymentMethodDisplayName = (method: string, paymentInfo: any): string => {
+    const methodNames: Record<string, string> = {
+      cash: 'Cash',
+      card: 'Card',
+      mobile_money: paymentInfo?.provider ? `Mobile Money (${paymentInfo.provider})` : 'Mobile Money',
+      bank_transfer: 'Bank Transfer',
+      credit: 'Credit',
+      kwikpay: 'KwikPay',
+    };
+    return methodNames[method] || method;
+  };
+
+  // Legacy processCheckout kept for backward compatibility with confirmation modal
+  const processCheckoutLegacy = async () => {
     setShowConfirmModal(false);
     setProcessing(true);
 
@@ -2164,6 +2385,43 @@ export default function Cart() {
           </View>
         </View>
       </Modal>
+
+      {/* New Payment Modal with country-based payment methods */}
+      {showPaymentModal && (
+        <SalePaymentModal
+          visible={showPaymentModal}
+          onClose={() => setShowPaymentModal(false)}
+          onConfirm={handlePaymentConfirm}
+          items={items.map(item => ({
+            name: item.product_name,
+            quantity: item.quantity,
+            unitPrice: item.unit_price,
+            total: item.subtotal,
+          }))}
+          subtotal={subtotal}
+          tax={tax}
+          discount={promoDiscount}
+          total={total}
+          customerName={customer_name || undefined}
+          countryCode="TZ"
+          currencySymbol={settings.currencySymbol || 'TSh'}
+          formatCurrency={(amount) => formatCurrency(amount)}
+          isProcessing={processing}
+          isOnline={isOnline}
+          kwikPayEnabled={false}
+        />
+      )}
+
+      {/* Receipt Modal with thermal receipt preview and sharing */}
+      <ReceiptModal
+        visible={showReceiptModal}
+        onClose={() => setShowReceiptModal(false)}
+        receiptData={receiptData}
+        onNewSale={() => {
+          setShowReceiptModal(false);
+          // Reset for new sale
+        }}
+      />
 
       {/* Confirm Sale Modal */}
       <Modal
