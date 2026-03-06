@@ -49,6 +49,30 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 - ✅ **Testing Agent Validation** - iteration_25.json (100% frontend pass)
 - ✅ **Bug Fixed** - Added missing QR Code option to web view of RetailPro settings tab
 
+### March 6, 2026 (Session 2) - INVENTORY MODULE SPRINT 1 ✅
+- ✅ **Module Gating** - Added `require_inventory_module()` helper in `/app/backend/routes/inventory.py`
+  - Checks linked_apps in user_preferences and subscriptions
+  - Backward compatibility fallback for existing businesses
+- ✅ **Suppliers CRUD Backend** - Full API implementation (all 17 tests pass)
+  - `GET /api/inventory/suppliers` - List with search & status filter
+  - `POST /api/inventory/suppliers` - Create with validation, duplicate check
+  - `GET /api/inventory/suppliers/{id}` - Get single supplier with items count
+  - `PUT /api/inventory/suppliers/{id}` - Update with duplicate name check
+  - `DELETE /api/inventory/suppliers/{id}` - Delete with auto-unlink items
+  - `GET /api/inventory/suppliers/{id}/items` - Get items by supplier
+- ✅ **Suppliers Frontend** - `/app/frontend/app/inventory/suppliers.tsx`
+  - List view with search, card layout
+  - Add/Edit modal with full form fields
+  - Detail modal with contact info, address, business info
+  - Delete confirmation with items unlink warning
+  - Consistent with RetailPro design language (green accent)
+- ✅ **QuickAddProductModal Enhanced** - `/app/frontend/src/components/products/QuickAddProductModal.tsx`
+  - Added `showItemType` prop with configurable options
+  - RetailPro: Product/Service | Inventory: Product/Raw Material
+  - Added `suppliers` prop for supplier dropdown selection
+  - Added `supplier_id` to ProductData interface
+- ✅ **Testing Agent Validation** - iteration_26.json (17/17 backend tests pass)
+
 ### March 6, 2026 - RETAILPRO GO-LIVE PREPARATION ✅
 - ✅ **Country-Based Payment Configuration** - Created `/app/frontend/src/config/paymentConfig.ts`
   - 20+ countries with payment methods (Cash, Card, Mobile Money, Bank Transfer, Credit)
