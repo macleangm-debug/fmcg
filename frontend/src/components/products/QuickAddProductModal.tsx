@@ -31,6 +31,14 @@ interface QuickAddProductModalProps {
   showSupplier?: boolean;
   showLocation?: boolean;
   showUnit?: boolean;
+  showSku?: boolean;
+  // Item type configuration
+  showItemType?: boolean;
+  itemTypeLabel?: string;
+  itemTypeOptions?: Array<{ label: string; value: string }>;
+  defaultItemType?: string;
+  // Supplier selection
+  suppliers?: Array<{ id: string; name: string }>;
   // Customization
   title?: string;
   saveButtonText?: string;
@@ -48,11 +56,28 @@ export interface ProductData {
   category_id?: string | null;
   unit?: string;
   supplier?: string;
+  supplier_id?: string | null;
   location?: string;
   sku?: string;
+  item_type?: string;
+}
+
+interface ItemTypeOption {
+  label: string;
+  value: string;
 }
 
 const UNITS = ['pcs', 'kg', 'g', 'L', 'mL', 'box', 'pack', 'carton', 'dozen'];
+
+const DEFAULT_RETAILPRO_TYPES: ItemTypeOption[] = [
+  { label: 'Product', value: 'product' },
+  { label: 'Service', value: 'service' },
+];
+
+const DEFAULT_INVENTORY_TYPES: ItemTypeOption[] = [
+  { label: 'Product', value: 'product' },
+  { label: 'Raw Material', value: 'raw_material' },
+];
 
 const QuickAddProductModal: React.FC<QuickAddProductModalProps> = ({
   visible,
@@ -65,6 +90,12 @@ const QuickAddProductModal: React.FC<QuickAddProductModalProps> = ({
   showSupplier = false,
   showLocation = false,
   showUnit = false,
+  showSku = false,
+  showItemType = false,
+  itemTypeLabel = 'Item Type',
+  itemTypeOptions,
+  defaultItemType = 'product',
+  suppliers = [],
   title = 'Quick Add Product',
   saveButtonText = 'Add Product',
   successCallback,
@@ -73,6 +104,9 @@ const QuickAddProductModal: React.FC<QuickAddProductModalProps> = ({
   const { width } = useWindowDimensions();
   const isMobile = Platform.OS !== 'web' || width < 768;
   const { formatCurrency, business } = useBusinessStore();
+  
+  // Get the appropriate type options
+  const typeOptions = itemTypeOptions || (appType === 'inventory' ? DEFAULT_INVENTORY_TYPES : DEFAULT_RETAILPRO_TYPES);
   
   // Form state
   const [name, setName] = useState('');
@@ -83,13 +117,16 @@ const QuickAddProductModal: React.FC<QuickAddProductModalProps> = ({
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [unit, setUnit] = useState('pcs');
   const [supplier, setSupplier] = useState('');
+  const [supplierId, setSupplierId] = useState<string | null>(null);
   const [location, setLocation] = useState('');
   const [sku, setSku] = useState('');
+  const [itemType, setItemType] = useState(defaultItemType);
   
   // UI state
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [showUnitPicker, setShowUnitPicker] = useState(false);
+  const [showSupplierPicker, setShowSupplierPicker] = useState(false);
   
   const currency = currencySymbol || business?.currency_symbol || 'TSh';
   
@@ -109,8 +146,10 @@ const QuickAddProductModal: React.FC<QuickAddProductModalProps> = ({
     setCategoryId(null);
     setUnit('pcs');
     setSupplier('');
+    setSupplierId(null);
     setLocation('');
     setSku('');
+    setItemType(defaultItemType);
     setError('');
   };
   
@@ -156,14 +195,26 @@ const QuickAddProductModal: React.FC<QuickAddProductModalProps> = ({
       if (showUnit) {
         productData.unit = unit;
       }
-      if (showSupplier && supplier.trim()) {
-        productData.supplier = supplier.trim();
+      if (showSupplier) {
+        if (supplierId) {
+          productData.supplier_id = supplierId;
+          // Get supplier name from selection
+          const selectedSupplier = suppliers.find(s => s.id === supplierId);
+          if (selectedSupplier) {
+            productData.supplier = selectedSupplier.name;
+          }
+        } else if (supplier.trim()) {
+          productData.supplier = supplier.trim();
+        }
       }
       if (showLocation && location.trim()) {
         productData.location = location.trim();
       }
-      if (sku.trim()) {
+      if ((showSku || appType === 'inventory') && sku.trim()) {
         productData.sku = sku.trim();
+      }
+      if (showItemType) {
+        productData.item_type = itemType;
       }
       
       await onSave(productData);
@@ -245,6 +296,33 @@ const QuickAddProductModal: React.FC<QuickAddProductModalProps> = ({
               placeholderTextColor="#9CA3AF"
               autoCapitalize="characters"
             />
+          </View>
+        )}
+        
+        {/* Item Type Selection */}
+        {showItemType && (
+          <View style={styles.field}>
+            <Text style={styles.label}>{itemTypeLabel}</Text>
+            <View style={styles.typeRow}>
+              {typeOptions.map((opt) => (
+                <TouchableOpacity
+                  key={opt.value}
+                  style={[
+                    styles.typeBtn,
+                    itemType === opt.value && styles.typeBtnActive,
+                    itemType === opt.value && isInventoryMode && styles.typeBtnActiveInventory,
+                  ]}
+                  onPress={() => setItemType(opt.value)}
+                >
+                  <Text style={[
+                    styles.typeBtnText,
+                    itemType === opt.value && styles.typeBtnTextActive,
+                  ]}>
+                    {opt.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         )}
         
@@ -377,13 +455,61 @@ const QuickAddProductModal: React.FC<QuickAddProductModalProps> = ({
         {showSupplier && (
           <View style={styles.field}>
             <Text style={styles.label}>Supplier</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="e.g., ABC Distributors"
-              value={supplier}
-              onChangeText={setSupplier}
-              placeholderTextColor="#9CA3AF"
-            />
+            {suppliers.length > 0 ? (
+              <>
+                <TouchableOpacity
+                  style={styles.pickerButton}
+                  onPress={() => setShowSupplierPicker(!showSupplierPicker)}
+                >
+                  <Text style={[styles.pickerButtonText, !supplierId && { color: '#9CA3AF' }]}>
+                    {supplierId 
+                      ? suppliers.find(s => s.id === supplierId)?.name || 'Select Supplier'
+                      : 'Select Supplier'
+                    }
+                  </Text>
+                  <Ionicons name="chevron-down" size={16} color="#6B7280" />
+                </TouchableOpacity>
+                {showSupplierPicker && (
+                  <View style={styles.supplierDropdown}>
+                    <TouchableOpacity
+                      style={[styles.supplierOption, !supplierId && styles.supplierOptionActive]}
+                      onPress={() => {
+                        setSupplierId(null);
+                        setSupplier('');
+                        setShowSupplierPicker(false);
+                      }}
+                    >
+                      <Text style={[styles.supplierOptionText, !supplierId && styles.supplierOptionTextActive]}>
+                        None
+                      </Text>
+                    </TouchableOpacity>
+                    {suppliers.map((s) => (
+                      <TouchableOpacity
+                        key={s.id}
+                        style={[styles.supplierOption, supplierId === s.id && styles.supplierOptionActive]}
+                        onPress={() => {
+                          setSupplierId(s.id);
+                          setSupplier(s.name);
+                          setShowSupplierPicker(false);
+                        }}
+                      >
+                        <Text style={[styles.supplierOptionText, supplierId === s.id && styles.supplierOptionTextActive]}>
+                          {s.name}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </>
+            ) : (
+              <TextInput
+                style={styles.input}
+                placeholder="e.g., ABC Distributors"
+                value={supplier}
+                onChangeText={setSupplier}
+                placeholderTextColor="#9CA3AF"
+              />
+            )}
           </View>
         )}
         
@@ -604,6 +730,64 @@ const styles = StyleSheet.create({
   },
   saveBtnDisabled: {
     backgroundColor: '#9CA3AF',
+  },
+  // Item Type styles
+  typeRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  typeBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    alignItems: 'center',
+  },
+  typeBtnActive: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#2563EB',
+  },
+  typeBtnActiveInventory: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#059669',
+  },
+  typeBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#6B7280',
+  },
+  typeBtnTextActive: {
+    color: '#111827',
+  },
+  // Supplier dropdown styles
+  supplierDropdown: {
+    marginTop: 8,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    maxHeight: 200,
+    overflow: 'hidden',
+  },
+  supplierOption: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  supplierOptionActive: {
+    backgroundColor: '#EFF6FF',
+  },
+  supplierOptionText: {
+    fontSize: 14,
+    color: '#374151',
+  },
+  supplierOptionTextActive: {
+    color: '#2563EB',
+    fontWeight: '600',
   },
 });
 

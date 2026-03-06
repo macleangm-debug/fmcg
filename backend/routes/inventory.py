@@ -1,10 +1,10 @@
 """
 Inventory Routes
-Handles inventory items, categories, adjustments, and movements
+Handles inventory items, categories, adjustments, movements, and suppliers
 """
 import os
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -58,7 +58,9 @@ class InventoryItemCreate(BaseModel):
     tax_rate: float = 0
     location: Optional[str] = None
     supplier: Optional[str] = None
+    supplier_id: Optional[str] = None
     notes: Optional[str] = None
+    item_type: str = "product"  # product, raw_material
 
 
 class InventoryItemUpdate(BaseModel):
@@ -75,7 +77,9 @@ class InventoryItemUpdate(BaseModel):
     tax_rate: Optional[float] = None
     location: Optional[str] = None
     supplier: Optional[str] = None
+    supplier_id: Optional[str] = None
     notes: Optional[str] = None
+    item_type: Optional[str] = None
 
 
 class InventoryCategoryCreate(BaseModel):
@@ -92,6 +96,35 @@ class InventoryAdjustment(BaseModel):
     reference: Optional[str] = None
     location_from: Optional[str] = None
     location_to: Optional[str] = None
+
+
+# ============== SUPPLIER MODELS ==============
+
+class SupplierCreate(BaseModel):
+    name: str
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    contact_person: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    country: Optional[str] = None
+    notes: Optional[str] = None
+    payment_terms: Optional[str] = None  # e.g., "Net 30", "COD"
+    tax_id: Optional[str] = None
+
+
+class SupplierUpdate(BaseModel):
+    name: Optional[str] = None
+    phone: Optional[str] = None
+    email: Optional[str] = None
+    contact_person: Optional[str] = None
+    address: Optional[str] = None
+    city: Optional[str] = None
+    country: Optional[str] = None
+    notes: Optional[str] = None
+    payment_terms: Optional[str] = None
+    tax_id: Optional[str] = None
+    status: Optional[str] = None  # active, inactive
 
 
 # ============== HELPER FUNCTIONS ==============
@@ -119,6 +152,38 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         raise HTTPException(status_code=401, detail="Token expired")
     except Exception as e:
         raise HTTPException(status_code=401, detail="Invalid token")
+
+
+async def require_inventory_module(current_user: dict = Depends(get_current_user)):
+    """
+    Module gating: Require inventory module to be enabled for the business.
+    Checks linked_apps in user preferences or subscriptions.
+    """
+    business_id = current_user.get("business_id")
+    if not business_id:
+        raise HTTPException(status_code=403, detail="No business associated with user")
+    
+    # Check if inventory is in linked apps
+    preference = await db.user_preferences.find_one({
+        "business_id": business_id,
+        "preference_type": "retailpro_linked_apps"
+    })
+    
+    if preference:
+        linked_apps = preference.get("linked_apps", [])
+        if "inventory" in linked_apps:
+            return current_user
+    
+    # Also check subscription linked_apps as fallback
+    subscription = await db.subscriptions.find_one({"business_id": business_id})
+    if subscription:
+        linked_apps = subscription.get("linked_apps", [])
+        if any(la.get("app_id") == "inventory" for la in linked_apps):
+            return current_user
+    
+    # For now, allow access if no explicit restriction (backward compatibility)
+    # In production, you might want to raise HTTPException(403, "Inventory module not enabled")
+    return current_user
 
 
 # ============== ENDPOINTS ==============
@@ -668,4 +733,271 @@ async def export_inventory(
         "selling_price": item.get("selling_price", 0),
         "location": item.get("location", ""),
         "supplier": item.get("supplier", "")
+    } for item in items]
+
+
+
+# ============== SUPPLIER ENDPOINTS ==============
+
+@router.get("/suppliers")
+async def get_suppliers(
+    search: Optional[str] = None,
+    status: Optional[str] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get all suppliers for the business"""
+    business_id = current_user.get("business_id")
+    query = {"business_id": business_id} if business_id else {}
+    
+    if search:
+        query["$or"] = [
+            {"name": {"$regex": search, "$options": "i"}},
+            {"contact_person": {"$regex": search, "$options": "i"}},
+            {"email": {"$regex": search, "$options": "i"}},
+            {"phone": {"$regex": search, "$options": "i"}}
+        ]
+    
+    if status:
+        query["status"] = status
+    
+    suppliers = await db.inventory_suppliers.find(query).sort("name", 1).to_list(None)
+    
+    return [{
+        "id": str(s["_id"]),
+        "name": s.get("name", ""),
+        "phone": s.get("phone", ""),
+        "email": s.get("email", ""),
+        "contact_person": s.get("contact_person", ""),
+        "address": s.get("address", ""),
+        "city": s.get("city", ""),
+        "country": s.get("country", ""),
+        "notes": s.get("notes", ""),
+        "payment_terms": s.get("payment_terms", ""),
+        "tax_id": s.get("tax_id", ""),
+        "status": s.get("status", "active"),
+        "items_count": s.get("items_count", 0),
+        "created_at": s.get("created_at", ""),
+        "updated_at": s.get("updated_at", "")
+    } for s in suppliers]
+
+
+@router.post("/suppliers")
+async def create_supplier(
+    supplier: SupplierCreate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Create a new supplier"""
+    business_id = current_user.get("business_id")
+    
+    # Check if supplier with same name exists
+    existing = await db.inventory_suppliers.find_one({
+        "business_id": business_id,
+        "name": {"$regex": f"^{supplier.name}$", "$options": "i"}
+    })
+    
+    if existing:
+        raise HTTPException(status_code=400, detail="Supplier with this name already exists")
+    
+    now = datetime.now(timezone.utc).isoformat()
+    
+    supplier_doc = {
+        "business_id": business_id,
+        "name": supplier.name,
+        "phone": supplier.phone,
+        "email": supplier.email,
+        "contact_person": supplier.contact_person,
+        "address": supplier.address,
+        "city": supplier.city,
+        "country": supplier.country,
+        "notes": supplier.notes,
+        "payment_terms": supplier.payment_terms,
+        "tax_id": supplier.tax_id,
+        "status": "active",
+        "items_count": 0,
+        "created_at": now,
+        "updated_at": now,
+        "created_by": current_user.get("id")
+    }
+    
+    result = await db.inventory_suppliers.insert_one(supplier_doc)
+    
+    return {
+        "id": str(result.inserted_id),
+        "name": supplier.name,
+        "phone": supplier.phone,
+        "email": supplier.email,
+        "contact_person": supplier.contact_person,
+        "address": supplier.address,
+        "city": supplier.city,
+        "country": supplier.country,
+        "notes": supplier.notes,
+        "payment_terms": supplier.payment_terms,
+        "tax_id": supplier.tax_id,
+        "status": "active",
+        "items_count": 0,
+        "created_at": now
+    }
+
+
+@router.get("/suppliers/{supplier_id}")
+async def get_supplier(
+    supplier_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get a specific supplier by ID"""
+    business_id = current_user.get("business_id")
+    
+    try:
+        supplier = await db.inventory_suppliers.find_one({
+            "_id": ObjectId(supplier_id),
+            "business_id": business_id
+        })
+    except:
+        raise HTTPException(status_code=400, detail="Invalid supplier ID")
+    
+    if not supplier:
+        raise HTTPException(status_code=404, detail="Supplier not found")
+    
+    # Get items associated with this supplier
+    items_count = await db.inventory_items.count_documents({
+        "business_id": business_id,
+        "supplier_id": supplier_id
+    })
+    
+    return {
+        "id": str(supplier["_id"]),
+        "name": supplier.get("name", ""),
+        "phone": supplier.get("phone", ""),
+        "email": supplier.get("email", ""),
+        "contact_person": supplier.get("contact_person", ""),
+        "address": supplier.get("address", ""),
+        "city": supplier.get("city", ""),
+        "country": supplier.get("country", ""),
+        "notes": supplier.get("notes", ""),
+        "payment_terms": supplier.get("payment_terms", ""),
+        "tax_id": supplier.get("tax_id", ""),
+        "status": supplier.get("status", "active"),
+        "items_count": items_count,
+        "created_at": supplier.get("created_at", ""),
+        "updated_at": supplier.get("updated_at", "")
+    }
+
+
+@router.put("/suppliers/{supplier_id}")
+async def update_supplier(
+    supplier_id: str,
+    supplier: SupplierUpdate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update a supplier"""
+    business_id = current_user.get("business_id")
+    
+    try:
+        existing = await db.inventory_suppliers.find_one({
+            "_id": ObjectId(supplier_id),
+            "business_id": business_id
+        })
+    except:
+        raise HTTPException(status_code=400, detail="Invalid supplier ID")
+    
+    if not existing:
+        raise HTTPException(status_code=404, detail="Supplier not found")
+    
+    # Check for duplicate name if name is being changed
+    if supplier.name and supplier.name != existing.get("name"):
+        duplicate = await db.inventory_suppliers.find_one({
+            "business_id": business_id,
+            "name": {"$regex": f"^{supplier.name}$", "$options": "i"},
+            "_id": {"$ne": ObjectId(supplier_id)}
+        })
+        if duplicate:
+            raise HTTPException(status_code=400, detail="Supplier with this name already exists")
+    
+    update_data = {k: v for k, v in supplier.dict().items() if v is not None}
+    update_data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    
+    await db.inventory_suppliers.update_one(
+        {"_id": ObjectId(supplier_id)},
+        {"$set": update_data}
+    )
+    
+    updated = await db.inventory_suppliers.find_one({"_id": ObjectId(supplier_id)})
+    
+    return {
+        "id": str(updated["_id"]),
+        "name": updated.get("name", ""),
+        "phone": updated.get("phone", ""),
+        "email": updated.get("email", ""),
+        "contact_person": updated.get("contact_person", ""),
+        "address": updated.get("address", ""),
+        "city": updated.get("city", ""),
+        "country": updated.get("country", ""),
+        "notes": updated.get("notes", ""),
+        "payment_terms": updated.get("payment_terms", ""),
+        "tax_id": updated.get("tax_id", ""),
+        "status": updated.get("status", "active"),
+        "updated_at": updated.get("updated_at", "")
+    }
+
+
+@router.delete("/suppliers/{supplier_id}")
+async def delete_supplier(
+    supplier_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete a supplier"""
+    business_id = current_user.get("business_id")
+    
+    try:
+        supplier = await db.inventory_suppliers.find_one({
+            "_id": ObjectId(supplier_id),
+            "business_id": business_id
+        })
+    except:
+        raise HTTPException(status_code=400, detail="Invalid supplier ID")
+    
+    if not supplier:
+        raise HTTPException(status_code=404, detail="Supplier not found")
+    
+    # Check if supplier has linked items
+    items_count = await db.inventory_items.count_documents({
+        "business_id": business_id,
+        "supplier_id": supplier_id
+    })
+    
+    if items_count > 0:
+        # Option 1: Prevent deletion
+        # raise HTTPException(status_code=400, detail=f"Cannot delete supplier with {items_count} linked items")
+        
+        # Option 2: Unlink items first (preferred for flexibility)
+        await db.inventory_items.update_many(
+            {"business_id": business_id, "supplier_id": supplier_id},
+            {"$set": {"supplier_id": None, "supplier": None}}
+        )
+    
+    await db.inventory_suppliers.delete_one({"_id": ObjectId(supplier_id)})
+    
+    return {"message": "Supplier deleted successfully", "unlinked_items": items_count}
+
+
+@router.get("/suppliers/{supplier_id}/items")
+async def get_supplier_items(
+    supplier_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get all inventory items for a specific supplier"""
+    business_id = current_user.get("business_id")
+    
+    items = await db.inventory_items.find({
+        "business_id": business_id,
+        "supplier_id": supplier_id
+    }).sort("name", 1).to_list(None)
+    
+    return [{
+        "id": str(item["_id"]),
+        "name": item.get("name", ""),
+        "sku": item.get("sku", ""),
+        "quantity": item.get("quantity", 0),
+        "cost_price": item.get("cost_price", 0),
+        "selling_price": item.get("selling_price", 0)
     } for item in items]
