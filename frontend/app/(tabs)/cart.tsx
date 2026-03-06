@@ -981,7 +981,8 @@ export default function Cart() {
         // Don't fail the order if printing fails
       }
       
-      clearCart();
+      // DO NOT call clearCart() here - we need items to stay until receipt is closed
+      // clearCart() will be called when the user closes the receipt modal
       setPromotionResult(null);
       setShowCheckout(false); // Return to main view after checkout
       
@@ -989,15 +990,9 @@ export default function Cart() {
       setLastOrderTotal(total);
       
       // Set receipt data and show the receipt modal (new flow)
-      // Important: Set receipt data BEFORE setting showReceiptModal to true
-      console.log('Setting receipt data:', JSON.stringify(thermalReceiptData));
-      
-      // Set both states in sequence with a small delay to ensure React processes them
+      console.log('Setting receipt data and showing modal');
       setReceiptData(thermalReceiptData);
-      setTimeout(() => {
-        console.log('Now showing receipt modal, receiptData should be set');
-        setShowReceiptModal(true);
-      }, 200);
+      setShowReceiptModal(true);
       
       // Update sale count and trigger JIT prompts
       const newSaleCount = saleCount + 1;
@@ -1241,6 +1236,14 @@ export default function Cart() {
     );
   };
 
+  // Handler to close receipt and clear cart
+  const handleReceiptClose = useCallback(() => {
+    console.log('Receipt closed - clearing cart');
+    setShowReceiptModal(false);
+    setReceiptData(null);
+    clearCart(); // Clear cart AFTER modal is closed
+  }, [clearCart]);
+
   // Receipt Modal must be rendered before any conditional returns
   // This ensures it can display even when cart items are cleared
   // Only render if BOTH showReceiptModal is true AND receiptData is set
@@ -1249,11 +1252,9 @@ export default function Cart() {
       <SafeAreaView style={styles.container}>
         <ReceiptModal
           visible={showReceiptModal}
-          onClose={() => setShowReceiptModal(false)}
+          onClose={handleReceiptClose}
           receiptData={receiptData}
-          onNewSale={() => {
-            setShowReceiptModal(false);
-          }}
+          onNewSale={handleReceiptClose}
         />
       </SafeAreaView>
     );
@@ -2441,12 +2442,9 @@ export default function Cart() {
       {/* Receipt Modal with thermal receipt preview and sharing */}
       <ReceiptModal
         visible={showReceiptModal}
-        onClose={() => setShowReceiptModal(false)}
+        onClose={handleReceiptClose}
         receiptData={receiptData}
-        onNewSale={() => {
-          setShowReceiptModal(false);
-          // Reset for new sale
-        }}
+        onNewSale={handleReceiptClose}
       />
 
       {/* Confirm Sale Modal */}
