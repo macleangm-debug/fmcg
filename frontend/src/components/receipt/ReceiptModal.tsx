@@ -11,6 +11,7 @@ import {
   Pressable,
   Alert,
   Share,
+  ScrollView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -134,14 +135,19 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({
       </View>
 
       {/* Receipt Preview */}
-      <View style={styles.receiptContainer}>
+      <ScrollView 
+        style={styles.receiptContainer}
+        contentContainerStyle={styles.receiptScrollContent}
+        showsVerticalScrollIndicator={true}
+      >
         <ThermalReceipt 
           data={receiptData}
           onPrint={handlePrint}
           onShare={handleShare}
           showActions={false}
+          embedded={true}
         />
-      </View>
+      </ScrollView>
 
       {/* Action Buttons */}
       <View style={[styles.actions, { paddingBottom: isMobile ? insets.bottom + 16 : 20 }]}>
@@ -302,6 +308,10 @@ const styles = StyleSheet.create({
   receiptContainer: {
     flex: 1,
     backgroundColor: '#F3F4F6',
+  },
+  receiptScrollContent: {
+    padding: 16,
+    alignItems: 'center',
   },
   
   // Actions

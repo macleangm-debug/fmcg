@@ -8,6 +8,7 @@ import {
   Platform,
   Share,
   Alert,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
@@ -62,6 +63,7 @@ export interface ReceiptData {
     handle: string;
   }[];
   qrCodeData?: string;
+  qrCodeType?: 'receipt' | 'website' | 'feedback' | 'whatsapp' | 'location' | 'custom';
   
   // Custom Message
   thankYouMessage?: string;
@@ -71,11 +73,15 @@ export interface ReceiptData {
   currencySymbol: string;
 }
 
+// RetailPro Logo URL
+const RETAILPRO_LOGO = 'https://static.prod-images.emergentagent.com/jobs/2af44a46-db88-4b9f-af8e-0fe7eac67172/images/efbd16f8763434ce8db40b54d4063fe3261ffdbe18e32f42bf103d471b40084d.png';
+
 interface ThermalReceiptProps {
   data: ReceiptData;
   onPrint?: () => void;
   onShare?: (type: 'whatsapp' | 'image' | 'pdf') => void;
   showActions?: boolean;
+  embedded?: boolean; // If true, won't wrap in its own ScrollView
 }
 
 const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
@@ -83,6 +89,7 @@ const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
   onPrint,
   onShare,
   showActions = true,
+  embedded = false,
 }) => {
   const receiptRef = useRef<View>(null);
   
@@ -145,31 +152,27 @@ const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
     return text;
   };
 
-  return (
-    <View style={styles.container}>
-      {/* Receipt Content */}
-      <ScrollView 
-        style={styles.receiptScroll}
-        contentContainerStyle={styles.receiptContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View ref={receiptRef} style={styles.receipt}>
-          {/* Header */}
-          <View style={styles.header}>
-            <View style={styles.logoPlaceholder}>
-              <Ionicons name="storefront" size={32} color="#374151" />
-            </View>
-            <Text style={styles.businessName}>{data.businessName}</Text>
-            {data.businessAddress && (
-              <Text style={styles.businessInfo}>{data.businessAddress}</Text>
-            )}
-            {data.businessPhone && (
-              <Text style={styles.businessInfo}>Tel: {data.businessPhone}</Text>
-            )}
-            {data.taxId && (
-              <Text style={styles.businessInfo}>TIN: {data.taxId}</Text>
-            )}
-          </View>
+  const receiptContent = (
+    <View ref={receiptRef} style={styles.receipt}>
+      {/* Header with Logo */}
+      <View style={styles.header}>
+        {/* RetailPro Logo or Business Logo */}
+        <Image 
+          source={{ uri: data.businessLogo || RETAILPRO_LOGO }}
+          style={styles.logoImage}
+          resizeMode="contain"
+        />
+        <Text style={styles.businessName}>{data.businessName}</Text>
+        {data.businessAddress && (
+          <Text style={styles.businessInfo}>{data.businessAddress}</Text>
+        )}
+        {data.businessPhone && (
+          <Text style={styles.businessInfo}>Tel: {data.businessPhone}</Text>
+        )}
+        {data.taxId && (
+          <Text style={styles.businessInfo}>TIN: {data.taxId}</Text>
+        )}
+      </View>
 
           {/* Divider */}
           <Text style={styles.divider}>{'━'.repeat(32)}</Text>
@@ -286,7 +289,14 @@ const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
                 backgroundColor="white"
                 color="black"
               />
-              <Text style={styles.qrHint}>Scan for digital receipt</Text>
+              <Text style={styles.qrHint}>
+                {data.qrCodeType === 'receipt' && 'Scan for digital receipt'}
+                {data.qrCodeType === 'website' && 'Visit our website'}
+                {data.qrCodeType === 'feedback' && 'Leave us a review'}
+                {data.qrCodeType === 'whatsapp' && 'Chat with us'}
+                {data.qrCodeType === 'location' && 'Find us on map'}
+                {(!data.qrCodeType || data.qrCodeType === 'custom') && 'Scan QR code'}
+              </Text>
             </View>
           )}
 
@@ -321,7 +331,22 @@ const ThermalReceipt: React.FC<ThermalReceiptProps> = ({
           {/* Footer Decorative */}
           <Text style={styles.footerDecor}>{'~'.repeat(32)}</Text>
         </View>
-      </ScrollView>
+    );
+
+  return (
+    <View style={styles.container}>
+      {/* Receipt Content - wrapped in ScrollView only if not embedded */}
+      {embedded ? (
+        receiptContent
+      ) : (
+        <ScrollView 
+          style={styles.receiptScroll}
+          contentContainerStyle={styles.receiptContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {receiptContent}
+        </ScrollView>
+      )}
 
       {/* Action Buttons */}
       {showActions && (
@@ -392,6 +417,11 @@ const styles = StyleSheet.create({
   // Header
   header: {
     alignItems: 'center',
+    marginBottom: 8,
+  },
+  logoImage: {
+    width: 60,
+    height: 60,
     marginBottom: 8,
   },
   logoPlaceholder: {

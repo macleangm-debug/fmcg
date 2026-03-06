@@ -907,6 +907,9 @@ export default function Cart() {
         throw new Error('You are offline. Please check your internet connection.');
       }
       
+      // Store items before clearing for receipt
+      const orderItems = [...items];
+      
       // Create receipt data for the new thermal receipt modal
       const now = new Date();
       const thermalReceiptData: ThermalReceiptData = {
@@ -918,7 +921,7 @@ export default function Cart() {
         date: now.toLocaleDateString(),
         time: now.toLocaleTimeString(),
         cashierName: user?.name || 'Staff',
-        items: items.map(item => ({
+        items: orderItems.map(item => ({
           name: item.product_name,
           quantity: item.quantity,
           unitPrice: item.unit_price,
@@ -978,9 +981,6 @@ export default function Cart() {
         // Don't fail the order if printing fails
       }
       
-      // Store items before clearing for receipt
-      const orderItems = [...items];
-      
       clearCart();
       setPromotionResult(null);
       setShowCheckout(false); // Return to main view after checkout
@@ -989,8 +989,15 @@ export default function Cart() {
       setLastOrderTotal(total);
       
       // Set receipt data and show the receipt modal (new flow)
+      // Important: Set receipt data BEFORE setting showReceiptModal to true
+      console.log('Setting receipt data:', JSON.stringify(thermalReceiptData));
+      
+      // Set both states in sequence with a small delay to ensure React processes them
       setReceiptData(thermalReceiptData);
-      setShowReceiptModal(true);
+      setTimeout(() => {
+        console.log('Now showing receipt modal, receiptData should be set');
+        setShowReceiptModal(true);
+      }, 200);
       
       // Update sale count and trigger JIT prompts
       const newSaleCount = saleCount + 1;
@@ -1233,6 +1240,24 @@ export default function Cart() {
       </TouchableOpacity>
     );
   };
+
+  // Receipt Modal must be rendered before any conditional returns
+  // This ensures it can display even when cart items are cleared
+  // Only render if BOTH showReceiptModal is true AND receiptData is set
+  if (showReceiptModal && receiptData) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ReceiptModal
+          visible={showReceiptModal}
+          onClose={() => setShowReceiptModal(false)}
+          receiptData={receiptData}
+          onNewSale={() => {
+            setShowReceiptModal(false);
+          }}
+        />
+      </SafeAreaView>
+    );
+  }
 
   if (items.length === 0 && !showProductsModal && !showReceiptModal) {
     return (
