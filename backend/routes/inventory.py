@@ -157,33 +157,50 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 async def require_inventory_module(current_user: dict = Depends(get_current_user)):
     """
     Module gating: Require inventory module to be enabled for the business.
-    Checks linked_apps in user preferences or subscriptions.
+    Checks linked_apps in business preferences or subscriptions.
+    Raises 403 if inventory is not enabled.
     """
     business_id = current_user.get("business_id")
+    user_id = current_user.get("id")
+    
     if not business_id:
         raise HTTPException(status_code=403, detail="No business associated with user")
     
-    # Check if inventory is in linked apps
-    preference = await db.user_preferences.find_one({
+    # Default linked apps (inventory is included by default for all businesses)
+    default_linked = ["inventory", "invoicing", "kwikpay"]
+    
+    # Check BUSINESS-level linked apps preference first
+    preference = await db.business_preferences.find_one({
         "business_id": business_id,
         "preference_type": "retailpro_linked_apps"
     })
     
-    if preference:
-        linked_apps = preference.get("linked_apps", [])
-        if "inventory" in linked_apps:
-            return current_user
+    # Fallback to user-level for backwards compatibility
+    if not preference:
+        preference = await db.user_preferences.find_one({
+            "user_id": user_id,
+            "preference_type": "retailpro_linked_apps"
+        })
+    
+    # Get linked apps from preference or use defaults
+    linked_apps = preference.get("linked_apps", default_linked) if preference else default_linked
+    
+    # Check if inventory is enabled
+    if "inventory" in linked_apps:
+        return current_user
     
     # Also check subscription linked_apps as fallback
     subscription = await db.subscriptions.find_one({"business_id": business_id})
     if subscription:
-        linked_apps = subscription.get("linked_apps", [])
-        if any(la.get("app_id") == "inventory" for la in linked_apps):
+        sub_linked_apps = subscription.get("linked_apps", [])
+        if any(la.get("app_id") == "inventory" for la in sub_linked_apps):
             return current_user
     
-    # For now, allow access if no explicit restriction (backward compatibility)
-    # In production, you might want to raise HTTPException(403, "Inventory module not enabled")
-    return current_user
+    # Inventory is not enabled - block access
+    raise HTTPException(
+        status_code=403, 
+        detail="Inventory product is not enabled for this business. Please subscribe to Inventory to access this feature."
+    )
 
 
 # ============== ENDPOINTS ==============
@@ -193,7 +210,7 @@ async def get_inventory_items(
     search: Optional[str] = None,
     category_id: Optional[str] = None,
     status: Optional[str] = None,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_inventory_module)
 ):
     """Get all inventory items"""
     business_id = current_user.get("business_id")
@@ -257,7 +274,7 @@ async def get_inventory_items(
 
 
 @router.get("/summary")
-async def get_inventory_summary(current_user: dict = Depends(get_current_user)):
+async def get_inventory_summary(current_user: dict = Depends(require_inventory_module)):
     """Get inventory summary stats"""
     business_id = current_user.get("business_id")
     query = {"business_id": business_id} if business_id else {}
@@ -296,7 +313,7 @@ async def get_inventory_summary(current_user: dict = Depends(get_current_user)):
 @router.post("/items")
 async def create_inventory_item(
     item: InventoryItemCreate,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_inventory_module)
 ):
     """Create a new inventory item"""
     business_id = current_user.get("business_id")
@@ -372,7 +389,7 @@ async def create_inventory_item(
 async def update_inventory_item(
     item_id: str,
     item: InventoryItemUpdate,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_inventory_module)
 ):
     """Update an inventory item"""
     business_id = current_user.get("business_id")
@@ -408,7 +425,7 @@ async def update_inventory_item(
 @router.delete("/items/{item_id}")
 async def delete_inventory_item(
     item_id: str,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_inventory_module)
 ):
     """Delete an inventory item"""
     business_id = current_user.get("business_id")
@@ -425,7 +442,7 @@ async def delete_inventory_item(
 
 
 @router.get("/categories")
-async def get_inventory_categories(current_user: dict = Depends(get_current_user)):
+async def get_inventory_categories(current_user: dict = Depends(require_inventory_module)):
     """Get all inventory categories"""
     business_id = current_user.get("business_id")
     query = {"business_id": business_id} if business_id else {}
@@ -444,7 +461,7 @@ async def get_inventory_categories(current_user: dict = Depends(get_current_user
 @router.post("/categories")
 async def create_inventory_category(
     category: InventoryCategoryCreate,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_inventory_module)
 ):
     """Create a new inventory category"""
     business_id = current_user.get("business_id")
@@ -466,7 +483,7 @@ async def create_inventory_category(
 @router.delete("/categories/{category_id}")
 async def delete_inventory_category(
     category_id: str,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_inventory_module)
 ):
     """Delete an inventory category"""
     business_id = current_user.get("business_id")
@@ -493,7 +510,7 @@ async def delete_inventory_category(
 @router.post("/adjust")
 async def adjust_inventory(
     adjustment: InventoryAdjustment,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_inventory_module)
 ):
     """Adjust inventory quantity"""
     business_id = current_user.get("business_id")
@@ -560,7 +577,7 @@ async def adjust_inventory(
 @router.get("/chart-data")
 async def get_inventory_chart_data(
     period: str = "30d",
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_inventory_module)
 ):
     """Get inventory chart data for dashboard"""
     business_id = current_user.get("business_id")
@@ -628,7 +645,7 @@ async def get_inventory_movements(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     limit: int = 100,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_inventory_module)
 ):
     """Get inventory movements history"""
     business_id = current_user.get("business_id")
@@ -671,7 +688,7 @@ async def get_inventory_movements(
 @router.get("/export")
 async def export_inventory(
     format: str = "csv",
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_inventory_module)
 ):
     """Export inventory data"""
     from fastapi.responses import StreamingResponse
@@ -743,7 +760,7 @@ async def export_inventory(
 async def get_suppliers(
     search: Optional[str] = None,
     status: Optional[str] = None,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_inventory_module)
 ):
     """Get all suppliers for the business"""
     business_id = current_user.get("business_id")
@@ -784,7 +801,7 @@ async def get_suppliers(
 @router.post("/suppliers")
 async def create_supplier(
     supplier: SupplierCreate,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_inventory_module)
 ):
     """Create a new supplier"""
     business_id = current_user.get("business_id")
@@ -842,7 +859,7 @@ async def create_supplier(
 @router.get("/suppliers/{supplier_id}")
 async def get_supplier(
     supplier_id: str,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_inventory_module)
 ):
     """Get a specific supplier by ID"""
     business_id = current_user.get("business_id")
@@ -887,7 +904,7 @@ async def get_supplier(
 async def update_supplier(
     supplier_id: str,
     supplier: SupplierUpdate,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_inventory_module)
 ):
     """Update a supplier"""
     business_id = current_user.get("business_id")
@@ -943,7 +960,7 @@ async def update_supplier(
 @router.delete("/suppliers/{supplier_id}")
 async def delete_supplier(
     supplier_id: str,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_inventory_module)
 ):
     """Delete a supplier"""
     business_id = current_user.get("business_id")
@@ -983,7 +1000,7 @@ async def delete_supplier(
 @router.get("/suppliers/{supplier_id}/items")
 async def get_supplier_items(
     supplier_id: str,
-    current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(require_inventory_module)
 ):
     """Get all inventory items for a specific supplier"""
     business_id = current_user.get("business_id")
@@ -1001,3 +1018,446 @@ async def get_supplier_items(
         "cost_price": item.get("cost_price", 0),
         "selling_price": item.get("selling_price", 0)
     } for item in items]
+
+
+# ============== PURCHASE ORDER MODELS ==============
+
+class PurchaseOrderItem(BaseModel):
+    item_id: str
+    item_name: str
+    sku: Optional[str] = None
+    ordered_qty: int
+    unit_cost: float
+    received_qty: int = 0
+
+
+class PurchaseOrderCreate(BaseModel):
+    supplier_id: str
+    expected_date: Optional[str] = None
+    notes: Optional[str] = None
+    items: List[PurchaseOrderItem] = []
+
+
+class PurchaseOrderUpdate(BaseModel):
+    supplier_id: Optional[str] = None
+    expected_date: Optional[str] = None
+    notes: Optional[str] = None
+    status: Optional[str] = None  # draft, submitted, partial, received, cancelled
+    items: Optional[List[PurchaseOrderItem]] = None
+
+
+class ReceiveItem(BaseModel):
+    item_id: str
+    quantity: int
+    notes: Optional[str] = None
+
+
+class ReceiveStock(BaseModel):
+    items: List[ReceiveItem]
+    notes: Optional[str] = None
+
+
+# ============== PURCHASE ORDER ENDPOINTS ==============
+
+@router.get("/purchase-orders")
+async def get_purchase_orders(
+    status: Optional[str] = None,
+    supplier_id: Optional[str] = None,
+    current_user: dict = Depends(require_inventory_module)
+):
+    """Get all purchase orders"""
+    business_id = current_user.get("business_id")
+    query = {"business_id": business_id}
+    
+    if status:
+        query["status"] = status
+    if supplier_id:
+        query["supplier_id"] = supplier_id
+    
+    orders = await db.purchase_orders.find(query).sort("created_at", -1).to_list(None)
+    
+    result = []
+    for order in orders:
+        # Get supplier name
+        supplier = await db.inventory_suppliers.find_one({"_id": ObjectId(order.get("supplier_id"))}) if order.get("supplier_id") else None
+        
+        # Calculate totals
+        items = order.get("items", [])
+        total = sum(item.get("ordered_qty", 0) * item.get("unit_cost", 0) for item in items)
+        total_ordered = sum(item.get("ordered_qty", 0) for item in items)
+        total_received = sum(item.get("received_qty", 0) for item in items)
+        
+        result.append({
+            "id": str(order["_id"]),
+            "po_number": order.get("po_number", ""),
+            "supplier_id": order.get("supplier_id", ""),
+            "supplier": supplier.get("name", "") if supplier else "",
+            "status": order.get("status", "draft"),
+            "items": items,
+            "total": total,
+            "total_items": total_ordered,
+            "received_items": total_received,
+            "expected_date": order.get("expected_date", ""),
+            "notes": order.get("notes", ""),
+            "created_at": order.get("created_at", "").isoformat() if order.get("created_at") else "",
+            "updated_at": order.get("updated_at", "").isoformat() if order.get("updated_at") else ""
+        })
+    
+    return result
+
+
+@router.post("/purchase-orders")
+async def create_purchase_order(
+    po: PurchaseOrderCreate,
+    current_user: dict = Depends(require_inventory_module)
+):
+    """Create a new purchase order"""
+    business_id = current_user.get("business_id")
+    
+    # Generate PO number
+    count = await db.purchase_orders.count_documents({"business_id": business_id})
+    po_number = f"PO-{datetime.now(timezone.utc).strftime('%Y')}-{count + 1:03d}"
+    
+    # Get supplier info
+    supplier = None
+    if po.supplier_id:
+        supplier = await db.inventory_suppliers.find_one({"_id": ObjectId(po.supplier_id)})
+    
+    now = datetime.now(timezone.utc)
+    
+    new_po = {
+        "business_id": business_id,
+        "po_number": po_number,
+        "supplier_id": po.supplier_id,
+        "status": "draft",
+        "items": [item.dict() for item in po.items],
+        "expected_date": po.expected_date,
+        "notes": po.notes,
+        "created_at": now,
+        "updated_at": now,
+        "created_by": current_user.get("id")
+    }
+    
+    result = await db.purchase_orders.insert_one(new_po)
+    
+    # Calculate total
+    total = sum(item.ordered_qty * item.unit_cost for item in po.items)
+    
+    return {
+        "id": str(result.inserted_id),
+        "po_number": po_number,
+        "supplier_id": po.supplier_id,
+        "supplier": supplier.get("name", "") if supplier else "",
+        "status": "draft",
+        "items": [item.dict() for item in po.items],
+        "total": total,
+        "expected_date": po.expected_date,
+        "notes": po.notes,
+        "created_at": now.isoformat()
+    }
+
+
+@router.get("/purchase-orders/{po_id}")
+async def get_purchase_order(
+    po_id: str,
+    current_user: dict = Depends(require_inventory_module)
+):
+    """Get a specific purchase order"""
+    business_id = current_user.get("business_id")
+    
+    order = await db.purchase_orders.find_one({
+        "_id": ObjectId(po_id),
+        "business_id": business_id
+    })
+    
+    if not order:
+        raise HTTPException(status_code=404, detail="Purchase order not found")
+    
+    # Get supplier name
+    supplier = await db.inventory_suppliers.find_one({"_id": ObjectId(order.get("supplier_id"))}) if order.get("supplier_id") else None
+    
+    items = order.get("items", [])
+    total = sum(item.get("ordered_qty", 0) * item.get("unit_cost", 0) for item in items)
+    
+    return {
+        "id": str(order["_id"]),
+        "po_number": order.get("po_number", ""),
+        "supplier_id": order.get("supplier_id", ""),
+        "supplier": supplier.get("name", "") if supplier else "",
+        "status": order.get("status", "draft"),
+        "items": items,
+        "total": total,
+        "expected_date": order.get("expected_date", ""),
+        "notes": order.get("notes", ""),
+        "created_at": order.get("created_at", "").isoformat() if order.get("created_at") else ""
+    }
+
+
+@router.put("/purchase-orders/{po_id}")
+async def update_purchase_order(
+    po_id: str,
+    po: PurchaseOrderUpdate,
+    current_user: dict = Depends(require_inventory_module)
+):
+    """Update a purchase order"""
+    business_id = current_user.get("business_id")
+    
+    existing = await db.purchase_orders.find_one({
+        "_id": ObjectId(po_id),
+        "business_id": business_id
+    })
+    
+    if not existing:
+        raise HTTPException(status_code=404, detail="Purchase order not found")
+    
+    # Don't allow updates to received/cancelled orders
+    if existing.get("status") in ["received", "cancelled"]:
+        raise HTTPException(status_code=400, detail="Cannot update received or cancelled orders")
+    
+    update_data = {}
+    if po.supplier_id is not None:
+        update_data["supplier_id"] = po.supplier_id
+    if po.expected_date is not None:
+        update_data["expected_date"] = po.expected_date
+    if po.notes is not None:
+        update_data["notes"] = po.notes
+    if po.status is not None:
+        update_data["status"] = po.status
+    if po.items is not None:
+        update_data["items"] = [item.dict() for item in po.items]
+    
+    update_data["updated_at"] = datetime.now(timezone.utc)
+    
+    await db.purchase_orders.update_one(
+        {"_id": ObjectId(po_id)},
+        {"$set": update_data}
+    )
+    
+    return {"message": "Purchase order updated successfully", "id": po_id}
+
+
+@router.delete("/purchase-orders/{po_id}")
+async def delete_purchase_order(
+    po_id: str,
+    current_user: dict = Depends(require_inventory_module)
+):
+    """Delete a purchase order (only drafts can be deleted)"""
+    business_id = current_user.get("business_id")
+    
+    existing = await db.purchase_orders.find_one({
+        "_id": ObjectId(po_id),
+        "business_id": business_id
+    })
+    
+    if not existing:
+        raise HTTPException(status_code=404, detail="Purchase order not found")
+    
+    if existing.get("status") != "draft":
+        raise HTTPException(status_code=400, detail="Only draft purchase orders can be deleted")
+    
+    await db.purchase_orders.delete_one({"_id": ObjectId(po_id)})
+    
+    return {"message": "Purchase order deleted successfully", "id": po_id}
+
+
+@router.post("/purchase-orders/{po_id}/submit")
+async def submit_purchase_order(
+    po_id: str,
+    current_user: dict = Depends(require_inventory_module)
+):
+    """Submit a purchase order (change status from draft to submitted)"""
+    business_id = current_user.get("business_id")
+    
+    existing = await db.purchase_orders.find_one({
+        "_id": ObjectId(po_id),
+        "business_id": business_id
+    })
+    
+    if not existing:
+        raise HTTPException(status_code=404, detail="Purchase order not found")
+    
+    if existing.get("status") != "draft":
+        raise HTTPException(status_code=400, detail="Only draft orders can be submitted")
+    
+    if not existing.get("items") or len(existing.get("items", [])) == 0:
+        raise HTTPException(status_code=400, detail="Cannot submit empty purchase order")
+    
+    await db.purchase_orders.update_one(
+        {"_id": ObjectId(po_id)},
+        {"$set": {"status": "submitted", "updated_at": datetime.now(timezone.utc)}}
+    )
+    
+    return {"message": "Purchase order submitted successfully", "id": po_id, "status": "submitted"}
+
+
+@router.post("/purchase-orders/{po_id}/receive")
+async def receive_purchase_order(
+    po_id: str,
+    receive: ReceiveStock,
+    current_user: dict = Depends(require_inventory_module)
+):
+    """Receive stock against a purchase order"""
+    business_id = current_user.get("business_id")
+    
+    existing = await db.purchase_orders.find_one({
+        "_id": ObjectId(po_id),
+        "business_id": business_id
+    })
+    
+    if not existing:
+        raise HTTPException(status_code=404, detail="Purchase order not found")
+    
+    if existing.get("status") in ["draft", "received", "cancelled"]:
+        raise HTTPException(status_code=400, detail=f"Cannot receive stock for {existing.get('status')} orders")
+    
+    now = datetime.now(timezone.utc)
+    po_items = existing.get("items", [])
+    items_received = []
+    
+    for recv_item in receive.items:
+        # Find matching item in PO
+        po_item = next((item for item in po_items if item.get("item_id") == recv_item.item_id), None)
+        if not po_item:
+            raise HTTPException(status_code=400, detail=f"Item {recv_item.item_id} not found in purchase order")
+        
+        # Check if receiving more than outstanding
+        outstanding = po_item.get("ordered_qty", 0) - po_item.get("received_qty", 0)
+        if recv_item.quantity > outstanding:
+            raise HTTPException(status_code=400, detail=f"Cannot receive more than outstanding quantity for {po_item.get('item_name')}")
+        
+        # Update PO item received qty
+        po_item["received_qty"] = po_item.get("received_qty", 0) + recv_item.quantity
+        
+        # Update inventory item quantity
+        await db.inventory_items.update_one(
+            {"_id": ObjectId(recv_item.item_id), "business_id": business_id},
+            {"$inc": {"quantity": recv_item.quantity}}
+        )
+        
+        # Create stock movement record
+        movement = {
+            "business_id": business_id,
+            "item_id": recv_item.item_id,
+            "item_name": po_item.get("item_name", ""),
+            "type": "in",
+            "quantity": recv_item.quantity,
+            "reason": f"PO Receive: {existing.get('po_number')}",
+            "reference": po_id,
+            "reference_type": "purchase_order",
+            "notes": recv_item.notes or receive.notes,
+            "created_at": now,
+            "created_by": current_user.get("id")
+        }
+        await db.inventory_movements.insert_one(movement)
+        
+        items_received.append({
+            "item_id": recv_item.item_id,
+            "item_name": po_item.get("item_name"),
+            "quantity_received": recv_item.quantity
+        })
+    
+    # Update PO with new item quantities
+    await db.purchase_orders.update_one(
+        {"_id": ObjectId(po_id)},
+        {"$set": {"items": po_items, "updated_at": now}}
+    )
+    
+    # Check if all items received - update status
+    total_ordered = sum(item.get("ordered_qty", 0) for item in po_items)
+    total_received = sum(item.get("received_qty", 0) for item in po_items)
+    
+    new_status = "partial"
+    if total_received >= total_ordered:
+        new_status = "received"
+    
+    await db.purchase_orders.update_one(
+        {"_id": ObjectId(po_id)},
+        {"$set": {"status": new_status}}
+    )
+    
+    return {
+        "message": "Stock received successfully",
+        "po_id": po_id,
+        "status": new_status,
+        "items_received": items_received
+    }
+
+
+@router.get("/receiving/pending")
+async def get_pending_receiving(
+    current_user: dict = Depends(require_inventory_module)
+):
+    """Get all purchase orders pending receiving (submitted or partial)"""
+    business_id = current_user.get("business_id")
+    
+    orders = await db.purchase_orders.find({
+        "business_id": business_id,
+        "status": {"$in": ["submitted", "partial"]}
+    }).sort("expected_date", 1).to_list(None)
+    
+    result = []
+    for order in orders:
+        supplier = await db.inventory_suppliers.find_one({"_id": ObjectId(order.get("supplier_id"))}) if order.get("supplier_id") else None
+        
+        items = order.get("items", [])
+        # Convert items to delivery format
+        delivery_items = []
+        for item in items:
+            pending = item.get("ordered_qty", 0) - item.get("received_qty", 0)
+            if pending > 0:
+                delivery_items.append({
+                    "product_id": item.get("item_id"),
+                    "product_name": item.get("item_name"),
+                    "sku": item.get("sku", ""),
+                    "ordered_qty": item.get("ordered_qty", 0),
+                    "received_qty": item.get("received_qty", 0),
+                    "pending_qty": pending
+                })
+        
+        total_items = sum(item.get("ordered_qty", 0) for item in items)
+        received_items = sum(item.get("received_qty", 0) for item in items)
+        
+        result.append({
+            "id": str(order["_id"]),
+            "po_number": order.get("po_number", ""),
+            "supplier": supplier.get("name", "") if supplier else "",
+            "expected_date": order.get("expected_date", ""),
+            "items": delivery_items,
+            "total_items": total_items,
+            "received_items": received_items,
+            "status": "partial" if received_items > 0 else "pending"
+        })
+    
+    return result
+
+
+@router.get("/receiving/history")
+async def get_receiving_history(
+    limit: int = 20,
+    current_user: dict = Depends(require_inventory_module)
+):
+    """Get receiving history (completed POs)"""
+    business_id = current_user.get("business_id")
+    
+    orders = await db.purchase_orders.find({
+        "business_id": business_id,
+        "status": "received"
+    }).sort("updated_at", -1).limit(limit).to_list(limit)
+    
+    result = []
+    for order in orders:
+        supplier = await db.inventory_suppliers.find_one({"_id": ObjectId(order.get("supplier_id"))}) if order.get("supplier_id") else None
+        
+        items = order.get("items", [])
+        total_items = sum(item.get("received_qty", 0) for item in items)
+        
+        result.append({
+            "id": str(order["_id"]),
+            "po_number": order.get("po_number", ""),
+            "supplier": supplier.get("name", "") if supplier else "",
+            "received_date": order.get("updated_at", "").isoformat() if order.get("updated_at") else "",
+            "items_count": total_items,
+            "notes": order.get("notes", "")
+        })
+    
+    return result
