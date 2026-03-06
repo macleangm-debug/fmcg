@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,61 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ThermalReceipt, { ReceiptData } from './ThermalReceipt';
+
+// Print styles - inject CSS to hide non-receipt elements when printing
+const PRINT_STYLES = `
+@media print {
+  /* Hide everything except the receipt */
+  body * {
+    visibility: hidden;
+  }
+  
+  /* Show only the receipt content */
+  .receipt-print-area,
+  .receipt-print-area * {
+    visibility: visible !important;
+  }
+  
+  /* Position receipt at top of page */
+  .receipt-print-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 80mm;
+    margin: 0;
+    padding: 0;
+  }
+  
+  /* Hide action buttons, success header, modal chrome */
+  .no-print,
+  .receipt-actions,
+  .receipt-success-header,
+  .receipt-modal-chrome,
+  [data-no-print="true"] {
+    display: none !important;
+    visibility: hidden !important;
+  }
+  
+  /* Optimize for thermal printer (80mm width) */
+  @page {
+    size: 80mm auto;
+    margin: 0;
+  }
+}
+`;
+
+// Inject print styles on web
+const injectPrintStyles = () => {
+  if (Platform.OS === 'web' && typeof document !== 'undefined') {
+    const existingStyle = document.getElementById('receipt-print-styles');
+    if (!existingStyle) {
+      const styleElement = document.createElement('style');
+      styleElement.id = 'receipt-print-styles';
+      styleElement.textContent = PRINT_STYLES;
+      document.head.appendChild(styleElement);
+    }
+  }
+};
 
 interface ReceiptModalProps {
   visible: boolean;
@@ -35,6 +90,11 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({
   const isMobile = Platform.OS !== 'web' || width < 768;
   
   const slideAnim = React.useRef(new Animated.Value(height)).current;
+  
+  // Inject print styles when component mounts
+  useEffect(() => {
+    injectPrintStyles();
+  }, []);
   
   React.useEffect(() => {
     if (visible && isMobile) {
@@ -121,10 +181,15 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({
 
   if (!visible || !receiptData) return null;
 
+  // Web-specific wrapper for print classes
+  const webProps = Platform.OS === 'web' ? { className: 'no-print receipt-success-header' } : {};
+  const receiptWebProps = Platform.OS === 'web' ? { className: 'receipt-print-area' } : {};
+  const actionsWebProps = Platform.OS === 'web' ? { className: 'no-print receipt-actions' } : {};
+
   const content = (
     <>
-      {/* Success Header */}
-      <View style={styles.successHeader}>
+      {/* Success Header - Hidden on Print */}
+      <View style={styles.successHeader} {...webProps}>
         <View style={styles.successIcon}>
           <Ionicons name="checkmark-circle" size={48} color="#10B981" />
         </View>
@@ -134,11 +199,12 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({
         </Text>
       </View>
 
-      {/* Receipt Preview */}
+      {/* Receipt Preview - This is what gets printed */}
       <ScrollView 
         style={styles.receiptContainer}
         contentContainerStyle={styles.receiptScrollContent}
         showsVerticalScrollIndicator={true}
+        {...receiptWebProps}
       >
         <ThermalReceipt 
           data={receiptData}
@@ -149,8 +215,8 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({
         />
       </ScrollView>
 
-      {/* Action Buttons */}
-      <View style={[styles.actions, { paddingBottom: isMobile ? insets.bottom + 16 : 20 }]}>
+      {/* Action Buttons - Hidden on Print */}
+      <View style={[styles.actions, { paddingBottom: isMobile ? insets.bottom + 16 : 20 }]} {...actionsWebProps}>
         <View style={styles.shareRow}>
           <TouchableOpacity style={styles.shareBtn} onPress={handlePrint}>
             <Ionicons name="print-outline" size={22} color="#374151" />
@@ -188,6 +254,9 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({
     </>
   );
 
+  // Web props for modal chrome (hidden on print)
+  const chromeWebProps = Platform.OS === 'web' ? { className: 'no-print receipt-modal-chrome' } : {};
+
   // Mobile: Bottom sheet (fullscreen)
   if (isMobile) {
     return (
@@ -206,8 +275,8 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({
               { transform: [{ translateY: slideAnim }] }
             ]}
           >
-            <View style={styles.handle} />
-            <TouchableOpacity style={styles.closeBtn} onPress={handleClose}>
+            <View style={styles.handle} {...chromeWebProps} />
+            <TouchableOpacity style={styles.closeBtn} onPress={handleClose} {...chromeWebProps}>
               <Ionicons name="close" size={24} color="#6B7280" />
             </TouchableOpacity>
             {content}
@@ -228,7 +297,7 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({
       <View style={styles.overlay}>
         <Pressable style={styles.backdrop} onPress={handleClose} />
         <View style={styles.desktopModal}>
-          <TouchableOpacity style={styles.closeBtn} onPress={handleClose}>
+          <TouchableOpacity style={styles.closeBtn} onPress={handleClose} {...chromeWebProps}>
             <Ionicons name="close" size={24} color="#6B7280" />
           </TouchableOpacity>
           {content}
