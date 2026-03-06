@@ -983,6 +983,7 @@ export default function Cart() {
       
       clearCart();
       setPromotionResult(null);
+      setShowCheckout(false); // Return to main view after checkout
       
       // Store the order total for the referral popup
       setLastOrderTotal(total);
@@ -1233,7 +1234,7 @@ export default function Cart() {
     );
   };
 
-  if (items.length === 0 && !showProductsModal) {
+  if (items.length === 0 && !showProductsModal && !showReceiptModal) {
     return (
       <SafeAreaView style={styles.container}>
         {/* Header with staff name and logout for sales roles */}
