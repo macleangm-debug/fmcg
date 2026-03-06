@@ -22252,6 +22252,197 @@ try:
 except Exception as e:
     logger.error(f"Error initializing Webhook routes: {e}")
 
+# ============== SMS ENDPOINT (TIGO SMPP) ==============
+# Direct SMS endpoint for Tigo connectivity via VPN
+
+class SMSRequest(BaseModel):
+    phone_number: str
+    message: str
+    sender_id: Optional[str] = None
+
+class BulkSMSRequest(BaseModel):
+    phone_numbers: List[str]
+    message: str
+    sender_id: Optional[str] = None
+
+# Tigo SMPP Configuration
+TIGO_SMPP_CONFIG = {
+    "host": os.environ.get("TIGO_SMPP_HOST", "41.222.182.102"),
+    "port": int(os.environ.get("TIGO_SMPP_PORT", "10501")),
+    "system_id": os.environ.get("TIGO_SYSTEM_ID", "datavision"),
+    "password": os.environ.get("TIGO_PASSWORD", ""),
+    "sender_id": os.environ.get("TIGO_SENDER_ID", "UNITXT"),
+    "sandbox": os.environ.get("TIGO_SANDBOX", "true").lower() == "true"
+}
+
+def send_sms_via_tigo_smpp(phone: str, message: str, sender_id: str) -> dict:
+    """Send SMS via Tigo SMPP"""
+    timestamp = datetime.utcnow().isoformat()
+    
+    # Sandbox mode - simulate success
+    if TIGO_SMPP_CONFIG["sandbox"]:
+        logger.info(f"[SANDBOX] Would send to {phone}: {message}")
+        return {
+            "success": True,
+            "message_id": f"SANDBOX-{datetime.utcnow().timestamp()}",
+            "timestamp": timestamp,
+            "sandbox": True
+        }
+    
+    try:
+        import smpplib
+        import smpplib.client
+        import smpplib.gsm
+        import smpplib.consts
+        
+        # Connect to SMPP server
+        client = smpplib.client.Client(TIGO_SMPP_CONFIG["host"], TIGO_SMPP_CONFIG["port"])
+        client.connect()
+        
+        # Bind as transmitter
+        client.bind_transmitter(
+            system_id=TIGO_SMPP_CONFIG["system_id"],
+            password=TIGO_SMPP_CONFIG["password"]
+        )
+        
+        # Prepare message
+        parts, encoding_flag, msg_type_flag = smpplib.gsm.make_parts(message)
+        
+        # Send each part
+        message_ids = []
+        for part in parts:
+            pdu = client.send_message(
+                source_addr_ton=smpplib.consts.SMPP_TON_ALNUM,
+                source_addr_npi=smpplib.consts.SMPP_NPI_UNK,
+                source_addr=sender_id,
+                dest_addr_ton=smpplib.consts.SMPP_TON_INTL,
+                dest_addr_npi=smpplib.consts.SMPP_NPI_ISDN,
+                destination_addr=phone,
+                short_message=part,
+                data_coding=encoding_flag,
+                esm_class=msg_type_flag,
+                registered_delivery=True
+            )
+            message_ids.append(pdu.message_id)
+        
+        # Unbind and disconnect
+        client.unbind()
+        client.disconnect()
+        
+        logger.info(f"SMS sent to {phone}, message_id: {message_ids[0]}")
+        
+        return {
+            "success": True,
+            "message_id": message_ids[0] if message_ids else None,
+            "timestamp": timestamp
+        }
+        
+    except ImportError:
+        logger.error("smpplib not installed. Install with: pip install smpplib")
+        return {
+            "success": False,
+            "error": "SMPP library not installed",
+            "timestamp": timestamp
+        }
+    except Exception as e:
+        logger.error(f"SMPP Error: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e),
+            "timestamp": timestamp
+        }
+
+@api_router.post("/sms/send")
+async def send_sms_endpoint(request: SMSRequest, current_user: dict = Depends(get_current_user)):
+    """Send single SMS via Tigo SMPP"""
+    sender_id = request.sender_id or TIGO_SMPP_CONFIG["sender_id"]
+    
+    # Clean phone number
+    phone = request.phone_number.strip()
+    if not phone.startswith("+"):
+        phone = f"+{phone}"
+    
+    result = send_sms_via_tigo_smpp(phone, request.message, sender_id)
+    
+    if not result.get("success"):
+        raise HTTPException(status_code=500, detail=result.get("error", "SMS failed"))
+    
+    return result
+
+@api_router.post("/sms/send-bulk")
+async def send_bulk_sms_endpoint(request: BulkSMSRequest, current_user: dict = Depends(get_current_user)):
+    """Send bulk SMS via Tigo SMPP"""
+    sender_id = request.sender_id or TIGO_SMPP_CONFIG["sender_id"]
+    
+    results = []
+    successful = 0
+    failed = 0
+    
+    for phone in request.phone_numbers:
+        clean_phone = phone.strip()
+        if not clean_phone.startswith("+"):
+            clean_phone = f"+{clean_phone}"
+        
+        result = send_sms_via_tigo_smpp(clean_phone, request.message, sender_id)
+        results.append(result)
+        
+        if result.get("success"):
+            successful += 1
+        else:
+            failed += 1
+    
+    return {
+        "total": len(request.phone_numbers),
+        "successful": successful,
+        "failed": failed,
+        "results": results
+    }
+
+@api_router.get("/sms/test-connection")
+async def test_tigo_smpp_connection():
+    """Test connectivity to Tigo SMPP server"""
+    import socket
+    
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(10)
+        result = sock.connect_ex((TIGO_SMPP_CONFIG["host"], TIGO_SMPP_CONFIG["port"]))
+        sock.close()
+        
+        if result == 0:
+            return {
+                "connected": True,
+                "host": TIGO_SMPP_CONFIG["host"],
+                "port": TIGO_SMPP_CONFIG["port"],
+                "sandbox_mode": TIGO_SMPP_CONFIG["sandbox"],
+                "message": "Successfully connected to Tigo SMPP server"
+            }
+        else:
+            return {
+                "connected": False,
+                "host": TIGO_SMPP_CONFIG["host"],
+                "port": TIGO_SMPP_CONFIG["port"],
+                "message": f"Connection failed with error code: {result}"
+            }
+    except Exception as e:
+        return {
+            "connected": False,
+            "host": TIGO_SMPP_CONFIG["host"],
+            "port": TIGO_SMPP_CONFIG["port"],
+            "message": f"Connection error: {str(e)}"
+        }
+
+@api_router.get("/sms/config")
+async def get_sms_config(current_user: dict = Depends(get_current_user)):
+    """Get current SMS configuration (without password)"""
+    return {
+        "host": TIGO_SMPP_CONFIG["host"],
+        "port": TIGO_SMPP_CONFIG["port"],
+        "system_id": TIGO_SMPP_CONFIG["system_id"],
+        "sender_id": TIGO_SMPP_CONFIG["sender_id"],
+        "sandbox_mode": TIGO_SMPP_CONFIG["sandbox"]
+    }
+
 # ============== SYSTEM HEALTH & MONITORING ==============
 @api_router.get("/health")
 async def health_check():
