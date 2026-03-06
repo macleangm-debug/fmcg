@@ -1,4 +1,4 @@
-import React, { useState, useEffect, memo } from 'react';
+import React, { useState, useEffect, memo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -11,6 +11,7 @@ import {
   Alert,
   ActivityIndicator,
   Modal,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,6 +22,7 @@ import Input from '../../src/components/Input';
 import Button from '../../src/components/Button';
 import ViewToggle from '../../src/components/ViewToggle';
 import { useViewSettingsStore } from '../../src/store/viewSettingsStore';
+import api from '../../src/api/client';
 
 const COLORS = {
   primary: '#059669',
@@ -219,18 +221,24 @@ interface PurchaseOrder {
   po_number: string;
   supplier: string;
   supplier_id: string;
-  status: 'draft' | 'sent' | 'partial' | 'received' | 'cancelled';
+  status: 'draft' | 'submitted' | 'sent' | 'partial' | 'received' | 'cancelled';
   items: PurchaseOrderItem[];
   total: number;
+  total_items?: number;
+  received_items?: number;
   created_at: string;
   expected_date: string;
   notes: string;
 }
 
 interface PurchaseOrderItem {
-  product_id: string;
-  product_name: string;
-  quantity: number;
+  item_id?: string;
+  product_id?: string;
+  item_name?: string;
+  product_name?: string;
+  sku?: string;
+  ordered_qty?: number;
+  quantity?: number;
   unit_cost: number;
   received_qty: number;
 }
@@ -250,66 +258,6 @@ interface Product {
   reorder_level: number;
 }
 
-// Mock data
-const mockSuppliers: Supplier[] = [
-  { id: '1', name: 'ABC Suppliers', email: 'abc@suppliers.com' },
-  { id: '2', name: 'XYZ Wholesale', email: 'xyz@wholesale.com' },
-  { id: '3', name: 'Global Distributors', email: 'global@dist.com' },
-];
-
-const mockProducts: Product[] = [
-  { id: '1', name: 'Widget A', sku: 'WID-001', cost_price: 10.00, current_stock: 15, reorder_level: 20 },
-  { id: '2', name: 'Gadget B', sku: 'GAD-002', cost_price: 25.00, current_stock: 8, reorder_level: 10 },
-  { id: '3', name: 'Component C', sku: 'COM-003', cost_price: 5.50, current_stock: 50, reorder_level: 30 },
-  { id: '4', name: 'Part D', sku: 'PAR-004', cost_price: 15.00, current_stock: 3, reorder_level: 15 },
-];
-
-const mockPurchaseOrders: PurchaseOrder[] = [
-  {
-    id: '1',
-    po_number: 'PO-2025-001',
-    supplier: 'ABC Suppliers',
-    supplier_id: '1',
-    status: 'sent',
-    items: [
-      { product_id: '1', product_name: 'Widget A', quantity: 50, unit_cost: 10.00, received_qty: 0 },
-      { product_id: '2', product_name: 'Gadget B', quantity: 30, unit_cost: 25.00, received_qty: 0 },
-    ],
-    total: 1250.00,
-    created_at: '2025-01-20',
-    expected_date: '2025-01-28',
-    notes: 'Urgent restock needed',
-  },
-  {
-    id: '2',
-    po_number: 'PO-2025-002',
-    supplier: 'XYZ Wholesale',
-    supplier_id: '2',
-    status: 'partial',
-    items: [
-      { product_id: '3', product_name: 'Component C', quantity: 100, unit_cost: 5.50, received_qty: 60 },
-    ],
-    total: 550.00,
-    created_at: '2025-01-18',
-    expected_date: '2025-01-25',
-    notes: '',
-  },
-  {
-    id: '3',
-    po_number: 'PO-2025-003',
-    supplier: 'Global Distributors',
-    supplier_id: '3',
-    status: 'received',
-    items: [
-      { product_id: '4', product_name: 'Part D', quantity: 40, unit_cost: 15.00, received_qty: 40 },
-    ],
-    total: 600.00,
-    created_at: '2025-01-15',
-    expected_date: '2025-01-22',
-    notes: 'Completed',
-  },
-];
-
 export default function PurchaseOrdersScreen() {
   const router = useRouter();
   const { width } = useWindowDimensions();
@@ -319,13 +267,59 @@ export default function PurchaseOrdersScreen() {
   // View settings store for Card/Table toggle
   const { purchaseOrdersView, setPurchaseOrdersView } = useViewSettingsStore();
 
-  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>(mockPurchaseOrders);
+  // Data state
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [inventoryItems, setInventoryItems] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  
+  // Modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedPO, setSelectedPO] = useState<PurchaseOrder | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [loading, setLoading] = useState(false);
+
+  // Fetch data on mount
+  const fetchData = useCallback(async () => {
+    try {
+      const [posRes, suppliersRes, itemsRes] = await Promise.all([
+        api.get('/inventory/purchase-orders'),
+        api.get('/inventory/suppliers'),
+        api.get('/inventory/items'),
+      ]);
+      
+      setPurchaseOrders(posRes.data || []);
+      setSuppliers(suppliersRes.data || []);
+      
+      // Map inventory items to Product format
+      const items = (itemsRes.data || []).map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        sku: item.sku || '',
+        cost_price: item.cost_price || 0,
+        current_stock: item.quantity || 0,
+        reorder_level: item.min_quantity || 10,
+      }));
+      setInventoryItems(items);
+    } catch (error) {
+      console.error('Failed to fetch data:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchData();
+  }, [fetchData]);
 
   // New PO form state
   const [formData, setFormData] = useState({
@@ -364,13 +358,13 @@ export default function PurchaseOrdersScreen() {
   const [newProductUnit, setNewProductUnit] = useState('pcs');
 
   // Filtered suppliers based on search
-  const filteredSuppliers = mockSuppliers.filter(s => 
+  const filteredSuppliers = suppliers.filter(s => 
     s.name.toLowerCase().includes((supplierSearch || '').toLowerCase()) ||
     (s.email || '').toLowerCase().includes((supplierSearch || '').toLowerCase())
   );
 
   // Filtered products based on search
-  const filteredProducts = mockProducts.filter(p =>
+  const filteredProducts = inventoryItems.filter(p =>
     p.name.toLowerCase().includes((productSearch || '').toLowerCase()) ||
     p.sku.toLowerCase().includes((productSearch || '').toLowerCase())
   );
@@ -378,7 +372,8 @@ export default function PurchaseOrdersScreen() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'draft': return { bg: COLORS.lightGray, text: COLORS.gray };
-      case 'sent': return { bg: COLORS.blueLight, text: COLORS.blue };
+      case 'submitted': return { bg: COLORS.blueLight, text: COLORS.blue };
+      case 'sent': return { bg: COLORS.blueLight, text: COLORS.blue }; // Legacy support
       case 'partial': return { bg: COLORS.warningLight, text: COLORS.warning };
       case 'received': return { bg: COLORS.successLight, text: COLORS.success };
       case 'cancelled': return { bg: COLORS.dangerLight, text: COLORS.danger };
@@ -398,7 +393,7 @@ export default function PurchaseOrdersScreen() {
       Alert.alert('Error', 'Please select a product');
       return;
     }
-    const product = mockProducts.find(p => p.id === newItem.product_id);
+    const product = inventoryItems.find(p => p.id === newItem.product_id);
     if (product) {
       setOrderItems([...orderItems, {
         product_id: newItem.product_id,
@@ -414,7 +409,7 @@ export default function PurchaseOrdersScreen() {
     setOrderItems(orderItems.filter((_, i) => i !== index));
   };
 
-  const handleCreatePO = () => {
+  const handleCreatePO = async () => {
     if (!formData.supplier_id) {
       Alert.alert('Error', 'Please select a supplier');
       return;
@@ -424,35 +419,35 @@ export default function PurchaseOrdersScreen() {
       return;
     }
 
-    const supplier = mockSuppliers.find(s => s.id === formData.supplier_id);
-    const total = orderItems.reduce((sum, item) => sum + (parseFloat(item.quantity) * parseFloat(item.unit_cost)), 0);
-    
-    const newOrder: PurchaseOrder = {
-      id: Date.now().toString(),
-      po_number: `PO-2025-${String(purchaseOrders.length + 1).padStart(3, '0')}`,
-      supplier: supplier?.name || '',
-      supplier_id: formData.supplier_id,
-      status: 'draft',
-      items: orderItems.map(item => {
-        const product = mockProducts.find(p => p.id === item.product_id);
-        return {
-          product_id: item.product_id,
-          product_name: product?.name || '',
-          quantity: parseFloat(item.quantity),
-          unit_cost: parseFloat(item.unit_cost),
-          received_qty: 0,
-        };
-      }),
-      total,
-      created_at: new Date().toISOString().split('T')[0],
-      expected_date: formData.expected_date || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      notes: formData.notes,
-    };
+    setSaving(true);
+    try {
+      const poData = {
+        supplier_id: formData.supplier_id,
+        expected_date: formData.expected_date || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        notes: formData.notes,
+        items: orderItems.map(item => {
+          const product = inventoryItems.find(p => p.id === item.product_id);
+          return {
+            item_id: item.product_id,
+            item_name: product?.name || '',
+            sku: product?.sku || '',
+            ordered_qty: parseInt(item.quantity),
+            unit_cost: parseFloat(item.unit_cost),
+            received_qty: 0,
+          };
+        }),
+      };
 
-    setPurchaseOrders([newOrder, ...purchaseOrders]);
-    setShowCreateModal(false);
-    resetForm();
-    Alert.alert('Success', 'Purchase Order created successfully!');
+      await api.post('/inventory/purchase-orders', poData);
+      await fetchData(); // Refresh the list
+      setShowCreateModal(false);
+      resetForm();
+      Alert.alert('Success', 'Purchase Order created successfully!');
+    } catch (error: any) {
+      Alert.alert('Error', error?.response?.data?.detail || 'Failed to create Purchase Order');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const resetForm = () => {
@@ -496,14 +491,17 @@ export default function PurchaseOrdersScreen() {
     setShowInlineProductForm(false);
   };
 
-  const handleSendPO = (po: PurchaseOrder) => {
-    setPurchaseOrders(purchaseOrders.map(p => 
-      p.id === po.id ? { ...p, status: 'sent' } : p
-    ));
-    Alert.alert('Success', `${po.po_number} has been sent to supplier`);
+  const handleSendPO = async (po: PurchaseOrder) => {
+    try {
+      await api.post(`/inventory/purchase-orders/${po.id}/submit`);
+      await fetchData();
+      Alert.alert('Success', `${po.po_number} has been submitted`);
+    } catch (error: any) {
+      Alert.alert('Error', error?.response?.data?.detail || 'Failed to submit Purchase Order');
+    }
   };
 
-  const handleCancelPO = (po: PurchaseOrder) => {
+  const handleCancelPO = async (po: PurchaseOrder) => {
     Alert.alert(
       'Cancel Order',
       `Are you sure you want to cancel ${po.po_number}?`,
@@ -512,10 +510,36 @@ export default function PurchaseOrdersScreen() {
         { 
           text: 'Yes', 
           style: 'destructive',
-          onPress: () => {
-            setPurchaseOrders(purchaseOrders.map(p => 
-              p.id === po.id ? { ...p, status: 'cancelled' } : p
-            ));
+          onPress: async () => {
+            try {
+              await api.put(`/inventory/purchase-orders/${po.id}`, { status: 'cancelled' });
+              await fetchData();
+            } catch (error: any) {
+              Alert.alert('Error', error?.response?.data?.detail || 'Failed to cancel Purchase Order');
+            }
+          }
+        },
+      ]
+    );
+  };
+
+  const handleDeletePO = async (po: PurchaseOrder) => {
+    Alert.alert(
+      'Delete Order',
+      `Are you sure you want to delete ${po.po_number}? This cannot be undone.`,
+      [
+        { text: 'No', style: 'cancel' },
+        { 
+          text: 'Yes', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await api.delete(`/inventory/purchase-orders/${po.id}`);
+              await fetchData();
+              Alert.alert('Success', 'Purchase Order deleted');
+            } catch (error: any) {
+              Alert.alert('Error', error?.response?.data?.detail || 'Failed to delete Purchase Order');
+            }
           }
         },
       ]
@@ -527,8 +551,8 @@ export default function PurchaseOrdersScreen() {
 
   const stats = {
     total: purchaseOrders.length,
-    pending: purchaseOrders.filter(p => p.status === 'sent' || p.status === 'partial').length,
-    totalValue: purchaseOrders.filter(p => p.status !== 'cancelled').reduce((sum, p) => sum + p.total, 0),
+    pending: purchaseOrders.filter(p => p.status === 'submitted' || p.status === 'sent' || p.status === 'partial').length,
+    totalValue: purchaseOrders.filter(p => p.status !== 'cancelled').reduce((sum, p) => sum + (p.total || 0), 0),
   };
 
   // Table Header Component
@@ -700,8 +724,18 @@ export default function PurchaseOrdersScreen() {
       </ScrollView>
 
       {/* Orders List */}
-      <View style={styles.listContainer}>
-        {filteredOrders.length === 0 ? (
+      <ScrollView 
+        style={styles.listContainer}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
+        {loading ? (
+          <View style={styles.emptyState}>
+            <ActivityIndicator size="large" color={COLORS.primary} />
+            <Text style={[styles.emptySubtitle, { marginTop: 12 }]}>Loading purchase orders...</Text>
+          </View>
+        ) : filteredOrders.length === 0 ? (
           <View style={styles.emptyState}>
             <Ionicons name="document-text-outline" size={64} color={COLORS.lightGray} />
             <Text style={styles.emptyTitle}>No Purchase Orders</Text>
@@ -719,7 +753,7 @@ export default function PurchaseOrdersScreen() {
             {filteredOrders.map(po => renderCard(po))}
           </View>
         )}
-      </View>
+      </ScrollView>
 
       {/* Create PO Modal */}
       <WebModal
@@ -1288,11 +1322,13 @@ export default function PurchaseOrdersScreen() {
             onPress={() => { setShowCreateModal(false); resetForm(); }}
             variant="outline"
             style={{ flex: 1 }}
+            disabled={saving}
           />
           <Button
-            title="Create Order"
+            title={saving ? "Creating..." : "Create Order"}
             onPress={handleCreatePO}
             style={{ flex: 1 }}
+            disabled={saving}
           />
         </View>
       </WebModal>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   useWindowDimensions,
   TextInput,
   Alert,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -19,6 +21,7 @@ import Button from '../../src/components/Button';
 import Input from '../../src/components/Input';
 import ViewToggle from '../../src/components/ViewToggle';
 import { useViewSettingsStore } from '../../src/store/viewSettingsStore';
+import api from '../../src/api/client';
 
 const COLORS = {
   primary: '#059669',
@@ -57,39 +60,14 @@ interface DeliveryItem {
   pending_qty: number;
 }
 
-// Mock pending deliveries
-const mockPendingDeliveries: PendingDelivery[] = [
-  {
-    id: '1',
-    po_number: 'PO-2025-001',
-    supplier: 'ABC Suppliers',
-    expected_date: '2025-01-28',
-    items: [
-      { product_id: '1', product_name: 'Widget A', sku: 'WID-001', ordered_qty: 50, received_qty: 0, pending_qty: 50 },
-      { product_id: '2', product_name: 'Gadget B', sku: 'GAD-002', ordered_qty: 30, received_qty: 0, pending_qty: 30 },
-    ],
-    total_items: 80,
-    received_items: 0,
-    status: 'pending',
-  },
-  {
-    id: '2',
-    po_number: 'PO-2025-002',
-    supplier: 'XYZ Wholesale',
-    expected_date: '2025-01-25',
-    items: [
-      { product_id: '3', product_name: 'Component C', sku: 'COM-003', ordered_qty: 100, received_qty: 60, pending_qty: 40 },
-    ],
-    total_items: 100,
-    received_items: 60,
-    status: 'partial',
-  },
-];
-
-const mockReceivedHistory = [
-  { id: '1', po_number: 'PO-2025-003', supplier: 'Global Distributors', received_date: '2025-01-22', items_count: 40, notes: 'All items in good condition' },
-  { id: '2', po_number: 'PO-2024-098', supplier: 'ABC Suppliers', received_date: '2025-01-15', items_count: 75, notes: '' },
-];
+interface ReceivedHistory {
+  id: string;
+  po_number: string;
+  supplier: string;
+  received_date: string;
+  items_count: number;
+  notes: string;
+}
 
 export default function ReceivingScreen() {
   const router = useRouter();
@@ -100,13 +78,46 @@ export default function ReceivingScreen() {
   // View settings store for Card/Table toggle
   const { receivingView, setReceivingView } = useViewSettingsStore();
 
-  const [pendingDeliveries, setPendingDeliveries] = useState<PendingDelivery[]>(mockPendingDeliveries);
-  const [receivedHistory, setReceivedHistory] = useState(mockReceivedHistory);
+  // Data state
+  const [pendingDeliveries, setPendingDeliveries] = useState<PendingDelivery[]>([]);
+  const [receivedHistory, setReceivedHistory] = useState<ReceivedHistory[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  
+  // Modal state
   const [showReceiveModal, setShowReceiveModal] = useState(false);
   const [selectedDelivery, setSelectedDelivery] = useState<PendingDelivery | null>(null);
   const [activeTab, setActiveTab] = useState<'pending' | 'history'>('pending');
   const [receiveQuantities, setReceiveQuantities] = useState<{ [key: string]: string }>({});
   const [receiveNotes, setReceiveNotes] = useState('');
+
+  // Fetch data
+  const fetchData = useCallback(async () => {
+    try {
+      const [pendingRes, historyRes] = await Promise.all([
+        api.get('/inventory/receiving/pending'),
+        api.get('/inventory/receiving/history'),
+      ]);
+      
+      setPendingDeliveries(pendingRes.data || []);
+      setReceivedHistory(historyRes.data || []);
+    } catch (error) {
+      console.error('Failed to fetch receiving data:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchData();
+  }, [fetchData]);
 
   const handleOpenReceive = (delivery: PendingDelivery) => {
     setSelectedDelivery(delivery);
@@ -119,7 +130,7 @@ export default function ReceivingScreen() {
     setShowReceiveModal(true);
   };
 
-  const handleReceiveGoods = () => {
+  const handleReceiveGoods = async () => {
     if (!selectedDelivery) return;
 
     const totalReceiving = Object.values(receiveQuantities).reduce((sum, qty) => sum + (parseInt(qty) || 0), 0);
@@ -128,47 +139,39 @@ export default function ReceivingScreen() {
       return;
     }
 
-    const updatedDeliveries = pendingDeliveries.map(d => {
-      if (d.id === selectedDelivery.id) {
-        const updatedItems = d.items.map(item => ({
-          ...item,
-          received_qty: item.received_qty + (parseInt(receiveQuantities[item.product_id]) || 0),
-          pending_qty: item.pending_qty - (parseInt(receiveQuantities[item.product_id]) || 0),
-        }));
-        
-        const totalReceived = updatedItems.reduce((sum, i) => sum + i.received_qty, 0);
-        const totalOrdered = updatedItems.reduce((sum, i) => sum + i.ordered_qty, 0);
-        
-        return {
-          ...d,
-          items: updatedItems,
-          received_items: totalReceived,
-          status: totalReceived >= totalOrdered ? 'complete' : 'partial' as 'pending' | 'partial' | 'complete',
-        };
+    // Validate quantities don't exceed pending
+    for (const item of selectedDelivery.items) {
+      const receiving = parseInt(receiveQuantities[item.product_id]) || 0;
+      if (receiving > item.pending_qty) {
+        Alert.alert('Error', `Cannot receive more than pending quantity for ${item.product_name}`);
+        return;
       }
-      return d;
-    });
-
-    const completedDelivery = updatedDeliveries.find(d => d.id === selectedDelivery.id && d.status === 'complete');
-    if (completedDelivery) {
-      setPendingDeliveries(updatedDeliveries.filter(d => d.id !== selectedDelivery.id));
-      setReceivedHistory([
-        {
-          id: Date.now().toString(),
-          po_number: completedDelivery.po_number,
-          supplier: completedDelivery.supplier,
-          received_date: new Date().toISOString().split('T')[0],
-          items_count: completedDelivery.total_items,
-          notes: receiveNotes,
-        },
-        ...receivedHistory,
-      ]);
-    } else {
-      setPendingDeliveries(updatedDeliveries);
     }
 
-    setShowReceiveModal(false);
-    Alert.alert('Success', `Received ${totalReceiving} items from ${selectedDelivery.po_number}`);
+    setSaving(true);
+    try {
+      // Build items array for API
+      const itemsToReceive = selectedDelivery.items
+        .filter(item => parseInt(receiveQuantities[item.product_id]) > 0)
+        .map(item => ({
+          item_id: item.product_id,
+          quantity: parseInt(receiveQuantities[item.product_id]) || 0,
+          notes: receiveNotes,
+        }));
+
+      await api.post(`/inventory/purchase-orders/${selectedDelivery.id}/receive`, {
+        items: itemsToReceive,
+        notes: receiveNotes,
+      });
+
+      await fetchData(); // Refresh the lists
+      setShowReceiveModal(false);
+      Alert.alert('Success', `Received ${totalReceiving} items from ${selectedDelivery.po_number}`);
+    } catch (error: any) {
+      Alert.alert('Error', error?.response?.data?.detail || 'Failed to receive goods');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const formatDate = (dateStr: string) => new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -284,7 +287,7 @@ export default function ReceivingScreen() {
   );
 
   // Card View for History
-  const renderHistoryCard = (record: any) => (
+  const renderHistoryCard = (record: ReceivedHistory) => (
     <View key={record.id} style={[styles.historyCard, isWeb && styles.cardGridItem]}>
       <View style={styles.historyHeader}>
         <Text style={styles.historyPO}>{record.po_number}</Text>
@@ -294,12 +297,14 @@ export default function ReceivingScreen() {
       <View style={styles.historyMeta}>
         <View style={styles.historyMetaItem}>
           <Ionicons name="cube-outline" size={14} color={COLORS.gray} />
-          <Text style={styles.historyMetaText}>{record.items_received} items received</Text>
+          <Text style={styles.historyMetaText}>{record.items_count} items received</Text>
         </View>
-        <View style={styles.historyMetaItem}>
-          <Ionicons name="person-outline" size={14} color={COLORS.gray} />
-          <Text style={styles.historyMetaText}>{record.received_by}</Text>
-        </View>
+        {record.notes && (
+          <View style={styles.historyMetaItem}>
+            <Ionicons name="document-text-outline" size={14} color={COLORS.gray} />
+            <Text style={styles.historyMetaText} numberOfLines={1}>{record.notes}</Text>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -371,7 +376,12 @@ export default function ReceivingScreen() {
       </View>
 
       {/* Content */}
-      {activeTab === 'pending' ? (
+      {loading ? (
+        <View style={styles.emptyState}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <Text style={[styles.emptySubtitle, { marginTop: 12 }]}>Loading receiving data...</Text>
+        </View>
+      ) : activeTab === 'pending' ? (
         <View style={styles.listContainer}>
           {pendingDeliveries.length === 0 ? (
             <View style={styles.emptyState}>
@@ -501,11 +511,13 @@ export default function ReceivingScreen() {
                 onPress={() => setShowReceiveModal(false)}
                 variant="outline"
                 style={{ flex: 1 }}
+                disabled={saving}
               />
               <Button
-                title="Confirm Receipt"
+                title={saving ? "Receiving..." : "Confirm Receipt"}
                 onPress={handleReceiveGoods}
                 style={{ flex: 1 }}
+                disabled={saving}
               />
             </View>
           </>
@@ -518,7 +530,13 @@ export default function ReceivingScreen() {
   // So we just render the content directly
   if (isWeb) {
     return (
-      <ScrollView showsVerticalScrollIndicator={false} style={styles.container}>
+      <ScrollView 
+        showsVerticalScrollIndicator={false} 
+        style={styles.container}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         {renderContent()}
       </ScrollView>
     );
@@ -526,7 +544,12 @@ export default function ReceivingScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+      >
         {renderContent()}
       </ScrollView>
     </SafeAreaView>
