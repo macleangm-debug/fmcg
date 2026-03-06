@@ -20,6 +20,19 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
   - Both `ReceiptModal` instances now use `handleReceiptClose` for `onClose` and `onNewSale` callbacks
 - ✅ **Testing Agent Validation** - iteration_23.json (Code review 100% pass, UI verified up to payment modal)
 
+### March 6, 2026 (Session 2) - PRINT PREVIEW & PROGRESSIVE SETUP ✅
+- ✅ **Fixed Print Preview Showing Buttons** - Print preview now only shows receipt content
+  - Added `@media print` CSS injection in `/app/frontend/src/components/receipt/ReceiptModal.tsx`
+  - CSS hides: Success header, Action buttons (Print, WhatsApp, Image, New Sale, Done), Modal chrome
+  - Only `.receipt-print-area` (thermal receipt) is visible in print
+  - Optimized for 80mm thermal printer width
+- ✅ **Progressive Setup Components** - Created for quick merchant onboarding:
+  - `/app/frontend/src/components/setup/QuickStartWizard.tsx` - Quick setup with "Start Selling Now" and "Custom Setup" options
+  - `/app/frontend/src/components/setup/JustInTimePrompt.tsx` - Contextual prompts (first_sale_complete, offline_detected, etc.)
+  - Auto-detects country/currency from timezone
+- ✅ **Modal Consistency Verified** - WebModal already has responsive bottom-sheet behavior
+- ✅ **Testing Agent Validation** - iteration_24.json (100% frontend pass)
+
 ### March 6, 2026 - RETAILPRO GO-LIVE PREPARATION ✅
 - ✅ **Country-Based Payment Configuration** - Created `/app/frontend/src/config/paymentConfig.ts`
   - 20+ countries with payment methods (Cash, Card, Mobile Money, Bank Transfer, Credit)
@@ -463,6 +476,7 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 ---
 
 ## Test Reports
+- `/app/test_reports/iteration_24.json` - **Print Preview & Progressive Setup (Mar 6, 2026)** - Print CSS injection, QuickStartWizard, JustInTimePrompt, WebModal responsive (100% pass)
 - `/app/test_reports/iteration_23.json` - **Receipt Modal Bug Fix (Mar 6, 2026)** - Fixed clearCart() timing issue, receipt modal now displays after sale (Code review 100% pass)
 - `/app/test_reports/iteration_20.json` - **Responsive Modal Pattern (Mar 2, 2026)** - Verified desktop centered modals and mobile bottom sheets (100% frontend pass)
 - `/app/test_reports/iteration_19.json` - **JIT Contextual Prompts (Mar 2, 2026)** - Just-in-Time prompts feature verified (100% frontend pass), component structure, AsyncStorage tracking, integration in cart.tsx and admin/products.tsx
