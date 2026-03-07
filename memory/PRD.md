@@ -11,6 +11,21 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
 
 ## What's Been Implemented
 
+### March 7, 2026 (Session 5) - INVENTORY UI ALIGNMENT ✅
+- ✅ **Inventory Items Page UI Aligned** - `/app/frontend/app/inventory/products.tsx` now matches `admin/products.tsx` design
+  - **Terminology Update**: All "Product" references changed to "Item" throughout the page
+    - Page title: "Items" (was "Products")
+    - Button: "Add Item" (was "Add Product")
+    - Modal: "Add New Item" / "Edit Item" (was "Add New Product" / "Edit Product")
+    - Form label: "Item Name *" (was "Product Name *")
+    - Success messages: "Item Added!", "Item Updated!", "Item Deleted"
+  - **Stats Row Inside White Card**: Added Total Items, Low Stock, Categories stats inside the card container
+  - **Table Actions Column Enhanced**: Added Edit (pencil) icon alongside Delete (trash) icon
+  - **Search Placeholder Updated**: "Search items..." (was "Search products...")
+  - **data-testid Attributes**: Added for Add Item button (add-item-button, add-item-button-mobile)
+- ✅ **Testing Agent Validation** - iteration_28.json (100% CODE_VERIFIED - all 10 features verified in code)
+
+
 ### March 6, 2026 (Session 3) - RETAILPRO PRODUCTS ALIGNMENT ✅
 - ✅ **Full CRUD for RetailPro Products** - Products page now has full Create, Read, Update, Delete functionality
   - **Backend APIs Added**:
