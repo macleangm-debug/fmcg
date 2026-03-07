@@ -17,6 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../../src/store/authStore';
 import { useBusinessStore } from '../../src/store/businessStore';
 import WebModal from '../../src/components/WebModal';
@@ -25,6 +26,8 @@ import ProductSwitcher from '../../src/components/ProductSwitcher';
 import ConfirmationModal from '../../src/components/ConfirmationModal';
 import { ProductDashboard } from '../../src/components/dashboard';
 import { Advert } from '../../src/components/AdvertCarousel';
+import InventoryQuickStartWizard from '../../src/components/setup/InventoryQuickStartWizard';
+import InventoryQuickStartPanel from '../../src/components/setup/InventoryQuickStartPanel';
 import api from '../../src/api/client';
 import { PieChart, BarChart, LineChart } from 'react-native-gifted-charts';
 
@@ -104,6 +107,12 @@ export default function InventoryManagement() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  
+  // Quick Start Wizard state
+  const [showQuickStartWizard, setShowQuickStartWizard] = useState(false);
+  const [hasSeenQuickStart, setHasSeenQuickStart] = useState(true); // Default true to avoid flash
+  const [suppliersCount, setSuppliersCount] = useState(0);
+  const [locationsCount, setLocationsCount] = useState(0);
   
   const [summary, setSummary] = useState<Summary | null>(null);
   const [items, setItems] = useState<InventoryItem[]>([]);
@@ -275,11 +284,56 @@ export default function InventoryManagement() {
       setCategories(catsRes.data);
       setMovements(movementsRes.data);
       setChartData(chartRes.data);
+      
+      // Fetch suppliers and locations count for Quick Start Panel
+      try {
+        const [suppliersRes, locationsRes] = await Promise.all([
+          api.get('/inventory/suppliers'),
+          api.get('/inventory/locations')
+        ]);
+        setSuppliersCount(suppliersRes.data?.length || 0);
+        setLocationsCount(locationsRes.data?.length || 0);
+      } catch (e) {
+        // Ignore errors - these are optional for Quick Start
+        console.log('Optional Quick Start data fetch failed:', e);
+      }
     } catch (error) {
       console.log('Failed to fetch data:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
+    }
+  };
+
+  // Check if user has seen Quick Start Wizard
+  useEffect(() => {
+    const checkQuickStart = async () => {
+      try {
+        const seen = await AsyncStorage.getItem('inventory_quickstart_seen');
+        if (!seen) {
+          setHasSeenQuickStart(false);
+        }
+      } catch (e) {
+        console.log('Failed to check quick start status');
+      }
+    };
+    checkQuickStart();
+  }, []);
+
+  // Show Quick Start Wizard for first-time users with empty inventory
+  useEffect(() => {
+    if (!loading && !hasSeenQuickStart && items.length === 0) {
+      setShowQuickStartWizard(true);
+    }
+  }, [loading, hasSeenQuickStart, items.length]);
+
+  const handleQuickStartComplete = async () => {
+    try {
+      await AsyncStorage.setItem('inventory_quickstart_seen', 'true');
+      setHasSeenQuickStart(true);
+      fetchData(); // Refresh data after quick start
+    } catch (e) {
+      console.log('Failed to save quick start status');
     }
   };
 
@@ -1103,32 +1157,48 @@ export default function InventoryManagement() {
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* WEB DASHBOARD - Using ProductDashboard Component */}
       {isWeb ? (
-        <ProductDashboard
-          productId="inventory"
-          subtitle="Inventory management overview"
-          onNewAction={openAddStockModal}
-          newActionLabel="Add Stock"
-          statsRow={[
-            { label: 'Total Items', value: formatNumber(summary?.total_items || 0), icon: 'cube', iconBg: '#D1FAE5', iconColor: '#059669' },
-            { label: 'Total Quantity', value: formatNumber(summary?.total_quantity || 0), icon: 'layers', iconBg: '#DBEAFE', iconColor: '#2563EB' },
-            { label: 'Low Stock', value: summary?.low_stock_count || 0, icon: 'alert-circle', iconBg: '#FEF3C7', iconColor: '#F59E0B' },
-            { label: 'Out of Stock', value: summary?.out_of_stock_count || 0, icon: 'close-circle', iconBg: '#FEE2E2', iconColor: '#EF4444' },
-          ]}
-          netIncome={{ value: summary?.total_items || 0, trend: 15 }}
-          totalReturn={{ value: summary?.out_of_stock_count || 0, trend: -8 }}
-          revenueTotal={summary?.total_value || 0}
-          revenueTrend={12}
-          adverts={adverts}
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          onTransactionViewMore={() => router.push('/inventory/products')}
-          onSalesReportViewMore={() => router.push('/inventory/reports')}
-          onPromoPress={() => router.push('/inventory/products')}
-          promoTitle="Manage your inventory efficiently."
-          promoSubtitle="Track stock levels, manage products, and get low stock alerts."
-          promoButtonText="Manage Products"
-          formatCurrency={formatCurrency}
-        />
+        <View style={{ flex: 1 }}>
+          {/* Quick Start Panel - Show when inventory is empty */}
+          {(items.length === 0 || suppliersCount === 0 || locationsCount === 0) && (
+            <View style={{ paddingHorizontal: 24, paddingTop: 16 }}>
+              <InventoryQuickStartPanel
+                itemsCount={items.length}
+                suppliersCount={suppliersCount}
+                locationsCount={locationsCount}
+                onAddFirstItem={openAddStockModal}
+                onAddSupplier={() => router.push('/inventory/suppliers')}
+                onCreateLocation={() => router.push('/inventory/locations')}
+                onShowWizard={() => setShowQuickStartWizard(true)}
+              />
+            </View>
+          )}
+          <ProductDashboard
+            productId="inventory"
+            subtitle="Inventory management overview"
+            onNewAction={openAddStockModal}
+            newActionLabel="Add Stock"
+            statsRow={[
+              { label: 'Total Items', value: formatNumber(summary?.total_items || 0), icon: 'cube', iconBg: '#D1FAE5', iconColor: '#059669' },
+              { label: 'Total Quantity', value: formatNumber(summary?.total_quantity || 0), icon: 'layers', iconBg: '#DBEAFE', iconColor: '#2563EB' },
+              { label: 'Low Stock', value: summary?.low_stock_count || 0, icon: 'alert-circle', iconBg: '#FEF3C7', iconColor: '#F59E0B' },
+              { label: 'Out of Stock', value: summary?.out_of_stock_count || 0, icon: 'close-circle', iconBg: '#FEE2E2', iconColor: '#EF4444' },
+            ]}
+            netIncome={{ value: summary?.total_items || 0, trend: 15 }}
+            totalReturn={{ value: summary?.out_of_stock_count || 0, trend: -8 }}
+            revenueTotal={summary?.total_value || 0}
+            revenueTrend={12}
+            adverts={adverts}
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            onTransactionViewMore={() => router.push('/inventory/products')}
+            onSalesReportViewMore={() => router.push('/inventory/reports')}
+            onPromoPress={() => router.push('/inventory/products')}
+            promoTitle="Manage your inventory efficiently."
+            promoSubtitle="Track stock levels, manage products, and get low stock alerts."
+            promoButtonText="Manage Products"
+            formatCurrency={formatCurrency}
+          />
+        </View>
       ) : (
         /* MOBILE LAYOUT */
         <ScrollView
@@ -1149,6 +1219,19 @@ export default function InventoryManagement() {
             {/* 3x3 Grid Icon for Apps */}
             <ProductSwitcher currentProductId="inventory" />
           </View>
+
+          {/* Quick Start Panel - Show when inventory is empty */}
+          {(items.length === 0 || suppliersCount === 0 || locationsCount === 0) && (
+            <InventoryQuickStartPanel
+              itemsCount={items.length}
+              suppliersCount={suppliersCount}
+              locationsCount={locationsCount}
+              onAddFirstItem={openAddStockModal}
+              onAddSupplier={() => router.push('/inventory/suppliers')}
+              onCreateLocation={() => router.push('/inventory/locations')}
+              onShowWizard={() => setShowQuickStartWizard(true)}
+            />
+          )}
 
           {/* Stats */}
           {renderStats()}
@@ -2661,6 +2744,21 @@ export default function InventoryManagement() {
           </View>
         </View>
       </Modal>
+
+      {/* Inventory Quick Start Wizard */}
+      <InventoryQuickStartWizard
+        visible={showQuickStartWizard}
+        onClose={() => {
+          setShowQuickStartWizard(false);
+          handleQuickStartComplete();
+        }}
+        onComplete={handleQuickStartComplete}
+        onOpenAddItem={() => {
+          setShowQuickStartWizard(false);
+          handleQuickStartComplete();
+          setTimeout(() => openAddStockModal(), 300);
+        }}
+      />
     </SafeAreaView>
   );
 }
