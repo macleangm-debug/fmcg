@@ -677,7 +677,7 @@ RetailPro must NOT force merchants to use Inventory. Linking is optional and enh
 ## Testing Credentials
 - **Admin User**: admin@fmcg.com / Admin@2025
 - **Demo User**: demo@fmcg.com / Demo@2025
-- **Preview URL**: https://retail-inventory-fix.preview.emergentagent.com
+- **Preview URL**: https://product-onboard.preview.emergentagent.com
 
 ---
 
