@@ -218,7 +218,7 @@ const PRODUCT_MENUS: Record<string, ProductMenuConfig> = {
         title: 'STOCK',
         items: [
           { name: '/inventory', label: 'Dashboard', icon: 'grid-outline' },
-          { name: '/inventory/products', label: 'Stock Levels', icon: 'layers-outline' },
+          { name: '/inventory/products', label: 'Items', icon: 'cube-outline' },
           { name: '/inventory/receiving', label: 'Receive Stock', icon: 'arrow-down-outline' },
         ]
       },
