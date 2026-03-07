@@ -33,7 +33,28 @@ Set up and preview the FMCG application from GitHub repository (`https://github.
   - Banner text updates based on mode
 - ✅ **Testing Agent Validation** - iteration_27.json (12/12 backend tests pass, frontend code verified)
 
-### March 6, 2026 (Session 3) - INVENTORY PRODUCT COMPLETION 🚧
+### March 7, 2026 (Session 4) - INVENTORY UI STABILITY FIX ✅
+- ✅ **Fixed Sidebar Navigation** - Updated routes in `WebSidebarLayout.tsx` to match actual file names
+  - `/inventory/stock` → `/inventory/products` (Stock Levels)
+  - `/inventory/receive` → `/inventory/receiving` (Receive Stock)
+  - `/inventory/warehouses` → `/inventory/locations` (Locations - renamed from Warehouses)
+  - `/inventory/adjustments` → `/inventory/movements` (Adjustments)
+- ✅ **Renamed Warehouse → Location** - Consistent naming across the system
+- ✅ **Created Missing Pages**:
+  - `/app/frontend/app/inventory/locations.tsx` - Location management with CRUD
+  - `/app/frontend/app/inventory/transfers.tsx` - Transfer management
+  - `/app/frontend/app/inventory/alerts.tsx` - Low Stock Alerts dashboard
+- ✅ **Added Location Backend APIs** in `/app/backend/routes/inventory.py`:
+  - `GET /api/inventory/locations` - List locations
+  - `POST /api/inventory/locations` - Create location
+  - `PUT /api/inventory/locations/{id}` - Update location
+  - `DELETE /api/inventory/locations/{id}` - Delete location
+- ✅ **Added Transfer Backend API** - `GET /api/inventory/transfers` - List transfers
+- ✅ **Sidebar Structure** now organized:
+  - STOCK: Dashboard, Stock Levels, Receive Stock
+  - MANAGEMENT: Locations, Transfers, Adjustments
+  - ALERTS: Low Stock Alerts, Reports
+  - SETTINGS: Suppliers, Purchase Orders, Settings
 - ✅ **Inventory Route Gating** - Applied `require_inventory_module` to ALL inventory routes
   - Uses default linked apps `["inventory", "invoicing", "kwikpay"]` when no preferences exist
   - Checks `business_preferences`, `user_preferences`, and `subscriptions` collections

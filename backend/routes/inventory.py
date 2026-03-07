@@ -1461,3 +1461,185 @@ async def get_receiving_history(
         })
     
     return result
+
+
+
+# ============== LOCATIONS ENDPOINTS ==============
+
+class LocationCreate(BaseModel):
+    name: str
+    address: Optional[str] = None
+    type: str = "warehouse"
+
+
+class LocationUpdate(BaseModel):
+    name: Optional[str] = None
+    address: Optional[str] = None
+    type: Optional[str] = None
+    status: Optional[str] = None
+
+
+@router.get("/locations")
+async def get_locations(
+    current_user: dict = Depends(require_inventory_module)
+):
+    """Get all locations for the business"""
+    business_id = current_user.get("business_id")
+    
+    locations = await db.inventory_locations.find({
+        "business_id": business_id
+    }).sort("name", 1).to_list(None)
+    
+    result = []
+    for loc in locations:
+        # Count items at this location
+        item_count = await db.inventory_items.count_documents({
+            "business_id": business_id,
+            "location_id": str(loc["_id"])
+        })
+        
+        result.append({
+            "id": str(loc["_id"]),
+            "name": loc.get("name", ""),
+            "address": loc.get("address", ""),
+            "type": loc.get("type", "warehouse"),
+            "status": loc.get("status", "active"),
+            "item_count": item_count,
+            "created_at": loc.get("created_at", "").isoformat() if loc.get("created_at") else ""
+        })
+    
+    return result
+
+
+@router.post("/locations")
+async def create_location(
+    location: LocationCreate,
+    current_user: dict = Depends(require_inventory_module)
+):
+    """Create a new location"""
+    business_id = current_user.get("business_id")
+    
+    now = datetime.now(timezone.utc)
+    new_location = {
+        "business_id": business_id,
+        "name": location.name,
+        "address": location.address,
+        "type": location.type,
+        "status": "active",
+        "created_at": now,
+        "updated_at": now
+    }
+    
+    result = await db.inventory_locations.insert_one(new_location)
+    
+    return {
+        "id": str(result.inserted_id),
+        "name": location.name,
+        "address": location.address,
+        "type": location.type,
+        "status": "active",
+        "item_count": 0,
+        "created_at": now.isoformat()
+    }
+
+
+@router.put("/locations/{location_id}")
+async def update_location(
+    location_id: str,
+    location: LocationUpdate,
+    current_user: dict = Depends(require_inventory_module)
+):
+    """Update a location"""
+    business_id = current_user.get("business_id")
+    
+    existing = await db.inventory_locations.find_one({
+        "_id": ObjectId(location_id),
+        "business_id": business_id
+    })
+    
+    if not existing:
+        raise HTTPException(status_code=404, detail="Location not found")
+    
+    update_data = {}
+    if location.name is not None:
+        update_data["name"] = location.name
+    if location.address is not None:
+        update_data["address"] = location.address
+    if location.type is not None:
+        update_data["type"] = location.type
+    if location.status is not None:
+        update_data["status"] = location.status
+    
+    update_data["updated_at"] = datetime.now(timezone.utc)
+    
+    await db.inventory_locations.update_one(
+        {"_id": ObjectId(location_id)},
+        {"$set": update_data}
+    )
+    
+    return {"message": "Location updated successfully", "id": location_id}
+
+
+@router.delete("/locations/{location_id}")
+async def delete_location(
+    location_id: str,
+    current_user: dict = Depends(require_inventory_module)
+):
+    """Delete a location"""
+    business_id = current_user.get("business_id")
+    
+    existing = await db.inventory_locations.find_one({
+        "_id": ObjectId(location_id),
+        "business_id": business_id
+    })
+    
+    if not existing:
+        raise HTTPException(status_code=404, detail="Location not found")
+    
+    # Check if location has items
+    item_count = await db.inventory_items.count_documents({
+        "business_id": business_id,
+        "location_id": location_id
+    })
+    
+    if item_count > 0:
+        raise HTTPException(status_code=400, detail=f"Cannot delete location with {item_count} items. Move items first.")
+    
+    await db.inventory_locations.delete_one({"_id": ObjectId(location_id)})
+    
+    return {"message": "Location deleted successfully", "id": location_id}
+
+
+# ============== TRANSFERS ENDPOINTS ==============
+
+@router.get("/transfers")
+async def get_transfers(
+    status: Optional[str] = None,
+    current_user: dict = Depends(require_inventory_module)
+):
+    """Get all transfers for the business"""
+    business_id = current_user.get("business_id")
+    query = {"business_id": business_id}
+    
+    if status:
+        query["status"] = status
+    
+    transfers = await db.inventory_transfers.find(query).sort("created_at", -1).to_list(None)
+    
+    result = []
+    for transfer in transfers:
+        # Get location names
+        from_loc = await db.inventory_locations.find_one({"_id": ObjectId(transfer.get("from_location_id"))}) if transfer.get("from_location_id") else None
+        to_loc = await db.inventory_locations.find_one({"_id": ObjectId(transfer.get("to_location_id"))}) if transfer.get("to_location_id") else None
+        
+        result.append({
+            "id": str(transfer["_id"]),
+            "from_location": from_loc.get("name", "") if from_loc else "",
+            "to_location": to_loc.get("name", "") if to_loc else "",
+            "status": transfer.get("status", "pending"),
+            "items_count": len(transfer.get("items", [])),
+            "created_at": transfer.get("created_at", "").isoformat() if transfer.get("created_at") else "",
+            "notes": transfer.get("notes", "")
+        })
+    
+    return result

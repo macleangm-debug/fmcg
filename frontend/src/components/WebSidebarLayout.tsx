@@ -218,16 +218,16 @@ const PRODUCT_MENUS: Record<string, ProductMenuConfig> = {
         title: 'STOCK',
         items: [
           { name: '/inventory', label: 'Dashboard', icon: 'grid-outline' },
-          { name: '/inventory/stock', label: 'Stock Levels', icon: 'layers-outline' },
-          { name: '/inventory/receive', label: 'Receive Stock', icon: 'arrow-down-outline' },
+          { name: '/inventory/products', label: 'Stock Levels', icon: 'layers-outline' },
+          { name: '/inventory/receiving', label: 'Receive Stock', icon: 'arrow-down-outline' },
         ]
       },
       {
         title: 'MANAGEMENT',
         items: [
-          { name: '/inventory/warehouses', label: 'Warehouses', icon: 'business-outline' },
+          { name: '/inventory/locations', label: 'Locations', icon: 'business-outline' },
           { name: '/inventory/transfers', label: 'Transfers', icon: 'swap-horizontal-outline' },
-          { name: '/inventory/adjustments', label: 'Adjustments', icon: 'create-outline' },
+          { name: '/inventory/movements', label: 'Adjustments', icon: 'create-outline' },
         ]
       },
       {
@@ -240,6 +240,8 @@ const PRODUCT_MENUS: Record<string, ProductMenuConfig> = {
       {
         title: 'SETTINGS',
         items: [
+          { name: '/inventory/suppliers', label: 'Suppliers', icon: 'people-outline' },
+          { name: '/inventory/purchase-orders', label: 'Purchase Orders', icon: 'document-text-outline' },
           { name: '/inventory/settings', label: 'Settings', icon: 'settings-outline' },
         ]
       }
