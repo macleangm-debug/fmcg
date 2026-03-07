@@ -33,7 +33,11 @@ import {
 } from '../../src/components/common/JustInTimePrompts';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const CARD_WIDTH = (SCREEN_WIDTH - 48) / 2;
+const isWebPlatform = Platform.OS === 'web';
+// For mobile: 2 columns, For web: 4 columns
+const CARD_WIDTH = isWebPlatform 
+  ? 'calc(25% - 12px)' as any  // 4 columns with gap
+  : (SCREEN_WIDTH - 48) / 2;
 
 interface Product {
   id: string;
@@ -442,12 +446,13 @@ export default function Products() {
     Alert.alert('Added to Cart', `${product.name} has been added to your cart.`);
   };
 
-  const renderProduct = ({ item }: { item: Product }) => {
+  // Render product card content (shared between FlatList and Web Grid)
+  const renderProductCard = (item: Product) => {
     const isOutOfStock = item.stock_quantity <= 0;
     const isLowStock = item.stock_quantity > 0 && item.stock_quantity <= (item.min_stock || 5);
     
     return (
-      <View style={[styles.productCard, isOutOfStock && styles.productCardDisabled]}>
+      <>
         {/* Product Image / Tap to view details */}
         <TouchableOpacity
           style={styles.productImageContainer}
@@ -508,6 +513,16 @@ export default function Products() {
             </TouchableOpacity>
           </View>
         </View>
+      </>
+    );
+  };
+
+  const renderProduct = ({ item }: { item: Product }) => {
+    const isOutOfStock = item.stock_quantity <= 0;
+    
+    return (
+      <View style={[styles.productCard, isOutOfStock && styles.productCardDisabled]}>
+        {renderProductCard(item)}
       </View>
     );
   };
@@ -691,36 +706,69 @@ export default function Products() {
         )}
       </View>
 
-      <FlatList
-        data={filteredProducts}
-        renderItem={renderProduct}
-        keyExtractor={(item) => item.id}
-        numColumns={2}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-        columnWrapperStyle={styles.productRow}
-        contentContainerStyle={[
-          styles.productsList,
-          items.length > 0 && { paddingBottom: 220 + (Math.min(items.length, 4) * 24) }
-        ]}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <EmptyState
-            icon="cube-outline"
-            title={itemTypeFilter !== 'all' || stockStatusFilter !== 'all' 
-              ? "No products match your filters" 
-              : "Your shelves are empty!"}
-            message={search 
-              ? 'Try a different search term' 
-              : itemTypeFilter !== 'all' || stockStatusFilter !== 'all'
-                ? 'Try adjusting your filters to see more products.'
-                : "Time to stock up! Add products to start selling."}
-            actionLabel={!search && itemTypeFilter === 'all' && stockStatusFilter === 'all' ? "Add Product" : undefined}
-            onAction={!search && itemTypeFilter === 'all' && stockStatusFilter === 'all' ? openAddModal : undefined}
-          />
-        }
-      />
+      {/* Products Grid - Web uses flex wrap, Mobile uses FlatList */}
+      {isWebPlatform ? (
+        <ScrollView
+          style={styles.productsList}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          showsVerticalScrollIndicator={false}
+        >
+          {filteredProducts.length === 0 ? (
+            <EmptyState
+              icon="cube-outline"
+              title={itemTypeFilter !== 'all' || stockStatusFilter !== 'all' 
+                ? "No products match your filters" 
+                : "Your shelves are empty!"}
+              message={search 
+                ? 'Try a different search term' 
+                : itemTypeFilter !== 'all' || stockStatusFilter !== 'all'
+                  ? 'Try adjusting your filters to see more products.'
+                  : "Time to stock up! Add products to start selling."}
+              actionLabel={!search && itemTypeFilter === 'all' && stockStatusFilter === 'all' ? "Add Product" : undefined}
+              onAction={!search && itemTypeFilter === 'all' && stockStatusFilter === 'all' ? openAddModal : undefined}
+            />
+          ) : (
+            <View style={styles.webProductGrid}>
+              {filteredProducts.map((item) => (
+                <View key={item.id} style={styles.webProductCard}>
+                  {renderProductCard(item)}
+                </View>
+              ))}
+            </View>
+          )}
+        </ScrollView>
+      ) : (
+        <FlatList
+          data={filteredProducts}
+          renderItem={renderProduct}
+          keyExtractor={(item) => item.id}
+          numColumns={2}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          columnWrapperStyle={styles.productRow}
+          contentContainerStyle={[
+            styles.productsList,
+            items.length > 0 && { paddingBottom: 220 + (Math.min(items.length, 4) * 24) }
+          ]}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <EmptyState
+              icon="cube-outline"
+              title={itemTypeFilter !== 'all' || stockStatusFilter !== 'all' 
+                ? "No products match your filters" 
+                : "Your shelves are empty!"}
+              message={search 
+                ? 'Try a different search term' 
+                : itemTypeFilter !== 'all' || stockStatusFilter !== 'all'
+                  ? 'Try adjusting your filters to see more products.'
+                  : "Time to stock up! Add products to start selling."}
+              actionLabel={!search && itemTypeFilter === 'all' && stockStatusFilter === 'all' ? "Add Product" : undefined}
+              onAction={!search && itemTypeFilter === 'all' && stockStatusFilter === 'all' ? openAddModal : undefined}
+            />
+          }
+        />
+      )}
 
       {/* Customer Selection Modal */}
       <Modal
@@ -1333,6 +1381,24 @@ const styles = StyleSheet.create({
   productRow: {
     justifyContent: 'space-between',
     marginBottom: 12,
+  },
+  // Web Grid Styles - 4 columns equally spaced
+  webProductGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+    paddingHorizontal: 4,
+  },
+  webProductCard: {
+    width: 'calc(25% - 12px)' as any,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    marginBottom: 0,
   },
   productCard: {
     width: CARD_WIDTH,
