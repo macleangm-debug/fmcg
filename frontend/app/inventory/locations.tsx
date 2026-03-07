@@ -7,20 +7,25 @@ import {
   ScrollView,
   Platform,
   useWindowDimensions,
-  TextInput,
   Alert,
   ActivityIndicator,
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import WebModal from '../../src/components/WebModal';
-import Button from '../../src/components/Button';
+import {
+  PageHeader,
+  PageStatsRow,
+  PageSearchBar,
+  PageTableCard,
+  EmptyStateCard,
+} from '../../src/components/ecosystem/layout';
+import ActionSheetModal from '../../src/components/common/ActionSheetModal';
 import Input from '../../src/components/Input';
 import api from '../../src/api/client';
 
 const COLORS = {
-  primary: '#1E40AF',
+  primary: '#2563EB',
   primaryLight: '#DBEAFE',
   success: '#059669',
   successLight: '#D1FAE5',
@@ -42,21 +47,23 @@ interface Location {
   type: string;
   status: string;
   item_count?: number;
+  is_default?: boolean;
   created_at?: string;
 }
 
 export default function LocationsScreen() {
   const { width } = useWindowDimensions();
-  const isWeb = Platform.OS === 'web' && width > 768;
+  const isWeb = Platform.OS === 'web' && width >= 768;
   
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
-  const [formData, setFormData] = useState({ name: '', address: '', type: 'warehouse' });
+  const [formData, setFormData] = useState({ name: '', address: '', type: 'store' });
 
   const fetchLocations = useCallback(async () => {
     try {
@@ -95,7 +102,7 @@ export default function LocationsScreen() {
       await fetchLocations();
       setShowAddModal(false);
       setEditingLocation(null);
-      setFormData({ name: '', address: '', type: 'warehouse' });
+      setFormData({ name: '', address: '', type: 'store' });
       Alert.alert('Success', editingLocation ? 'Location updated' : 'Location created');
     } catch (error: any) {
       Alert.alert('Error', error?.response?.data?.detail || 'Failed to save location');
@@ -109,7 +116,7 @@ export default function LocationsScreen() {
     setFormData({ 
       name: location.name, 
       address: location.address || '', 
-      type: location.type || 'warehouse' 
+      type: location.type || 'store' 
     });
     setShowAddModal(true);
   };
@@ -137,114 +144,150 @@ export default function LocationsScreen() {
     );
   };
 
-  const renderLocation = (location: Location) => (
-    <View key={location.id} style={[styles.card, isWeb && styles.cardGrid]}>
-      <View style={styles.cardHeader}>
-        <View style={styles.iconContainer}>
-          <Ionicons name="business-outline" size={24} color={COLORS.primary} />
-        </View>
-        <View style={styles.cardInfo}>
-          <Text style={styles.cardTitle}>{location.name}</Text>
-          {location.address && (
-            <Text style={styles.cardSubtitle}>{location.address}</Text>
-          )}
-        </View>
-        <View style={styles.cardActions}>
-          <TouchableOpacity 
-            style={styles.actionBtn}
-            onPress={() => handleEdit(location)}
-          >
-            <Ionicons name="create-outline" size={18} color={COLORS.primary} />
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.actionBtn, styles.deleteBtn]}
-            onPress={() => handleDelete(location)}
-          >
-            <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
-          </TouchableOpacity>
-        </View>
-      </View>
-      <View style={styles.cardFooter}>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>{location.type || 'warehouse'}</Text>
-        </View>
-        <Text style={styles.itemCount}>{location.item_count || 0} items</Text>
-      </View>
-    </View>
+  const openAddModal = () => {
+    setEditingLocation(null);
+    setFormData({ name: '', address: '', type: 'store' });
+    setShowAddModal(true);
+  };
+
+  // Filter locations by search
+  const filteredLocations = locations.filter(loc => 
+    loc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (loc.address && loc.address.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  const renderContent = () => (
-    <View style={styles.content}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.pageTitle}>Locations</Text>
-          <Text style={styles.pageSubtitle}>Manage your storage locations</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => {
-            setEditingLocation(null);
-            setFormData({ name: '', address: '', type: 'warehouse' });
-            setShowAddModal(true);
-          }}
-        >
-          <Ionicons name="add" size={20} color={COLORS.white} />
-          <Text style={styles.addButtonText}>Add Location</Text>
-        </TouchableOpacity>
-      </View>
+  // Stats
+  const stats = [
+    { label: 'Total Locations', value: locations.length, color: COLORS.primary, bgColor: COLORS.primaryLight },
+    { label: 'Active', value: locations.filter(l => l.status === 'active' || !l.status).length, color: COLORS.success, bgColor: COLORS.successLight },
+    { label: 'With Stock', value: locations.filter(l => (l.item_count || 0) > 0).length, color: COLORS.warning, bgColor: COLORS.warningLight },
+  ];
 
-      {/* Stats */}
-      <View style={styles.statsRow}>
-        <View style={[styles.statCard, { backgroundColor: COLORS.primaryLight }]}>
-          <Text style={[styles.statValue, { color: COLORS.primary }]}>{locations.length}</Text>
-          <Text style={styles.statLabel}>Total Locations</Text>
+  // Table columns
+  const columns = [
+    {
+      key: 'name',
+      label: 'Name',
+      flex: 1.5,
+      render: (item: Location) => (
+        <View style={styles.nameCell}>
+          <View style={styles.locationIcon}>
+            <Ionicons name="business-outline" size={18} color={COLORS.primary} />
+          </View>
+          <View>
+            <Text style={styles.locationName}>{item.name}</Text>
+            {item.address && <Text style={styles.locationAddress}>{item.address}</Text>}
+          </View>
         </View>
-        <View style={[styles.statCard, { backgroundColor: COLORS.successLight }]}>
-          <Text style={[styles.statValue, { color: COLORS.success }]}>
-            {locations.filter(l => l.status === 'active').length}
+      ),
+    },
+    {
+      key: 'type',
+      label: 'Type',
+      flex: 0.8,
+      render: (item: Location) => (
+        <View style={[styles.typeBadge, item.type === 'store' ? styles.storeBadge : styles.warehouseBadge]}>
+          <Text style={[styles.typeBadgeText, item.type === 'store' ? styles.storeText : styles.warehouseText]}>
+            {item.type || 'store'}
           </Text>
-          <Text style={styles.statLabel}>Active</Text>
         </View>
-      </View>
+      ),
+    },
+    {
+      key: 'item_count',
+      label: 'Items',
+      flex: 0.6,
+      align: 'center' as const,
+      render: (item: Location) => (
+        <Text style={styles.itemCount}>{item.item_count || 0}</Text>
+      ),
+    },
+    {
+      key: 'is_default',
+      label: 'Default',
+      flex: 0.6,
+      align: 'center' as const,
+      render: (item: Location) => (
+        item.is_default ? (
+          <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
+        ) : (
+          <Text style={styles.notDefault}>-</Text>
+        )
+      ),
+    },
+  ];
 
-      {/* Locations List */}
-      {loading ? (
-        <View style={styles.emptyState}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.emptyText}>Loading locations...</Text>
-        </View>
-      ) : locations.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Ionicons name="business-outline" size={64} color={COLORS.lightGray} />
-          <Text style={styles.emptyTitle}>No Locations</Text>
-          <Text style={styles.emptyText}>Create your first storage location</Text>
-        </View>
-      ) : (
-        <View style={isWeb ? styles.grid : undefined}>
-          {locations.map(renderLocation)}
-        </View>
-      )}
+  const renderActions = (item: Location) => (
+    <>
+      <TouchableOpacity onPress={() => handleEdit(item)} style={styles.actionBtn}>
+        <Ionicons name="pencil-outline" size={18} color={COLORS.primary} />
+      </TouchableOpacity>
+      <TouchableOpacity onPress={() => handleDelete(item)} style={styles.actionBtn}>
+        <Ionicons name="trash-outline" size={18} color={COLORS.danger} />
+      </TouchableOpacity>
+    </>
+  );
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView
+        style={styles.scrollView}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
+        }
+      >
+        {/* Page Header */}
+        <PageHeader
+          title="Locations"
+          subtitle={`${locations.length} location${locations.length !== 1 ? 's' : ''}`}
+          primaryAction={{
+            label: 'Add Location',
+            icon: 'add',
+            onPress: openAddModal,
+          }}
+        />
+
+        {/* Stats Row */}
+        <PageStatsRow stats={stats} />
+
+        {/* Search */}
+        {locations.length > 0 && (
+          <PageSearchBar
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search locations..."
+          />
+        )}
+
+        {/* Table */}
+        <PageTableCard
+          columns={columns}
+          data={filteredLocations}
+          keyExtractor={(item) => item.id}
+          loading={loading}
+          emptyIcon="business-outline"
+          emptyTitle="No Locations"
+          emptySubtitle="Create your first storage location to start tracking inventory"
+          renderActions={renderActions}
+        />
+      </ScrollView>
 
       {/* Add/Edit Modal */}
-      <WebModal
+      <ActionSheetModal
         visible={showAddModal}
         onClose={() => {
           setShowAddModal(false);
           setEditingLocation(null);
         }}
         title={editingLocation ? 'Edit Location' : 'Add Location'}
-        subtitle="Enter location details"
-        icon="business-outline"
-        iconColor={COLORS.primary}
-        maxWidth={450}
+        subtitle="Configure storage location details"
       >
         <View style={styles.form}>
           <Input
-            label="Location Name"
+            label="Location Name *"
             value={formData.name}
             onChangeText={(text) => setFormData({ ...formData, name: text })}
-            placeholder="e.g., Main Warehouse"
+            placeholder="e.g., Main Store"
           />
           <Input
             label="Address (Optional)"
@@ -252,105 +295,170 @@ export default function LocationsScreen() {
             onChangeText={(text) => setFormData({ ...formData, address: text })}
             placeholder="e.g., 123 Business Street"
           />
-          <View style={styles.typeSelector}>
-            <Text style={styles.inputLabel}>Type</Text>
-            <View style={styles.typeOptions}>
-              {['warehouse', 'store', 'office'].map((type) => (
-                <TouchableOpacity
-                  key={type}
+          
+          <Text style={styles.inputLabel}>Location Type</Text>
+          <View style={styles.typeOptions}>
+            {['store', 'warehouse', 'office'].map((type) => (
+              <TouchableOpacity
+                key={type}
+                style={[
+                  styles.typeOption,
+                  formData.type === type && styles.typeOptionActive,
+                ]}
+                onPress={() => setFormData({ ...formData, type })}
+              >
+                <Ionicons
+                  name={type === 'store' ? 'storefront-outline' : type === 'warehouse' ? 'cube-outline' : 'business-outline'}
+                  size={20}
+                  color={formData.type === type ? COLORS.white : COLORS.gray}
+                />
+                <Text
                   style={[
-                    styles.typeOption,
-                    formData.type === type && styles.typeOptionActive
-                  ]}
-                  onPress={() => setFormData({ ...formData, type })}
-                >
-                  <Text style={[
                     styles.typeOptionText,
-                    formData.type === type && styles.typeOptionTextActive
-                  ]}>
-                    {type.charAt(0).toUpperCase() + type.slice(1)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
+                    formData.type === type && styles.typeOptionTextActive,
+                  ]}
+                >
+                  {type.charAt(0).toUpperCase() + type.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
           </View>
-          <View style={styles.formActions}>
-            <Button
-              title="Cancel"
-              onPress={() => setShowAddModal(false)}
-              variant="outline"
-              style={{ flex: 1 }}
-              disabled={saving}
-            />
-            <Button
-              title={saving ? 'Saving...' : (editingLocation ? 'Update' : 'Create')}
-              onPress={handleSave}
-              style={{ flex: 1 }}
-              disabled={saving}
-            />
-          </View>
+
+          <TouchableOpacity
+            style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
+            onPress={handleSave}
+            disabled={saving}
+          >
+            {saving ? (
+              <ActivityIndicator color={COLORS.white} />
+            ) : (
+              <Text style={styles.saveBtnText}>
+                {editingLocation ? 'Update Location' : 'Create Location'}
+              </Text>
+            )}
+          </TouchableOpacity>
         </View>
-      </WebModal>
-    </View>
-  );
-
-  if (isWeb) {
-    return (
-      <ScrollView
-        style={styles.container}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      >
-        {renderContent()}
-      </ScrollView>
-    );
-  }
-
-  return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
-        {renderContent()}
-      </ScrollView>
+      </ActionSheetModal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  content: { padding: 24 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  pageTitle: { fontSize: 28, fontWeight: '800', color: COLORS.dark },
-  pageSubtitle: { fontSize: 14, color: COLORS.gray, marginTop: 4 },
-  addButton: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: COLORS.primary, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8 },
-  addButtonText: { fontSize: 14, fontWeight: '600', color: COLORS.white },
-  statsRow: { flexDirection: 'row', gap: 16, marginBottom: 24 },
-  statCard: { flex: 1, padding: 16, borderRadius: 12, alignItems: 'center' },
-  statValue: { fontSize: 32, fontWeight: '800' },
-  statLabel: { fontSize: 12, color: COLORS.gray, marginTop: 4 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
-  card: { backgroundColor: COLORS.white, borderRadius: 12, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#E5E7EB' },
-  cardGrid: { width: 'calc(50% - 8px)' as any },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  iconContainer: { width: 48, height: 48, borderRadius: 12, backgroundColor: COLORS.primaryLight, alignItems: 'center', justifyContent: 'center' },
-  cardInfo: { flex: 1 },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: COLORS.dark },
-  cardSubtitle: { fontSize: 13, color: COLORS.gray, marginTop: 2 },
-  cardActions: { flexDirection: 'row', gap: 8 },
-  actionBtn: { width: 36, height: 36, borderRadius: 8, backgroundColor: COLORS.primaryLight, alignItems: 'center', justifyContent: 'center' },
-  deleteBtn: { backgroundColor: COLORS.dangerLight },
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#E5E7EB' },
-  badge: { backgroundColor: COLORS.primaryLight, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
-  badgeText: { fontSize: 12, fontWeight: '600', color: COLORS.primary, textTransform: 'capitalize' },
-  itemCount: { fontSize: 13, color: COLORS.gray },
-  emptyState: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: COLORS.dark, marginTop: 16 },
-  emptyText: { fontSize: 14, color: COLORS.gray, marginTop: 8 },
-  form: { gap: 16 },
-  inputLabel: { fontSize: 14, fontWeight: '600', color: COLORS.dark, marginBottom: 8 },
-  typeSelector: { marginTop: 8 },
-  typeOptions: { flexDirection: 'row', gap: 8 },
-  typeOption: { flex: 1, paddingVertical: 12, borderRadius: 8, backgroundColor: '#F3F4F6', alignItems: 'center' },
-  typeOptionActive: { backgroundColor: COLORS.primary },
-  typeOptionText: { fontSize: 14, fontWeight: '600', color: COLORS.gray },
-  typeOptionTextActive: { color: COLORS.white },
-  formActions: { flexDirection: 'row', gap: 12, marginTop: 8 },
+  container: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  nameCell: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  locationIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    backgroundColor: '#DBEAFE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  locationName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  locationAddress: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  typeBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  storeBadge: {
+    backgroundColor: '#D1FAE5',
+  },
+  warehouseBadge: {
+    backgroundColor: '#DBEAFE',
+  },
+  typeBadgeText: {
+    fontSize: 12,
+    fontWeight: '500',
+    textTransform: 'capitalize',
+  },
+  storeText: {
+    color: '#059669',
+  },
+  warehouseText: {
+    color: '#2563EB',
+  },
+  itemCount: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  notDefault: {
+    fontSize: 14,
+    color: '#9CA3AF',
+  },
+  actionBtn: {
+    padding: 8,
+  },
+  form: {
+    gap: 16,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  typeOptions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  typeOption: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  typeOptionActive: {
+    backgroundColor: '#2563EB',
+    borderColor: '#2563EB',
+  },
+  typeOptionText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#374151',
+  },
+  typeOptionTextActive: {
+    color: '#FFFFFF',
+  },
+  saveBtn: {
+    backgroundColor: '#2563EB',
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  saveBtnDisabled: {
+    opacity: 0.7,
+  },
+  saveBtnText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
 });

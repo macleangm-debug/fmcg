@@ -137,6 +137,9 @@ export default function ProductManagement() {
   // Category filter state
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string | null>(null);
   
+  // Item Type filter state (All, Products, Raw Materials)
+  const [itemTypeFilter, setItemTypeFilter] = useState<'all' | 'product' | 'raw_material'>('all');
+  
   // Search query state
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -686,13 +689,14 @@ export default function ProductManagement() {
     router.push('/inventory');
   };
 
-  // Filter products based on search and category
+  // Filter products based on search, category, and item type
   const filteredProducts = products.filter(p => {
     const matchesSearch = !searchQuery || 
       p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       p.sku?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = !selectedCategoryFilter || p.category_id === selectedCategoryFilter;
-    return matchesSearch && matchesCategory;
+    const matchesItemType = itemTypeFilter === 'all' || p.item_type === itemTypeFilter;
+    return matchesSearch && matchesCategory && matchesItemType;
   });
 
   // Web Card renderer for grid view
@@ -1101,6 +1105,54 @@ export default function ProductManagement() {
                       </Text>
                     </TouchableOpacity>
                   ))}
+                </View>
+              </View>
+            )}
+
+            {/* Item Type Filter Row */}
+            {products.length > 0 && (
+              <View style={styles.itemTypeFilterRow}>
+                <Text style={styles.itemTypeFilterLabel}>Item Type:</Text>
+                <View style={styles.itemTypeFilters}>
+                  <TouchableOpacity
+                    style={[styles.itemTypeChip, itemTypeFilter === 'all' && styles.itemTypeChipActive]}
+                    onPress={() => setItemTypeFilter('all')}
+                  >
+                    <Ionicons 
+                      name="layers-outline" 
+                      size={16} 
+                      color={itemTypeFilter === 'all' ? '#FFFFFF' : '#6B7280'} 
+                    />
+                    <Text style={[styles.itemTypeChipText, itemTypeFilter === 'all' && styles.itemTypeChipTextActive]}>
+                      All ({products.length})
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.itemTypeChip, itemTypeFilter === 'product' && styles.itemTypeChipActive]}
+                    onPress={() => setItemTypeFilter('product')}
+                  >
+                    <Ionicons 
+                      name="cube-outline" 
+                      size={16} 
+                      color={itemTypeFilter === 'product' ? '#FFFFFF' : '#6B7280'} 
+                    />
+                    <Text style={[styles.itemTypeChipText, itemTypeFilter === 'product' && styles.itemTypeChipTextActive]}>
+                      Products ({products.filter(p => p.item_type === 'product').length})
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.itemTypeChip, itemTypeFilter === 'raw_material' && styles.itemTypeChipActive]}
+                    onPress={() => setItemTypeFilter('raw_material')}
+                  >
+                    <Ionicons 
+                      name="construct-outline" 
+                      size={16} 
+                      color={itemTypeFilter === 'raw_material' ? '#FFFFFF' : '#6B7280'} 
+                    />
+                    <Text style={[styles.itemTypeChipText, itemTypeFilter === 'raw_material' && styles.itemTypeChipTextActive]}>
+                      Raw Materials ({products.filter(p => p.item_type === 'raw_material').length})
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               </View>
             )}
@@ -3272,6 +3324,49 @@ const styles = StyleSheet.create({
     color: '#6B7280',
   },
   webTabTextActive: {
+    color: '#FFFFFF',
+  },
+  // Item Type Filter styles
+  itemTypeFilterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+    gap: 12,
+  },
+  itemTypeFilterLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#6B7280',
+  },
+  itemTypeFilters: {
+    flexDirection: 'row',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  itemTypeChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  itemTypeChipActive: {
+    backgroundColor: '#2563EB',
+    borderColor: '#2563EB',
+  },
+  itemTypeChipText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#374151',
+  },
+  itemTypeChipTextActive: {
     color: '#FFFFFF',
   },
   webSearchBox: {

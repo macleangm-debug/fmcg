@@ -7,16 +7,22 @@ import {
   ScrollView,
   Platform,
   useWindowDimensions,
-  ActivityIndicator,
   RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import {
+  PageHeader,
+  PageStatsRow,
+  PageSearchBar,
+  PageFiltersRow,
+  PageTableCard,
+} from '../../src/components/ecosystem/layout';
 import api from '../../src/api/client';
 
 const COLORS = {
-  primary: '#1E40AF',
+  primary: '#2563EB',
   primaryLight: '#DBEAFE',
   success: '#059669',
   successLight: '#D1FAE5',
@@ -26,48 +32,38 @@ const COLORS = {
   dangerLight: '#FEE2E2',
   dark: '#111827',
   gray: '#6B7280',
-  lightGray: '#D1D5DB',
   white: '#FFFFFF',
   background: '#F8FAFC',
 };
 
-interface LowStockItem {
+interface Item {
   id: string;
   name: string;
   sku?: string;
   quantity: number;
   min_quantity: number;
-  category?: string;
+  category_name?: string;
 }
 
+type AlertType = 'all' | 'low_stock' | 'out_of_stock';
+
 export default function AlertsScreen() {
-  const router = useRouter();
   const { width } = useWindowDimensions();
-  const isWeb = Platform.OS === 'web' && width > 768;
+  const isWeb = Platform.OS === 'web' && width >= 768;
+  const router = useRouter();
   
-  const [lowStockItems, setLowStockItems] = useState<LowStockItem[]>([]);
-  const [outOfStockItems, setOutOfStockItems] = useState<LowStockItem[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'low' | 'out'>('low');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [alertFilter, setAlertFilter] = useState<string | null>(null);
 
-  const fetchAlerts = useCallback(async () => {
+  const fetchItems = useCallback(async () => {
     try {
       const response = await api.get('/inventory/items');
-      const items: LowStockItem[] = response.data || [];
-      
-      // Filter low stock (quantity > 0 but <= min_quantity)
-      const lowStock = items.filter(item => 
-        item.quantity > 0 && item.quantity <= (item.min_quantity || 10)
-      );
-      
-      // Filter out of stock (quantity <= 0)
-      const outOfStock = items.filter(item => item.quantity <= 0);
-      
-      setLowStockItems(lowStock);
-      setOutOfStockItems(outOfStock);
+      setItems(response.data || []);
     } catch (error) {
-      console.error('Failed to fetch alerts:', error);
+      console.error('Failed to fetch items:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -75,171 +71,330 @@ export default function AlertsScreen() {
   }, []);
 
   useEffect(() => {
-    fetchAlerts();
-  }, [fetchAlerts]);
+    fetchItems();
+  }, [fetchItems]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    fetchAlerts();
-  }, [fetchAlerts]);
+    fetchItems();
+  }, [fetchItems]);
 
-  const renderAlertItem = (item: LowStockItem, isOutOfStock: boolean) => (
-    <View key={item.id} style={[styles.card, isWeb && styles.cardGrid]}>
-      <View style={styles.cardHeader}>
-        <View style={[styles.alertIcon, { backgroundColor: isOutOfStock ? COLORS.dangerLight : COLORS.warningLight }]}>
-          <Ionicons 
-            name={isOutOfStock ? "close-circle" : "alert-circle"} 
-            size={24} 
-            color={isOutOfStock ? COLORS.danger : COLORS.warning} 
-          />
+  // Filter items by alert type
+  const lowStockItems = items.filter(item => item.quantity > 0 && item.quantity <= item.min_quantity);
+  const outOfStockItems = items.filter(item => item.quantity === 0);
+  const allAlertItems = [...outOfStockItems, ...lowStockItems];
+
+  // Apply filters and search
+  const getFilteredItems = () => {
+    let filtered = allAlertItems;
+    
+    if (alertFilter === 'low_stock') {
+      filtered = lowStockItems;
+    } else if (alertFilter === 'out_of_stock') {
+      filtered = outOfStockItems;
+    }
+
+    if (searchQuery) {
+      filtered = filtered.filter(item =>
+        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.sku && item.sku.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+    }
+
+    return filtered;
+  };
+
+  const filteredItems = getFilteredItems();
+
+  // Stats
+  const stats = [
+    { label: 'Total Alerts', value: allAlertItems.length, color: COLORS.danger, bgColor: COLORS.dangerLight, icon: 'alert-circle' },
+    { label: 'Out of Stock', value: outOfStockItems.length, color: COLORS.danger, bgColor: COLORS.dangerLight, icon: 'close-circle' },
+    { label: 'Low Stock', value: lowStockItems.length, color: COLORS.warning, bgColor: COLORS.warningLight, icon: 'warning' },
+  ];
+
+  // Filters
+  const filters = [
+    { key: 'all', label: `All (${allAlertItems.length})` },
+    { key: 'out_of_stock', label: `Out of Stock (${outOfStockItems.length})` },
+    { key: 'low_stock', label: `Low Stock (${lowStockItems.length})` },
+  ];
+
+  // Get alert badge
+  const getAlertBadge = (item: Item) => {
+    if (item.quantity === 0) {
+      return { label: 'Out of Stock', bg: COLORS.dangerLight, color: COLORS.danger };
+    }
+    return { label: 'Low Stock', bg: COLORS.warningLight, color: COLORS.warning };
+  };
+
+  // Table columns
+  const columns = [
+    {
+      key: 'name',
+      label: 'Item',
+      flex: 1.5,
+      render: (item: Item) => (
+        <View style={styles.itemCell}>
+          <View style={[styles.itemIcon, item.quantity === 0 ? styles.itemIconDanger : styles.itemIconWarning]}>
+            <Ionicons 
+              name={item.quantity === 0 ? 'close-circle' : 'alert-circle'} 
+              size={18} 
+              color={item.quantity === 0 ? COLORS.danger : COLORS.warning} 
+            />
+          </View>
+          <View>
+            <Text style={styles.itemName}>{item.name}</Text>
+            {item.sku && <Text style={styles.itemSku}>{item.sku}</Text>}
+          </View>
         </View>
-        <View style={styles.cardInfo}>
-          <Text style={styles.itemName}>{item.name}</Text>
-          {item.sku && <Text style={styles.sku}>SKU: {item.sku}</Text>}
-        </View>
-      </View>
-      <View style={styles.stockInfo}>
-        <View style={styles.stockItem}>
-          <Text style={styles.stockLabel}>Current Stock</Text>
-          <Text style={[
-            styles.stockValue, 
-            { color: isOutOfStock ? COLORS.danger : COLORS.warning }
-          ]}>
-            {item.quantity}
-          </Text>
-        </View>
-        <View style={styles.stockItem}>
-          <Text style={styles.stockLabel}>Min Level</Text>
-          <Text style={styles.stockValue}>{item.min_quantity || 10}</Text>
-        </View>
-        <View style={styles.stockItem}>
-          <Text style={styles.stockLabel}>Reorder</Text>
-          <Text style={styles.stockValue}>
-            {Math.max(0, (item.min_quantity || 10) * 2 - item.quantity)}
-          </Text>
-        </View>
-      </View>
+      ),
+    },
+    {
+      key: 'category',
+      label: 'Category',
+      flex: 0.8,
+      render: (item: Item) => (
+        <Text style={styles.categoryText}>{item.category_name || 'Uncategorized'}</Text>
+      ),
+    },
+    {
+      key: 'quantity',
+      label: 'Current Stock',
+      flex: 0.6,
+      align: 'center' as const,
+      render: (item: Item) => (
+        <Text style={[styles.quantityText, item.quantity === 0 && styles.quantityDanger]}>
+          {item.quantity}
+        </Text>
+      ),
+    },
+    {
+      key: 'min_quantity',
+      label: 'Min Stock',
+      flex: 0.6,
+      align: 'center' as const,
+      render: (item: Item) => (
+        <Text style={styles.minQuantityText}>{item.min_quantity}</Text>
+      ),
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      flex: 0.8,
+      render: (item: Item) => {
+        const badge = getAlertBadge(item);
+        return (
+          <View style={[styles.statusBadge, { backgroundColor: badge.bg }]}>
+            <Text style={[styles.statusText, { color: badge.color }]}>{badge.label}</Text>
+          </View>
+        );
+      },
+    },
+  ];
+
+  const renderActions = (item: Item) => (
+    <>
       <TouchableOpacity 
-        style={styles.createPoButton}
-        onPress={() => router.push('/inventory/purchase-orders')}
+        onPress={() => router.push('/inventory/products')} 
+        style={styles.actionBtn}
       >
-        <Ionicons name="add-circle-outline" size={16} color={COLORS.primary} />
-        <Text style={styles.createPoText}>Create PO</Text>
+        <Ionicons name="eye-outline" size={18} color={COLORS.primary} />
       </TouchableOpacity>
-    </View>
-  );
-
-  const renderContent = () => (
-    <View style={styles.content}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.pageTitle}>Low Stock Alerts</Text>
-          <Text style={styles.pageSubtitle}>Items that need restocking</Text>
-        </View>
-      </View>
-
-      {/* Summary Cards */}
-      <View style={styles.summaryRow}>
-        <TouchableOpacity 
-          style={[styles.summaryCard, activeTab === 'low' && styles.summaryCardActive]}
-          onPress={() => setActiveTab('low')}
-        >
-          <View style={[styles.summaryIcon, { backgroundColor: COLORS.warningLight }]}>
-            <Ionicons name="alert-circle" size={24} color={COLORS.warning} />
-          </View>
-          <Text style={styles.summaryValue}>{lowStockItems.length}</Text>
-          <Text style={styles.summaryLabel}>Low Stock</Text>
-        </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.summaryCard, activeTab === 'out' && styles.summaryCardActive]}
-          onPress={() => setActiveTab('out')}
-        >
-          <View style={[styles.summaryIcon, { backgroundColor: COLORS.dangerLight }]}>
-            <Ionicons name="close-circle" size={24} color={COLORS.danger} />
-          </View>
-          <Text style={styles.summaryValue}>{outOfStockItems.length}</Text>
-          <Text style={styles.summaryLabel}>Out of Stock</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Items List */}
-      {loading ? (
-        <View style={styles.emptyState}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.emptyText}>Checking stock levels...</Text>
-        </View>
-      ) : (activeTab === 'low' ? lowStockItems : outOfStockItems).length === 0 ? (
-        <View style={styles.emptyState}>
-          <Ionicons 
-            name="checkmark-circle-outline" 
-            size={64} 
-            color={COLORS.success} 
-          />
-          <Text style={styles.emptyTitle}>All Good!</Text>
-          <Text style={styles.emptyText}>
-            {activeTab === 'low' 
-              ? 'No items are running low on stock' 
-              : 'No items are out of stock'}
-          </Text>
-        </View>
-      ) : (
-        <View style={isWeb ? styles.grid : undefined}>
-          {(activeTab === 'low' ? lowStockItems : outOfStockItems).map(item => 
-            renderAlertItem(item, activeTab === 'out')
-          )}
-        </View>
-      )}
-    </View>
-  );
-
-  if (isWeb) {
-    return (
-      <ScrollView
-        style={styles.container}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      <TouchableOpacity 
+        onPress={() => router.push('/inventory/purchase-orders')} 
+        style={styles.restockBtn}
       >
-        {renderContent()}
-      </ScrollView>
-    );
-  }
+        <Ionicons name="cart-outline" size={18} color={COLORS.success} />
+      </TouchableOpacity>
+    </>
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
-        {renderContent()}
+      <ScrollView
+        style={styles.scrollView}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
+        }
+      >
+        {/* Page Header */}
+        <PageHeader
+          title="Low Stock Alerts"
+          subtitle={`${allAlertItems.length} item${allAlertItems.length !== 1 ? 's' : ''} need attention`}
+          primaryAction={{
+            label: 'Create PO',
+            icon: 'add',
+            onPress: () => router.push('/inventory/purchase-orders'),
+          }}
+        />
+
+        {/* Stats Row */}
+        <PageStatsRow stats={stats} />
+
+        {/* Search & Filters */}
+        {allAlertItems.length > 0 && (
+          <>
+            <PageSearchBar
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Search items..."
+            />
+            <PageFiltersRow
+              filters={filters}
+              selectedFilter={alertFilter}
+              onFilterSelect={setAlertFilter}
+            />
+          </>
+        )}
+
+        {/* Table */}
+        <PageTableCard
+          columns={columns}
+          data={filteredItems}
+          keyExtractor={(item) => item.id}
+          loading={loading}
+          emptyIcon="checkmark-circle-outline"
+          emptyTitle="All Stocked Up!"
+          emptySubtitle="No items are currently low on stock or out of stock"
+          renderActions={renderActions}
+        />
+
+        {/* Info Card */}
+        {allAlertItems.length > 0 && (
+          <View style={styles.infoCard}>
+            <View style={styles.infoIconContainer}>
+              <Ionicons name="information-circle" size={24} color={COLORS.primary} />
+            </View>
+            <View style={styles.infoContent}>
+              <Text style={styles.infoTitle}>Need to restock?</Text>
+              <Text style={styles.infoText}>
+                Create a Purchase Order to request more stock from your suppliers.
+              </Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.infoAction}
+              onPress={() => router.push('/inventory/purchase-orders')}
+            >
+              <Text style={styles.infoActionText}>Create PO</Text>
+              <Ionicons name="arrow-forward" size={16} color={COLORS.primary} />
+            </TouchableOpacity>
+          </View>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  content: { padding: 24 },
-  header: { marginBottom: 24 },
-  pageTitle: { fontSize: 28, fontWeight: '800', color: COLORS.dark },
-  pageSubtitle: { fontSize: 14, color: COLORS.gray, marginTop: 4 },
-  summaryRow: { flexDirection: 'row', gap: 16, marginBottom: 24 },
-  summaryCard: { flex: 1, backgroundColor: COLORS.white, borderRadius: 12, padding: 16, alignItems: 'center', borderWidth: 2, borderColor: 'transparent' },
-  summaryCardActive: { borderColor: COLORS.primary },
-  summaryIcon: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
-  summaryValue: { fontSize: 32, fontWeight: '800', color: COLORS.dark },
-  summaryLabel: { fontSize: 12, color: COLORS.gray, marginTop: 4 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
-  card: { backgroundColor: COLORS.white, borderRadius: 12, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#E5E7EB' },
-  cardGrid: { width: 'calc(50% - 8px)' as any },
-  cardHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 },
-  alertIcon: { width: 48, height: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  cardInfo: { flex: 1 },
-  itemName: { fontSize: 16, fontWeight: '700', color: COLORS.dark },
-  sku: { fontSize: 12, color: COLORS.gray, marginTop: 2 },
-  stockInfo: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12, borderTopWidth: 1, borderBottomWidth: 1, borderColor: '#E5E7EB' },
-  stockItem: { alignItems: 'center' },
-  stockLabel: { fontSize: 11, color: COLORS.gray, textTransform: 'uppercase' },
-  stockValue: { fontSize: 18, fontWeight: '700', color: COLORS.dark, marginTop: 4 },
-  createPoButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, marginTop: 12, backgroundColor: COLORS.primaryLight, borderRadius: 8 },
-  createPoText: { fontSize: 14, fontWeight: '600', color: COLORS.primary },
-  emptyState: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: COLORS.dark, marginTop: 16 },
-  emptyText: { fontSize: 14, color: COLORS.gray, marginTop: 8, textAlign: 'center' },
+  container: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  itemCell: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  itemIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  itemIconDanger: {
+    backgroundColor: COLORS.dangerLight,
+  },
+  itemIconWarning: {
+    backgroundColor: COLORS.warningLight,
+  },
+  itemName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  itemSku: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  categoryText: {
+    fontSize: 14,
+    color: '#374151',
+  },
+  quantityText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  quantityDanger: {
+    color: COLORS.danger,
+  },
+  minQuantityText: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  actionBtn: {
+    padding: 8,
+  },
+  restockBtn: {
+    padding: 8,
+  },
+  infoCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    marginHorizontal: 24,
+    marginVertical: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    gap: 12,
+  },
+  infoIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: COLORS.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  infoContent: {
+    flex: 1,
+  },
+  infoTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  infoText: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  infoAction: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  infoActionText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: COLORS.primary,
+  },
 });

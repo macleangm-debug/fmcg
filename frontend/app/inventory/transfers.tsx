@@ -13,13 +13,19 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import WebModal from '../../src/components/WebModal';
-import Button from '../../src/components/Button';
+import {
+  PageHeader,
+  PageStatsRow,
+  PageSearchBar,
+  PageFiltersRow,
+  PageTableCard,
+} from '../../src/components/ecosystem/layout';
+import ActionSheetModal from '../../src/components/common/ActionSheetModal';
 import Input from '../../src/components/Input';
 import api from '../../src/api/client';
 
 const COLORS = {
-  primary: '#1E40AF',
+  primary: '#2563EB',
   primaryLight: '#DBEAFE',
   success: '#059669',
   successLight: '#D1FAE5',
@@ -29,19 +35,22 @@ const COLORS = {
   dangerLight: '#FEE2E2',
   dark: '#111827',
   gray: '#6B7280',
-  lightGray: '#D1D5DB',
   white: '#FFFFFF',
   background: '#F8FAFC',
 };
 
 interface Transfer {
   id: string;
-  from_location: string;
-  to_location: string;
-  status: string;
-  items_count: number;
-  created_at: string;
+  from_location_id?: string;
+  from_location_name?: string;
+  to_location_id?: string;
+  to_location_name?: string;
+  item_id?: string;
+  item_name?: string;
+  quantity: number;
+  status: 'pending' | 'in_transit' | 'completed' | 'cancelled';
   notes?: string;
+  created_at?: string;
 }
 
 interface Location {
@@ -49,26 +58,44 @@ interface Location {
   name: string;
 }
 
+interface Item {
+  id: string;
+  name: string;
+  quantity: number;
+}
+
 export default function TransfersScreen() {
   const { width } = useWindowDimensions();
-  const isWeb = Platform.OS === 'web' && width > 768;
+  const isWeb = Platform.OS === 'web' && width >= 768;
   
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
+  const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string | null>(null);
   
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<'pending' | 'completed'>('pending');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [formData, setFormData] = useState({
+    from_location_id: '',
+    to_location_id: '',
+    item_id: '',
+    quantity: '',
+    notes: '',
+  });
 
   const fetchData = useCallback(async () => {
     try {
-      const [transfersRes, locationsRes] = await Promise.all([
+      const [transfersRes, locationsRes, itemsRes] = await Promise.all([
         api.get('/inventory/transfers'),
         api.get('/inventory/locations'),
+        api.get('/inventory/items'),
       ]);
       setTransfers(transfersRes.data || []);
       setLocations(locationsRes.data || []);
+      setItems(itemsRes.data || []);
     } catch (error) {
       console.error('Failed to fetch data:', error);
     } finally {
@@ -86,235 +113,408 @@ export default function TransfersScreen() {
     fetchData();
   }, [fetchData]);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pending': return { bg: COLORS.warningLight, text: COLORS.warning };
-      case 'in_transit': return { bg: COLORS.primaryLight, text: COLORS.primary };
-      case 'completed': return { bg: COLORS.successLight, text: COLORS.success };
-      case 'cancelled': return { bg: COLORS.dangerLight, text: COLORS.danger };
-      default: return { bg: COLORS.primaryLight, text: COLORS.primary };
+  const handleCreateTransfer = async () => {
+    if (!formData.from_location_id || !formData.to_location_id || !formData.item_id || !formData.quantity) {
+      Alert.alert('Error', 'Please fill in all required fields');
+      return;
+    }
+
+    if (formData.from_location_id === formData.to_location_id) {
+      Alert.alert('Error', 'Source and destination locations must be different');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await api.post('/inventory/transfers', {
+        from_location_id: formData.from_location_id,
+        to_location_id: formData.to_location_id,
+        item_id: formData.item_id,
+        quantity: parseInt(formData.quantity),
+        notes: formData.notes,
+      });
+      await fetchData();
+      setShowAddModal(false);
+      setFormData({ from_location_id: '', to_location_id: '', item_id: '', quantity: '', notes: '' });
+      Alert.alert('Success', 'Transfer created successfully');
+    } catch (error: any) {
+      Alert.alert('Error', error?.response?.data?.detail || 'Failed to create transfer');
+    } finally {
+      setSaving(false);
     }
   };
 
-  const pendingTransfers = transfers.filter(t => t.status === 'pending' || t.status === 'in_transit');
-  const completedTransfers = transfers.filter(t => t.status === 'completed');
-
-  const renderTransfer = (transfer: Transfer) => {
-    const statusColor = getStatusColor(transfer.status);
-    return (
-      <View key={transfer.id} style={[styles.card, isWeb && styles.cardGrid]}>
-        <View style={styles.cardHeader}>
-          <View style={styles.transferRoute}>
-            <View style={styles.locationBadge}>
-              <Ionicons name="arrow-up-outline" size={14} color={COLORS.danger} />
-              <Text style={styles.locationText}>{transfer.from_location}</Text>
-            </View>
-            <Ionicons name="arrow-forward" size={16} color={COLORS.gray} />
-            <View style={styles.locationBadge}>
-              <Ionicons name="arrow-down-outline" size={14} color={COLORS.success} />
-              <Text style={styles.locationText}>{transfer.to_location}</Text>
-            </View>
-          </View>
-          <View style={[styles.statusBadge, { backgroundColor: statusColor.bg }]}>
-            <Text style={[styles.statusText, { color: statusColor.text }]}>
-              {transfer.status.replace('_', ' ')}
-            </Text>
-          </View>
-        </View>
-        <View style={styles.cardMeta}>
-          <View style={styles.metaItem}>
-            <Ionicons name="cube-outline" size={14} color={COLORS.gray} />
-            <Text style={styles.metaText}>{transfer.items_count} items</Text>
-          </View>
-          <View style={styles.metaItem}>
-            <Ionicons name="calendar-outline" size={14} color={COLORS.gray} />
-            <Text style={styles.metaText}>
-              {new Date(transfer.created_at).toLocaleDateString()}
-            </Text>
-          </View>
-        </View>
-        {transfer.notes && (
-          <Text style={styles.notes} numberOfLines={2}>{transfer.notes}</Text>
-        )}
-      </View>
-    );
+  const openAddModal = () => {
+    if (locations.length < 2) {
+      Alert.alert('Cannot Create Transfer', 'You need at least 2 locations to create a transfer. Please add more locations first.');
+      return;
+    }
+    if (items.length === 0) {
+      Alert.alert('Cannot Create Transfer', 'You need at least 1 item to transfer. Please add items first.');
+      return;
+    }
+    setFormData({ from_location_id: '', to_location_id: '', item_id: '', quantity: '', notes: '' });
+    setShowAddModal(true);
   };
 
-  const renderContent = () => (
-    <View style={styles.content}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.pageTitle}>Transfers</Text>
-          <Text style={styles.pageSubtitle}>Move stock between locations</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => setShowCreateModal(true)}
-        >
-          <Ionicons name="swap-horizontal" size={20} color={COLORS.white} />
-          <Text style={styles.addButtonText}>New Transfer</Text>
-        </TouchableOpacity>
-      </View>
+  // Filter transfers
+  const filteredTransfers = transfers.filter(t => {
+    const matchesSearch = searchQuery === '' || 
+      t.item_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.from_location_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      t.to_location_name?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = !statusFilter || t.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
-      {/* Stats */}
-      <View style={styles.statsRow}>
-        <View style={[styles.statCard, { backgroundColor: COLORS.warningLight }]}>
-          <Text style={[styles.statValue, { color: COLORS.warning }]}>{pendingTransfers.length}</Text>
-          <Text style={styles.statLabel}>Pending</Text>
-        </View>
-        <View style={[styles.statCard, { backgroundColor: COLORS.successLight }]}>
-          <Text style={[styles.statValue, { color: COLORS.success }]}>{completedTransfers.length}</Text>
-          <Text style={styles.statLabel}>Completed</Text>
-        </View>
-        <View style={[styles.statCard, { backgroundColor: COLORS.primaryLight }]}>
-          <Text style={[styles.statValue, { color: COLORS.primary }]}>{locations.length}</Text>
-          <Text style={styles.statLabel}>Locations</Text>
-        </View>
-      </View>
+  // Stats
+  const stats = [
+    { label: 'Total Transfers', value: transfers.length, color: COLORS.primary, bgColor: COLORS.primaryLight },
+    { label: 'Pending', value: transfers.filter(t => t.status === 'pending').length, color: COLORS.warning, bgColor: COLORS.warningLight },
+    { label: 'Completed', value: transfers.filter(t => t.status === 'completed').length, color: COLORS.success, bgColor: COLORS.successLight },
+  ];
 
-      {/* Tabs */}
-      <View style={styles.tabs}>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'pending' && styles.tabActive]}
-          onPress={() => setActiveTab('pending')}
-        >
-          <Text style={[styles.tabText, activeTab === 'pending' && styles.tabTextActive]}>
-            Pending ({pendingTransfers.length})
-          </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'completed' && styles.tabActive]}
-          onPress={() => setActiveTab('completed')}
-        >
-          <Text style={[styles.tabText, activeTab === 'completed' && styles.tabTextActive]}>
-            Completed ({completedTransfers.length})
-          </Text>
-        </TouchableOpacity>
-      </View>
+  // Filters
+  const filters = [
+    { key: 'all', label: 'All' },
+    { key: 'pending', label: 'Pending' },
+    { key: 'in_transit', label: 'In Transit' },
+    { key: 'completed', label: 'Completed' },
+    { key: 'cancelled', label: 'Cancelled' },
+  ];
 
-      {/* Transfer List */}
-      {loading ? (
-        <View style={styles.emptyState}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-          <Text style={styles.emptyText}>Loading transfers...</Text>
-        </View>
-      ) : (activeTab === 'pending' ? pendingTransfers : completedTransfers).length === 0 ? (
-        <View style={styles.emptyState}>
-          <Ionicons name="swap-horizontal-outline" size={64} color={COLORS.lightGray} />
-          <Text style={styles.emptyTitle}>No {activeTab} Transfers</Text>
-          <Text style={styles.emptyText}>
-            {activeTab === 'pending' 
-              ? 'Create a transfer to move stock between locations' 
-              : 'Completed transfers will appear here'}
-          </Text>
-        </View>
-      ) : (
-        <View style={isWeb ? styles.grid : undefined}>
-          {(activeTab === 'pending' ? pendingTransfers : completedTransfers).map(renderTransfer)}
-        </View>
-      )}
+  // Get status badge style
+  const getStatusBadge = (status: string) => {
+    const statusStyles: Record<string, { bg: string; color: string }> = {
+      pending: { bg: COLORS.warningLight, color: COLORS.warning },
+      in_transit: { bg: COLORS.primaryLight, color: COLORS.primary },
+      completed: { bg: COLORS.successLight, color: COLORS.success },
+      cancelled: { bg: COLORS.dangerLight, color: COLORS.danger },
+    };
+    return statusStyles[status] || statusStyles.pending;
+  };
 
-      {/* Create Transfer Modal */}
-      <WebModal
-        visible={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        title="New Transfer"
-        subtitle="Move stock between locations"
-        icon="swap-horizontal"
-        iconColor={COLORS.primary}
-        maxWidth={500}
-      >
-        <View style={styles.modalContent}>
-          <View style={styles.infoBox}>
-            <Ionicons name="information-circle-outline" size={20} color={COLORS.primary} />
-            <Text style={styles.infoText}>
-              Select source and destination locations, then choose items to transfer.
+  // Table columns
+  const columns = [
+    {
+      key: 'item_name',
+      label: 'Item',
+      flex: 1.2,
+      render: (item: Transfer) => (
+        <View style={styles.itemCell}>
+          <View style={styles.itemIcon}>
+            <Ionicons name="cube-outline" size={16} color={COLORS.primary} />
+          </View>
+          <Text style={styles.itemName}>{item.item_name || 'Unknown Item'}</Text>
+        </View>
+      ),
+    },
+    {
+      key: 'from',
+      label: 'From',
+      flex: 1,
+      render: (item: Transfer) => (
+        <Text style={styles.locationText}>{item.from_location_name || '-'}</Text>
+      ),
+    },
+    {
+      key: 'to',
+      label: 'To',
+      flex: 1,
+      render: (item: Transfer) => (
+        <Text style={styles.locationText}>{item.to_location_name || '-'}</Text>
+      ),
+    },
+    {
+      key: 'quantity',
+      label: 'Qty',
+      flex: 0.5,
+      align: 'center' as const,
+      render: (item: Transfer) => (
+        <Text style={styles.quantityText}>{item.quantity}</Text>
+      ),
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      flex: 0.8,
+      render: (item: Transfer) => {
+        const badge = getStatusBadge(item.status);
+        return (
+          <View style={[styles.statusBadge, { backgroundColor: badge.bg }]}>
+            <Text style={[styles.statusText, { color: badge.color }]}>
+              {item.status.replace('_', ' ')}
             </Text>
           </View>
-          
-          {locations.length < 2 ? (
-            <View style={styles.warningBox}>
-              <Ionicons name="alert-circle-outline" size={20} color={COLORS.warning} />
-              <Text style={styles.warningText}>
-                You need at least 2 locations to create a transfer. Please add more locations first.
-              </Text>
-            </View>
-          ) : (
-            <Text style={styles.comingSoon}>Transfer creation flow coming soon...</Text>
-          )}
-          
-          <View style={styles.formActions}>
-            <Button
-              title="Close"
-              onPress={() => setShowCreateModal(false)}
-              variant="outline"
-              style={{ flex: 1 }}
-            />
-          </View>
-        </View>
-      </WebModal>
-    </View>
-  );
-
-  if (isWeb) {
-    return (
-      <ScrollView
-        style={styles.container}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      >
-        {renderContent()}
-      </ScrollView>
-    );
-  }
+        );
+      },
+    },
+  ];
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
-        {renderContent()}
+      <ScrollView
+        style={styles.scrollView}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={COLORS.primary} />
+        }
+      >
+        {/* Page Header */}
+        <PageHeader
+          title="Transfers"
+          subtitle={`${transfers.length} transfer${transfers.length !== 1 ? 's' : ''}`}
+          primaryAction={{
+            label: 'New Transfer',
+            icon: 'swap-horizontal',
+            onPress: openAddModal,
+          }}
+        />
+
+        {/* Stats Row */}
+        <PageStatsRow stats={stats} />
+
+        {/* Search */}
+        {transfers.length > 0 && (
+          <>
+            <PageSearchBar
+              value={searchQuery}
+              onChangeText={setSearchQuery}
+              placeholder="Search transfers..."
+            />
+            <PageFiltersRow
+              filters={filters}
+              selectedFilter={statusFilter}
+              onFilterSelect={setStatusFilter}
+            />
+          </>
+        )}
+
+        {/* Table */}
+        <PageTableCard
+          columns={columns}
+          data={filteredTransfers}
+          keyExtractor={(item) => item.id}
+          loading={loading}
+          emptyIcon="swap-horizontal-outline"
+          emptyTitle="No Transfers"
+          emptySubtitle={locations.length < 2 
+            ? "Add at least 2 locations to start transferring stock"
+            : "Create your first stock transfer between locations"
+          }
+        />
       </ScrollView>
+
+      {/* Add Transfer Modal */}
+      <ActionSheetModal
+        visible={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        title="New Transfer"
+        subtitle="Move stock between locations"
+      >
+        <View style={styles.form}>
+          {/* From Location */}
+          <Text style={styles.inputLabel}>From Location *</Text>
+          <View style={styles.selectContainer}>
+            {locations.map((loc) => (
+              <TouchableOpacity
+                key={loc.id}
+                style={[
+                  styles.selectOption,
+                  formData.from_location_id === loc.id && styles.selectOptionActive,
+                  formData.to_location_id === loc.id && styles.selectOptionDisabled,
+                ]}
+                onPress={() => setFormData({ ...formData, from_location_id: loc.id })}
+                disabled={formData.to_location_id === loc.id}
+              >
+                <Text style={[
+                  styles.selectOptionText,
+                  formData.from_location_id === loc.id && styles.selectOptionTextActive,
+                ]}>
+                  {loc.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* To Location */}
+          <Text style={styles.inputLabel}>To Location *</Text>
+          <View style={styles.selectContainer}>
+            {locations.map((loc) => (
+              <TouchableOpacity
+                key={loc.id}
+                style={[
+                  styles.selectOption,
+                  formData.to_location_id === loc.id && styles.selectOptionActive,
+                  formData.from_location_id === loc.id && styles.selectOptionDisabled,
+                ]}
+                onPress={() => setFormData({ ...formData, to_location_id: loc.id })}
+                disabled={formData.from_location_id === loc.id}
+              >
+                <Text style={[
+                  styles.selectOptionText,
+                  formData.to_location_id === loc.id && styles.selectOptionTextActive,
+                ]}>
+                  {loc.name}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Item */}
+          <Text style={styles.inputLabel}>Item *</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <View style={styles.selectContainer}>
+              {items.slice(0, 10).map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[
+                    styles.selectOption,
+                    formData.item_id === item.id && styles.selectOptionActive,
+                  ]}
+                  onPress={() => setFormData({ ...formData, item_id: item.id })}
+                >
+                  <Text style={[
+                    styles.selectOptionText,
+                    formData.item_id === item.id && styles.selectOptionTextActive,
+                  ]}>
+                    {item.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
+
+          {/* Quantity */}
+          <Input
+            label="Quantity *"
+            value={formData.quantity}
+            onChangeText={(text) => setFormData({ ...formData, quantity: text.replace(/[^0-9]/g, '') })}
+            placeholder="Enter quantity"
+            keyboardType="numeric"
+          />
+
+          {/* Notes */}
+          <Input
+            label="Notes (Optional)"
+            value={formData.notes}
+            onChangeText={(text) => setFormData({ ...formData, notes: text })}
+            placeholder="Add any notes"
+            multiline
+          />
+
+          <TouchableOpacity
+            style={[styles.saveBtn, saving && styles.saveBtnDisabled]}
+            onPress={handleCreateTransfer}
+            disabled={saving}
+          >
+            {saving ? (
+              <ActivityIndicator color={COLORS.white} />
+            ) : (
+              <Text style={styles.saveBtnText}>Create Transfer</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      </ActionSheetModal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  content: { padding: 24 },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 },
-  pageTitle: { fontSize: 28, fontWeight: '800', color: COLORS.dark },
-  pageSubtitle: { fontSize: 14, color: COLORS.gray, marginTop: 4 },
-  addButton: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: COLORS.primary, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8 },
-  addButtonText: { fontSize: 14, fontWeight: '600', color: COLORS.white },
-  statsRow: { flexDirection: 'row', gap: 12, marginBottom: 24 },
-  statCard: { flex: 1, padding: 16, borderRadius: 12, alignItems: 'center' },
-  statValue: { fontSize: 28, fontWeight: '800' },
-  statLabel: { fontSize: 12, color: COLORS.gray, marginTop: 4 },
-  tabs: { flexDirection: 'row', backgroundColor: '#F3F4F6', borderRadius: 8, padding: 4, marginBottom: 20 },
-  tab: { flex: 1, paddingVertical: 10, borderRadius: 6, alignItems: 'center' },
-  tabActive: { backgroundColor: COLORS.white },
-  tabText: { fontSize: 14, fontWeight: '600', color: COLORS.gray },
-  tabTextActive: { color: COLORS.primary },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 16 },
-  card: { backgroundColor: COLORS.white, borderRadius: 12, padding: 16, marginBottom: 12, borderWidth: 1, borderColor: '#E5E7EB' },
-  cardGrid: { width: 'calc(50% - 8px)' as any },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 },
-  transferRoute: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1, flexWrap: 'wrap' },
-  locationBadge: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#F3F4F6', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 6 },
-  locationText: { fontSize: 13, fontWeight: '600', color: COLORS.dark },
-  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 6 },
-  statusText: { fontSize: 12, fontWeight: '600', textTransform: 'capitalize' },
-  cardMeta: { flexDirection: 'row', gap: 16 },
-  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  metaText: { fontSize: 13, color: COLORS.gray },
-  notes: { fontSize: 13, color: COLORS.gray, marginTop: 8, fontStyle: 'italic' },
-  emptyState: { alignItems: 'center', justifyContent: 'center', paddingVertical: 60 },
-  emptyTitle: { fontSize: 18, fontWeight: '700', color: COLORS.dark, marginTop: 16 },
-  emptyText: { fontSize: 14, color: COLORS.gray, marginTop: 8, textAlign: 'center' },
-  modalContent: { gap: 16 },
-  infoBox: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, backgroundColor: COLORS.primaryLight, padding: 12, borderRadius: 8 },
-  infoText: { flex: 1, fontSize: 14, color: COLORS.primary },
-  warningBox: { flexDirection: 'row', alignItems: 'flex-start', gap: 12, backgroundColor: COLORS.warningLight, padding: 12, borderRadius: 8 },
-  warningText: { flex: 1, fontSize: 14, color: COLORS.warning },
-  comingSoon: { fontSize: 14, color: COLORS.gray, textAlign: 'center', paddingVertical: 20 },
-  formActions: { flexDirection: 'row', gap: 12, marginTop: 8 },
+  container: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
+  scrollView: {
+    flex: 1,
+  },
+  itemCell: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  itemIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#DBEAFE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  itemName: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#111827',
+  },
+  locationText: {
+    fontSize: 14,
+    color: '#374151',
+  },
+  quantityText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'flex-start',
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '500',
+    textTransform: 'capitalize',
+  },
+  form: {
+    gap: 16,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: 8,
+  },
+  selectContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  selectOption: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  selectOptionActive: {
+    backgroundColor: '#2563EB',
+    borderColor: '#2563EB',
+  },
+  selectOptionDisabled: {
+    opacity: 0.4,
+  },
+  selectOptionText: {
+    fontSize: 13,
+    color: '#374151',
+  },
+  selectOptionTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '500',
+  },
+  saveBtn: {
+    backgroundColor: '#2563EB',
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  saveBtnDisabled: {
+    opacity: 0.7,
+  },
+  saveBtnText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
 });
