@@ -17,7 +17,6 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../../src/store/authStore';
 import { useBusinessStore } from '../../src/store/businessStore';
 import WebModal from '../../src/components/WebModal';
@@ -26,8 +25,6 @@ import ProductSwitcher from '../../src/components/ProductSwitcher';
 import ConfirmationModal from '../../src/components/ConfirmationModal';
 import { ProductDashboard } from '../../src/components/dashboard';
 import { Advert } from '../../src/components/AdvertCarousel';
-import InventoryQuickStartWizard from '../../src/components/setup/InventoryQuickStartWizard';
-import InventoryQuickStartPanel from '../../src/components/setup/InventoryQuickStartPanel';
 import api from '../../src/api/client';
 import { PieChart, BarChart, LineChart } from 'react-native-gifted-charts';
 
@@ -107,12 +104,6 @@ export default function InventoryManagement() {
   const [filterStatus, setFilterStatus] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showLogoutModal, setShowLogoutModal] = useState(false);
-  
-  // Quick Start Wizard state
-  const [showQuickStartWizard, setShowQuickStartWizard] = useState(false);
-  const [hasSeenQuickStart, setHasSeenQuickStart] = useState(true); // Default true to avoid flash
-  const [suppliersCount, setSuppliersCount] = useState(0);
-  const [locationsCount, setLocationsCount] = useState(0);
   
   const [summary, setSummary] = useState<Summary | null>(null);
   const [items, setItems] = useState<InventoryItem[]>([]);
@@ -284,56 +275,11 @@ export default function InventoryManagement() {
       setCategories(catsRes.data);
       setMovements(movementsRes.data);
       setChartData(chartRes.data);
-      
-      // Fetch suppliers and locations count for Quick Start Panel
-      try {
-        const [suppliersRes, locationsRes] = await Promise.all([
-          api.get('/inventory/suppliers'),
-          api.get('/inventory/locations')
-        ]);
-        setSuppliersCount(suppliersRes.data?.length || 0);
-        setLocationsCount(locationsRes.data?.length || 0);
-      } catch (e) {
-        // Ignore errors - these are optional for Quick Start
-        console.log('Optional Quick Start data fetch failed:', e);
-      }
     } catch (error) {
       console.log('Failed to fetch data:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
-    }
-  };
-
-  // Check if user has seen Quick Start Wizard
-  useEffect(() => {
-    const checkQuickStart = async () => {
-      try {
-        const seen = await AsyncStorage.getItem('inventory_quickstart_seen');
-        if (!seen) {
-          setHasSeenQuickStart(false);
-        }
-      } catch (e) {
-        console.log('Failed to check quick start status');
-      }
-    };
-    checkQuickStart();
-  }, []);
-
-  // Show Quick Start Wizard for first-time users with empty inventory
-  useEffect(() => {
-    if (!loading && !hasSeenQuickStart && items.length === 0) {
-      setShowQuickStartWizard(true);
-    }
-  }, [loading, hasSeenQuickStart, items.length]);
-
-  const handleQuickStartComplete = async () => {
-    try {
-      await AsyncStorage.setItem('inventory_quickstart_seen', 'true');
-      setHasSeenQuickStart(true);
-      fetchData(); // Refresh data after quick start
-    } catch (e) {
-      console.log('Failed to save quick start status');
     }
   };
 
@@ -1158,20 +1104,6 @@ export default function InventoryManagement() {
       {/* WEB DASHBOARD - Using ProductDashboard Component */}
       {isWeb ? (
         <View style={{ flex: 1 }}>
-          {/* Quick Start Panel - Show when inventory is empty */}
-          {(items.length === 0 || suppliersCount === 0 || locationsCount === 0) && (
-            <View style={{ paddingHorizontal: 24, paddingTop: 16 }}>
-              <InventoryQuickStartPanel
-                itemsCount={items.length}
-                suppliersCount={suppliersCount}
-                locationsCount={locationsCount}
-                onAddFirstItem={openAddStockModal}
-                onAddSupplier={() => router.push('/inventory/suppliers')}
-                onCreateLocation={() => router.push('/inventory/locations')}
-                onShowWizard={() => setShowQuickStartWizard(true)}
-              />
-            </View>
-          )}
           <ProductDashboard
             productId="inventory"
             subtitle="Inventory management overview"
@@ -1219,19 +1151,6 @@ export default function InventoryManagement() {
             {/* 3x3 Grid Icon for Apps */}
             <ProductSwitcher currentProductId="inventory" />
           </View>
-
-          {/* Quick Start Panel - Show when inventory is empty */}
-          {(items.length === 0 || suppliersCount === 0 || locationsCount === 0) && (
-            <InventoryQuickStartPanel
-              itemsCount={items.length}
-              suppliersCount={suppliersCount}
-              locationsCount={locationsCount}
-              onAddFirstItem={openAddStockModal}
-              onAddSupplier={() => router.push('/inventory/suppliers')}
-              onCreateLocation={() => router.push('/inventory/locations')}
-              onShowWizard={() => setShowQuickStartWizard(true)}
-            />
-          )}
 
           {/* Stats */}
           {renderStats()}
@@ -2744,21 +2663,6 @@ export default function InventoryManagement() {
           </View>
         </View>
       </Modal>
-
-      {/* Inventory Quick Start Wizard */}
-      <InventoryQuickStartWizard
-        visible={showQuickStartWizard}
-        onClose={() => {
-          setShowQuickStartWizard(false);
-          handleQuickStartComplete();
-        }}
-        onComplete={handleQuickStartComplete}
-        onOpenAddItem={() => {
-          setShowQuickStartWizard(false);
-          handleQuickStartComplete();
-          setTimeout(() => openAddStockModal(), 300);
-        }}
-      />
     </SafeAreaView>
   );
 }

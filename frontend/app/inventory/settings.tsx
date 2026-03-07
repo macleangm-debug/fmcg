@@ -638,20 +638,113 @@ export default function InventorySettings() {
         <View style={{ width: 40 }} />
       </View>
 
-      {/* Onboarding Welcome Banner */}
-      {isOnboarding && (
-        <View style={styles.onboardingBanner}>
-          <View style={styles.onboardingIconContainer}>
-            <Ionicons name="checkmark-circle" size={32} color="#10B981" />
+      {/* Complete Your Setup Panel - Shows for all users */}
+      <View style={styles.setupPanel}>
+        <View style={styles.setupPanelContent}>
+          <View style={styles.setupPanelLeft}>
+            <Text style={styles.setupPanelTitle}>Complete Your Setup</Text>
+            <Text style={styles.setupPanelProgress}>0/3</Text>
           </View>
-          <View style={styles.onboardingTextContainer}>
-            <Text style={styles.onboardingTitle}>Welcome to Inventory! 🎉</Text>
-            <Text style={styles.onboardingSubtitle}>
-              Complete your business setup below to get started. Set your currency, country, and other details.
-            </Text>
-          </View>
+          <TouchableOpacity 
+            style={styles.setupPanelButton}
+            onPress={() => setActiveTab('general')}
+          >
+            <Text style={styles.setupPanelButtonText}>Continue Setup</Text>
+            <Ionicons name="arrow-forward" size={18} color="#059669" />
+          </TouchableOpacity>
         </View>
-      )}
+      </View>
+
+      {/* Essential Settings Section */}
+      <View style={styles.essentialSection}>
+        <Text style={styles.essentialTitle}>Essential Settings</Text>
+        <Text style={styles.essentialSubtitle}>Get started with these basic settings</Text>
+        
+        <View style={styles.settingsCardsRow}>
+          {/* Business Profile Card */}
+          <TouchableOpacity 
+            style={styles.settingsCard}
+            onPress={() => setActiveTab('general')}
+          >
+            <View style={[styles.settingsCardIcon, { backgroundColor: '#DBEAFE' }]}>
+              <Ionicons name="business-outline" size={24} color="#2563EB" />
+            </View>
+            <View style={styles.settingsCardContent}>
+              <Text style={styles.settingsCardTitle}>Business Profile</Text>
+              <Text style={styles.settingsCardDescription}>Name, logo, contact details</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+          </TouchableOpacity>
+
+          {/* Stock Settings Card */}
+          <TouchableOpacity 
+            style={styles.settingsCard}
+            onPress={() => setActiveTab('app')}
+          >
+            <View style={[styles.settingsCardIcon, { backgroundColor: '#D1FAE5' }]}>
+              <Ionicons name="cube-outline" size={24} color="#059669" />
+            </View>
+            <View style={styles.settingsCardContent}>
+              <Text style={styles.settingsCardTitle}>Stock Settings</Text>
+              <Text style={styles.settingsCardDescription}>SKU format, alerts, units</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+          </TouchableOpacity>
+
+          {/* Locations Card */}
+          <TouchableOpacity 
+            style={styles.settingsCard}
+            onPress={() => router.push('/inventory/locations')}
+          >
+            <View style={[styles.settingsCardIcon, { backgroundColor: '#FEF3C7' }]}>
+              <Ionicons name="location-outline" size={24} color="#D97706" />
+            </View>
+            <View style={styles.settingsCardContent}>
+              <Text style={styles.settingsCardTitle}>Locations</Text>
+              <Text style={styles.settingsCardDescription}>Manage stores & warehouses</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+          </TouchableOpacity>
+
+          {/* Suppliers Card */}
+          <TouchableOpacity 
+            style={styles.settingsCard}
+            onPress={() => router.push('/inventory/suppliers')}
+          >
+            <View style={[styles.settingsCardIcon, { backgroundColor: '#EDE9FE' }]}>
+              <Ionicons name="people-outline" size={24} color="#7C3AED" />
+            </View>
+            <View style={styles.settingsCardContent}>
+              <Text style={styles.settingsCardTitle}>Suppliers</Text>
+              <Text style={styles.settingsCardDescription}>Manage vendor contacts</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={20} color="#9CA3AF" />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Advanced Settings Collapse */}
+      <TouchableOpacity style={styles.advancedSection}>
+        <View style={styles.advancedLeft}>
+          <Ionicons name="cog-outline" size={20} color="#6B7280" />
+          <Text style={styles.advancedTitle}>Advanced Settings</Text>
+        </View>
+        <Ionicons name="chevron-down" size={20} color="#6B7280" />
+      </TouchableOpacity>
+
+      {/* Need Help Section */}
+      <View style={styles.helpSection}>
+        <View style={styles.helpIconContainer}>
+          <Ionicons name="help-circle-outline" size={28} color="#2563EB" />
+        </View>
+        <View style={styles.helpContent}>
+          <Text style={styles.helpTitle}>Need Help?</Text>
+          <Text style={styles.helpDescription}>Our support team is here to help you get set up.</Text>
+        </View>
+        <TouchableOpacity style={styles.helpButton}>
+          <Text style={styles.helpButtonText}>Contact Support</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* Tab Selector */}
       <View style={[styles.tabContainer, isWeb && styles.tabContainerWeb]}>
@@ -2586,7 +2679,190 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#111827',
   },
-  // Onboarding Banner Styles
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 40,
+  },
+  // Complete Your Setup Panel
+  setupPanel: {
+    backgroundColor: '#D1FAE5',
+    marginHorizontal: 20,
+    marginBottom: 24,
+    borderRadius: 16,
+    padding: 20,
+  },
+  setupPanelContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  setupPanelLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  setupPanelTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#065F46',
+  },
+  setupPanelProgress: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#059669',
+    backgroundColor: '#A7F3D0',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  setupPanelButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  setupPanelButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#059669',
+  },
+  // Essential Settings Section
+  essentialSection: {
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  essentialTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  essentialSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginBottom: 16,
+  },
+  settingsCardsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  settingsCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    minWidth: 280,
+    flex: 1,
+    gap: 12,
+  },
+  settingsCardIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  settingsCardContent: {
+    flex: 1,
+  },
+  settingsCardTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 2,
+  },
+  settingsCardDescription: {
+    fontSize: 13,
+    color: '#6B7280',
+  },
+  // Advanced Settings Section
+  advancedSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 20,
+    marginBottom: 24,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  advancedLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  advancedTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  // Need Help Section
+  helpSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 20,
+    marginBottom: 32,
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    gap: 12,
+  },
+  helpIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#DBEAFE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  helpContent: {
+    flex: 1,
+  },
+  helpTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 2,
+  },
+  helpDescription: {
+    fontSize: 13,
+    color: '#6B7280',
+  },
+  helpButton: {
+    backgroundColor: '#059669',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  helpButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
+  // Detailed Settings Container
+  detailedSettingsContainer: {
+    paddingHorizontal: 20,
+  },
+  detailedSettingsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 16,
+  },
+  // Onboarding Banner Styles (kept for backwards compatibility)
   onboardingBanner: {
     flexDirection: 'row',
     backgroundColor: '#ECFDF5',
