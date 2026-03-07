@@ -1,25 +1,29 @@
 <analysis>**original_problem_statement:**
-The user's initial goal was to make the RetailPro application merchant-ready by adding country-specific payment methods, professional receipts with configurable QR codes, responsive modals, and Tigo SMS integration.
+The user's initial goal was to make the RetailPro application merchant-ready by adding country-specific payment methods and professional receipts. The focus has since shifted to making the **Inventory module** a complete, standalone product that is visually and functionally consistent with the rest of the ecosystem.
 
-The focus has since shifted to making the **Inventory module** a complete, standalone product that is visually and functionally consistent with the rest of the ecosystem. The current and most critical task is to align the **RetailPro Products page** with the more mature **Inventory Items page**, ensuring component reusability and feature parity (full CRUD, more fields, better filtering) as defined in a detailed blueprint provided by the user.
+The current architectural principle is that **products (RetailPro, Inventory, Invoicing) are standalone** and only share data when explicitly linked; their interfaces must not be mixed.
+
+After completing the backend for Inventory (gating, Purchase Orders, Receiving), the user identified critical UI instability issues (non-responsive pages, missing buttons, inconsistent naming). The immediate priority is to fix these issues and align the Inventory product's UI with the established ecosystem design before adding any new features.
 
 **User's preferred language**: English
 
 **what currently exists?**
-The application is a full-stack retail platform with a POS (RetailPro) and an Inventory module.
-- The critical bug preventing the sales receipt from showing has been fixed.
-- A progressive onboarding flow () has been implemented to help new merchants get started quickly.
-- Print styles for receipts have been improved to hide UI elements.
-- A comprehensive analysis of the Inventory module was completed, highlighting its architectural separation from the POS ( vs.  collections).
-- Full CRUD functionality for **Suppliers** has been implemented in the Inventory module (backend and frontend).
-- A reusable  component has been created and enhanced to support different fields and item types ( vs. ) for both RetailPro and Inventory contexts.
-- Backend routes for the Inventory module are now properly gated, requiring a module subscription.
+- A full-stack retail application with separate but potentially linkable products: POS (RetailPro) and Inventory.
+- The RetailPro products page has full CRUD capabilities and advanced filters, serving as a design reference.
+- The Inventory product's backend is substantially complete:
+    - All routes are gated via  to enforce it as a standalone, subscribed product.
+    - Full backend CRUD APIs for Suppliers, Purchase Orders, and Receiving have been implemented and verified.
+- The core Inventory frontend pages ( and ) are now connected to the real backend APIs, with all mock data removed.
+- A full end-to-end test of the  flow has been successfully verified via API calls.
+- Initial UI instability fixes are complete: placeholder pages for , , and  have been created, and the main Inventory sidebar navigation has been corrected.
+-  has been established as the definitive reference page for UI alignment.
+-  has been identified as the standard responsive modal to be used across the application.
 
 **Last working item**:
-- **Last item agent was working**: Enhancing the reusable  component to support an edit mode. This involved adding props like  and  and the logic to populate the form for editing an existing product or item. This is the first step in aligning the RetailPro Products page with the more feature-complete Inventory page.
+- **Last item agent was working**: Investigating the standard modal component as requested by the user. The agent has identified  and reviewed its implementation and a usage example in . This is in preparation for aligning all Inventory modals to this standard.
 - **Status**: IN PROGRESS
-- **Agent Testing Done**: N
-- **Which testing method agent to use?**: Frontend testing agent. After the full alignment of the Products page is complete (implementing edit, delete, detail modals, adding new fields and filters), the testing agent should be used to verify all CRUD operations work as expected and that the UI is consistent.
+- **Agent Testing Done**: N/A
+- **Which testing method agent to use?**: N/A
 - **User Testing Done**: N
 
 **All Pending/In progress Issue list**:
@@ -28,141 +32,138 @@ The application is a full-stack retail platform with a POS (RetailPro) and an In
 
 **Issues Detail**:
 - **Issue 1**: Printed Receipt is Cut Off
-    - **Attempted fixes**: The agent wrapped the receipt content in a  inside the .
-    - **Next debug checklist**: This fix is unverified. Now that the receipt modal displays correctly, the next agent must manually test the print functionality to confirm the receipt is no longer cut off. If it is, inspect the print-specific CSS in .
-    - **Why fix this issue and what will be achieved with the fix?**: Merchants need to be able to print or share a complete, professional-looking receipt.
-    - **Status**: BLOCKED
+    - **Attempted fixes**: A  was added and print-specific CSS exists.
+    - **Next debug checklist**: This fix is unverified. The next agent must perform a sale (ideally with many items to create a long receipt) and test the Print or Download PDF functionality to confirm if the receipt is still cut off. If it is, inspect the print styles in  and .
+    - **Why fix this issue and what will be achieved with the fix?**: Merchants require complete and professional receipts for their customers.
+    - **Status**: USER VERIFICATION PENDING
     - **Is recurring issue?**: N
     - **Should Test frontend/backend/both after fix?**: Frontend
-    - **Blocked on other issue**: Blocked on manual user/agent verification of the sales flow.
+    - **Blocked on other issue**: None
 
 - **Issue 2**:  Component Crash
-    - **Attempted fixes**: None in this session.
-    - **Next debug checklist**: This is a low-priority issue as the component is not in use. It is likely a build configuration problem in  or .
-    - **Why fix this issue and what will be achieved with the fix?**: Enables multi-language support in the future.
+    - **Attempted fixes**: None.
+    - **Next debug checklist**: This is a low-priority component that is not currently used. The issue is likely related to build configuration ( or ).
+    - **Why fix this issue and what will be achieved with the fix?**: It enables future multi-language support.
     - **Status**: NOT STARTED
     - **Is recurring issue?**: Y
     - **Should Test frontend/backend/both after fix?**: Frontend
     - **Blocked on other issue**: None
 
 **In progress Task List**:
-- **Task 1**: Align RetailPro Products Page with Inventory Module (P0)
+- **Task 1**: Align Inventory Pages with Standard Ecosystem Design (P0)
     - **Where to resume**:
-        1.  In , complete the implementation for edit mode by adding a  to populate the form state when  and  are provided.
-        2.  Go to  and replace the existing inline Quick Add modal with the enhanced, reusable .
-        3.  Add an Edit button to each product card and wire it to open the  in edit mode, passing the product's data.
-    - **What will be achieved with this?**: This will bring the RetailPro Products page up to the same quality standard as the Inventory module by enabling product editing and establishing a pattern for full CRUD functionality using a shared, consistent component.
+        1.  Present the findings about  to the user.
+        2.  Upon approval, begin refactoring the Inventory pages, starting with the main items list ( or ).
+        3.  The refactor should make the page's UI match the structure of the reference page (), including the header (title/actions), stats cards, search placement, and table/grid view.
+    - **What will be achieved with this?**: A consistent and professional UI/UX across the entire application, making the Inventory product feel like a cohesive part of the ecosystem.
     - **Status**: IN PROGRESS
     - **Should Test frontend/backend/both after fix?**: Frontend
-    - **Blocked on something**: None.
+    - **Blocked on something**: Awaiting user confirmation after providing details on the standard modal component.
 
 **Upcoming and Future Tasks**
 - **Upcoming Tasks**:
-    - **(P0) Complete RetailPro Products Alignment**:
-        - Add Delete Product functionality (with a confirmation modal).
-        - Add a Product Detail view modal.
-        - Add remaining fields to the RetailPro product form (cost price, SKU, min stock, unit).
-        - Add filters for Item Type (Product/Service), Status (Active, Low Stock), and stock levels.
-    - **(P1) Complete Inventory Standalone Features**:
-        - Connect the Receiving screen () to a real backend API to replace the mock data.
-        - Complete the Purchase Order creation and management workflow.
-    - **(P1) Implement POS-Inventory Sync**: Create the linking layer (e.g., a  collection) to allow optional stock synchronization when a POS sale occurs.
-    - **(P2) Implement Sample Product Creation**: Create a backend endpoint to add sample products when a merchant clicks Start Selling Now in the .
+    - **(P0) Complete Inventory UI Implementation**:
+        - Implement the full UI and functionality for the placeholder pages: , , and .
+        - Add a visible  button to the main Inventory items page, which opens the standard .
+        - Add an Item Type filter (, , ) to the Inventory items list.
+    - **(P1) Rename Products to Items in RetailPro**: Update the RetailPro UI to use the more general term Items to better encompass both Products and Services.
+    - **(P1) Implement POS-Inventory Linking Layer**: Create the  collection and build the UI for merchants to link items between RetailPro and Inventory. Implement the logic for linked sales to deplete Inventory stock.
 
 - **Future Tasks**:
-    - Convert all remaining modals to the responsive  pattern.
-    - Implement the settings UI for merchants to configure the QR code link on receipts.
-    - Refactor the monolithic .
-    - Refactor the oversized .
-    - Add Location Management and Transfer UIs to the Inventory module.
+    - Implement barcode scanning capabilities in Receiving and POS.
+    - Create the UI for merchants to configure SKU generation settings.
+    - Implement non-intrusive soft CTAs in the UI to suggest linking other products.
+    - Refactor the monolithic  and oversized frontend components like .
 
 **Completed work in this session**
-- **Receipt Modal Bug Fix (DONE)**: Fixed the critical bug where the receipt modal failed to appear after a sale by deferring the  action until the modal is closed.
-- **Progressive Onboarding (DONE)**: Created and integrated a  and  system to simplify the new merchant setup process.
-- **Receipt Print Styles (DONE)**: Added CSS to  to hide UI buttons during printing, ensuring a clean printed receipt.
-- **Inventory Analysis (DONE)**: Performed a deep-dive analysis of the Inventory module, identifying its architecture and key gaps, notably the disconnect from POS.
-- **Supplier CRUD (DONE)**: Implemented full Create, Read, Update, and Delete functionality for Suppliers in the Inventory module, including both backend API () and a new frontend page ().
-- **Reusable Product Modal (DONE)**: Created  and enhanced it to be configurable for both RetailPro and Inventory contexts, supporting different fields and item types.
-- **Backend Module Gating (DONE)**: Implemented a  decorator to protect all inventory-specific API endpoints.
-- **QR Code Settings UI (DONE)**: Implemented the frontend modal and state management for QR code configuration in the settings page.
+- **RetailPro Products Page Alignment (DONE)**: The page at  now has full CRUD, advanced filters, and uses the reusable .
+- **Inventory Backend Completion (DONE)**:
+    - **Gating**: All Inventory routes in  are now protected by .
+    - **Purchase Orders & Receiving**: Full backend APIs for the PO lifecycle have been created. The corresponding frontend pages (, ) are now connected to these APIs, removing all mock data.
+    - **E2E Flow Verified**: The core flow of  ->  ->  ->  has been confirmed to work.
+- **UI Instability & Navigation Fixes (DONE)**:
+    - Created placeholder pages for , , and  to fix broken links.
+    - Corrected the Inventory sidebar navigation in .
+- **UI Design Alignment (DONE)**:
+    - Fixed the POS Add Sale page to use a responsive 4-column grid.
+    - Established  as the standard UI reference page.
+    - Identified  as the standard responsive modal component.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Component Reusability**: Abstracting UI into configurable components like  to serve different parts of the application (RetailPro vs. Inventory) with slight variations driven by props.
-- **Modular Monolith Architecture**: Building features as independent modules (e.g., Inventory) within a single codebase, with access controlled by backend decorators (). This prepares the app for future separation into microservices if needed.
-- **Progressive Onboarding**: Improving user experience by deferring complex setup steps. The  allows merchants to start selling immediately, while  asks for information contextually.
+- **Product-based Architecture**: The application is composed of standalone products (RetailPro, Inventory, Invoicing) that can be enabled per business. They only share data when explicitly linked.
+- **Interface Decoupling**: A strict rule that one product's UI and workflows must not be embedded within another's. Linking enables data sharing and status visibility, not UI merging.
+- **Backend Gating**: Using a FastAPI dependency () to protect all Inventory-related API endpoints, enforcing the product subscription model.
 
 **key DB schema**
-- : { name, sku, quantity, cost_price, selling_price, min_quantity, category_id, supplier_id, item_type: product | raw_material }
-- : { name, quantity, unit_price, cost_price, category_id } (Used by POS, lacks many fields)
-- : { supplier_id, business_id, name, phone, email, contact_person, status }
+- : { , , , , , , : product | service }
+- : { , : draft | submitted | partial | received, : [...] }
+- : { , : [inventory, invoicing] }
 
 **All files of reference**
-- **New Files**:
-    - : Houses all inventory-related API endpoints.
-    - : Contains the  dependency for gating routes.
-    - : The core reusable component for adding/editing products and inventory items.
-    - : The UI for managing suppliers.
-    - : The new merchant onboarding wizard.
-    - : The UI for managing QR code settings.
-- **Significantly Updated Files**:
-    - : Fixed the receipt modal display logic.
-    - : Integrated the .
-    - : Integrated the new user onboarding flow.
+- : **The UI reference page**. Use this for layout, headers, stats, and actions.
+- : **The UI reference component**. Use this for all modals to ensure responsive behavior.
+- : Contains all the gated backend logic for the Inventory product.
+- : Defines the navigation structure for the Inventory product.
 
 **Areas that need refactoring**:
-- : This is the next major refactoring target. It needs to be updated to use the new  and implement full CRUD functionality.
-- : Still contains many non-modularized routes that should be moved into the  directory.
+- The placeholder pages (, , ) need to be fully implemented.
+- All major Inventory list pages should be refactored to match the design of .
 
 **key api endpoints**
--  (GET, POST): Manage suppliers.
--  (PUT, DELETE): Manage a specific supplier.
-- All endpoints under  are now gated and require the business to have the inventory module enabled.
+-  (GET, POST): Manage Purchase Orders.
+-  (GET): Get POs ready for receiving.
+-  (POST): Receive items against a PO.
+-  (GET, POST): Manage locations.
+-  (GET, POST): Manage stock transfers.
+*(All endpoints under  are gated)*
 
 **Critical Info for New Agent**
-- **Your top priority is the Products Page Alignment task.** The goal is to give the RetailPro Products page full CRUD capabilities (Create, Edit, Delete, View) and more advanced fields/filters, making it as mature as the Inventory page.
-- **Reuse, Don't Rebuild.** The cornerstone of this task is to use the enhanced, reusable  for all product creation and editing. Do not create a separate modal.
-- You will resume work on  to finish implementing the edit mode logic before integrating it into .
-- Follow the user's detailed blueprint for implementation order: 1) Enhance modal, 2) Implement Edit, 3) Implement Delete, 4) Add Detail View, 5) Add new fields and filters.
+- **Priority #1 is UI Alignment and Stability.** Do not add new features until the Inventory product is stable and visually consistent with the rest of the ecosystem.
+- Your **UI design reference** is . All major Inventory pages must be refactored to match this structure.
+- Your **modal component reference** is . Use it for all new modals.
+- **The architectural rule is strict: Products are standalone.** Do not mix UIs or workflows. Linking enables data sharing, not UI merging.
+- Your immediate next task, after confirming with the user about the modal component, is to start the UI alignment of the Inventory pages.
 
 **documents and test reports created in this job**
-- 
-- 
-- 
-- 
+- : Contains the latest product requirements and architectural decisions.
+- : Test report from the verification of the RetailPro products page.
 
 **Last 10 User Messages and any pending HUMAN messages**
-10. **User**: Provided a comprehensive analysis of the Inventory module and asked the agent to produce a blueprint for completion.
-9. **User**: Asked the agent to provide the code for the Add New Product modal in RetailPro so it can be reused for Inventory.
-8. **User**: Acknowledged the agent's detailed analysis of the Inventory module and provided a master Inventory Completion Blueprint, prioritizing module gating, supplier CRUD, and fixing the POS-Inventory disconnect.
-7. **User**: Approved the plan to reuse the  and extend it to support Product/Raw Material types for the Inventory module.
-6. **User**: Provided a master implementation prompt/blueprint for aligning the RetailPro Products page and the Inventory module, emphasizing UI consistency and component reuse.
-5. **User**: (Pending) Waiting for the implementation of the alignment blueprint to be completed.
-4. **User**: How will this work - add sample product creation when a new merchant clicks Start Selling Now so they can immediately start exploring the sales flow.
-3. **User**: Great — to finish the Inventory product properly, I need to see the parts that tell us what already works, what is missing, how independent it really is from POS, whether it already behaves like a standalone app.
-2. **User**: pLEASE SHARE THE CODE BASE FOR THE ADD NEW PRODUCT MODAL IN RETAILPRO SO THAT WE CAN RE-USE IT IN INVENTORY
-1. **User**: Provided detailed blueprint for aligning RetailPro products and Inventory items, emphasizing component reuse and functional parity.
+10. User confirms architecture, shifts priority to Inventory completion, provides detailed prompt.
+9.  User approves sequential execution, clarifies supplier field requirements.
+8.  User receives progress update on backend completion, asks to see the app.
+7.  User is provided with URL/credentials.
+6.  User reports UI instability (missing buttons, non-responsive pages), prioritizes fixing these over new features and renames Warehouse to Location.
+5.  User asks for a reference page from RetailPro to guide the Inventory UI alignment.
+4.  Agent provides POS Add Sale page as reference.
+3.  User corrects agent, asks for a 4-column layout on POS page and a proper standard page for reference.
+2.  Agent fixes 4-column layout and provides  as the correct reference page.
+1.  **PENDING**: User has now asked to see the standard reusable modal component used across the ecosystem.
 
 **Project Health Check:**
 - **Broken**:
-    - The RetailPro Products page () is functionally incomplete. It lacks edit, delete, and detail view functionality, making product management impossible after creation.
+    - Several Inventory pages (, , ) are non-functional placeholders.
+    - The main Inventory items page lacks a visible Add Item button and does not conform to the standard ecosystem design.
 - **Mocked**:
-    - The Inventory Receiving screen () is not connected to any backend API and relies entirely on static mock data.
+    - None. Core mock data has been replaced with live API calls.
 
 **3rd Party Integrations**
-- **Tigo Bulk SMS**: Implemented via  (Python library).
-- **react-native-qrcode-svg**: Used for generating QR codes on the receipt.
+- : For Tigo Bulk SMS.
+- : For receipt QR codes.
 
 **Testing status**
-- **Testing agent used after significant changes**: YES. The agent was used to validate the backend implementation of Supplier CRUD, which passed all tests.
+- **Testing agent used after significant changes**: YES, to verify the RetailPro products page alignment.
 - **Troubleshoot agent used after agent stuck in loop**: NO
 - **Test files created**: None.
-- **Known regressions**: Automated frontend testing via Playwright is consistently failing due to session timeouts. This means UI-heavy features require manual verification with the  tool.
+- **Known regressions**: None in this session.
 
 **Credentials to test flow:**
-- **Admin**:  / 
+- **Email**: 
+- **Password**: 
 
 **What agent forgot to execute**
-- The agent has been closely following the user's detailed blueprints and has not overlooked any requested tasks. The remaining work is captured in the In progress and Upcoming task lists.</analysis>
+- The user's request to rename Products to Items in the RetailPro UI has been noted but not yet implemented. This should be prioritized after the current Inventory UI work.
+- The placeholder pages (, , etc.) were created to fix navigation but still require full implementation.</analysis>

@@ -511,7 +511,7 @@ export default function ProductManagement() {
     const missingFields: string[] = [];
     
     if (!formName.trim()) {
-      missingFields.push('Product Name');
+      missingFields.push('Item Name');
     }
 
     if (!formCategoryId) {
@@ -588,13 +588,13 @@ export default function ProductManagement() {
       if (editingProduct) {
         await api.put(`/inventory/items/${editingProduct.id}`, productData);
         setSuccessMessage({
-          title: 'Product Updated!',
+          title: 'Item Updated!',
           subtitle: `"${formName}" has been updated successfully`
         });
       } else {
         await api.post('/inventory/items', productData);
         setSuccessMessage({
-          title: 'Product Added!',
+          title: 'Item Added!',
           subtitle: `"${formName}" has been added to your inventory`
         });
       }
@@ -625,7 +625,7 @@ export default function ProductManagement() {
       await api.delete(`/inventory/items/${productToDelete.id}`);
       setShowDeleteModal(false);
       setProductToDelete(null);
-      setSuccessMessage({ title: 'Product Deleted', subtitle: `"${productToDelete.name}" has been removed.` });
+      setSuccessMessage({ title: 'Item Deleted', subtitle: `"${productToDelete.name}" has been removed.` });
       setShowSuccessModal(true);
       fetchData();
     } catch (error) {
@@ -779,8 +779,23 @@ export default function ProductManagement() {
             </Text>
           </View>
         </View>
-        <View style={[styles.webTableCell, { flex: 0.5, alignItems: 'center' }]}>
-          <TouchableOpacity onPress={() => handleDeleteProduct(item)}>
+        <View style={[styles.webTableCell, { flex: 0.8, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12 }]}>
+          <TouchableOpacity 
+            onPress={(e) => {
+              e.stopPropagation?.();
+              handleEditProduct(item);
+            }}
+            style={styles.tableActionButton}
+          >
+            <Ionicons name="pencil-outline" size={18} color="#2563EB" />
+          </TouchableOpacity>
+          <TouchableOpacity 
+            onPress={(e) => {
+              e.stopPropagation?.();
+              handleDeleteProduct(item);
+            }}
+            style={styles.tableActionButton}
+          >
             <Ionicons name="trash-outline" size={18} color="#DC2626" />
           </TouchableOpacity>
         </View>
@@ -928,42 +943,45 @@ export default function ProductManagement() {
       {isWeb && (
         <View style={styles.webPageHeader}>
           <View>
-            <Text style={styles.webPageTitle}>Products</Text>
+            <Text style={styles.webPageTitle}>Items</Text>
             {products.length > 0 && (
-              <Text style={styles.webPageSubtitle}>{products.length} product(s) • {categories.length} categories</Text>
+              <Text style={styles.webPageSubtitle}>{products.length} item(s) • {categories.length} categories</Text>
             )}
           </View>
-          {products.length > 0 && (
-            <View style={styles.headerActions}>
-              <ViewToggle
-                currentView={productsView}
-                onToggle={setProductsView}
-              />
-              <TouchableOpacity 
-                style={styles.importExportButton}
-                onPress={() => setShowImportExportModal(true)}
-              >
-                <Ionicons name="swap-vertical-outline" size={20} color="#6B7280" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.webCreateBtn}
-                onPress={async () => {
-                  await fetchCategories();
-                  openAddForm();
-                }}
-              >
-                <Ionicons name="add" size={20} color="#FFFFFF" />
-                <Text style={styles.webCreateBtnText}>Add Product</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+          <View style={styles.headerActions}>
+            {products.length > 0 && (
+              <>
+                <ViewToggle
+                  currentView={productsView}
+                  onToggle={setProductsView}
+                />
+                <TouchableOpacity 
+                  style={styles.importExportButton}
+                  onPress={() => setShowImportExportModal(true)}
+                >
+                  <Ionicons name="swap-vertical-outline" size={20} color="#6B7280" />
+                </TouchableOpacity>
+              </>
+            )}
+            <TouchableOpacity
+              style={styles.webCreateBtn}
+              onPress={async () => {
+                await fetchCategories();
+                openAddForm();
+              }}
+              data-testid="add-item-button"
+            >
+              <Ionicons name="add" size={20} color="#FFFFFF" />
+              <Text style={styles.webCreateBtnText}>Add Item</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
       {/* Mobile Header */}
       {!isWeb && (
         <View style={styles.header}>
-          <Text style={styles.title}>Products</Text>
+          <Text style={styles.title}>Items</Text>
           {products.length > 0 && (
             <View style={styles.headerActions}>
               <TouchableOpacity 
@@ -979,6 +997,7 @@ export default function ProductManagement() {
                   openAddForm();
                 }}
                 activeOpacity={0.7}
+                data-testid="add-item-button-mobile"
               >
                 <Ionicons name="add" size={24} color="#FFFFFF" />
               </TouchableOpacity>
@@ -1013,9 +1032,51 @@ export default function ProductManagement() {
       {isWeb ? (
         <View style={styles.webContentWrapper}>
           <View style={styles.webWhiteCard}>
-            {/* Filter and Search Row - Only show when there are products */}
+            {/* Card Header with Count and Search */}
             {products.length > 0 && (
               <View style={styles.webCardHeader}>
+                <Text style={styles.webCardTitle}>{filteredProducts.length} Items</Text>
+                <View style={styles.webSearchBox}>
+                  <Ionicons name="search" size={18} color="#6B7280" />
+                  <TextInput
+                    style={styles.webSearchInput}
+                    placeholder="Search items..."
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                    placeholderTextColor="#6B7280"
+                  />
+                  {searchQuery.length > 0 && (
+                    <TouchableOpacity onPress={() => setSearchQuery('')}>
+                      <Ionicons name="close-circle" size={18} color="#6B7280" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+            )}
+
+            {/* Stats Row - Inside white card like reference */}
+            {products.length > 0 && (
+              <View style={styles.webStatsRow}>
+                <View style={styles.webStatItem}>
+                  <Text style={styles.webStatValue}>{formatNumber(products.length)}</Text>
+                  <Text style={styles.webStatLabel}>Total Items</Text>
+                </View>
+                <View style={styles.webStatItem}>
+                  <Text style={[styles.webStatValue, { color: '#F59E0B' }]}>
+                    {formatNumber(products.filter(p => p.quantity <= p.min_quantity).length)}
+                  </Text>
+                  <Text style={styles.webStatLabel}>Low Stock</Text>
+                </View>
+                <View style={styles.webStatItem}>
+                  <Text style={styles.webStatValue}>{formatNumber(categories.length)}</Text>
+                  <Text style={styles.webStatLabel}>Categories</Text>
+                </View>
+              </View>
+            )}
+
+            {/* Category Filter Tabs */}
+            {products.length > 0 && categories.length > 0 && (
+              <View style={styles.webTabsRow}>
                 <View style={styles.webTabs}>
                   <TouchableOpacity
                     style={[styles.webTab, !selectedCategoryFilter && styles.webTabActive]}
@@ -1041,22 +1102,6 @@ export default function ProductManagement() {
                     </TouchableOpacity>
                   ))}
                 </View>
-                
-                <View style={styles.webSearchBox}>
-                  <Ionicons name="search" size={18} color="#6B7280" />
-                  <TextInput
-                    style={styles.webSearchInput}
-                    placeholder="Search products..."
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                    placeholderTextColor="#6B7280"
-                  />
-                  {searchQuery.length > 0 && (
-                    <TouchableOpacity onPress={() => setSearchQuery('')}>
-                      <Ionicons name="close-circle" size={18} color="#6B7280" />
-                    </TouchableOpacity>
-                  )}
-                </View>
               </View>
             )}
 
@@ -1074,12 +1119,12 @@ export default function ProductManagement() {
                     {searchQuery ? 'No products match your search' : "Your inventory's looking a bit... empty"}
                   </Text>
                   <Text style={styles.webEmptySubtext}>
-                    {searchQuery ? 'Try a different search term' : 'Time to stock up! Add your first product to get started.'}
+                    {searchQuery ? 'Try a different search term' : 'Time to stock up! Add your first item to get started.'}
                   </Text>
                   {!searchQuery && (
                     <TouchableOpacity style={styles.webEmptyBtn} onPress={openAddForm}>
                       <Ionicons name="add" size={20} color="#FFFFFF" />
-                      <Text style={styles.webEmptyBtnText}>Add First Product</Text>
+                      <Text style={styles.webEmptyBtnText}>Add First Item</Text>
                     </TouchableOpacity>
                   )}
                 </View>
@@ -1146,9 +1191,9 @@ export default function ProductManagement() {
                     title={selectedCategoryFilter ? "No Products in This Category" : "Your inventory's looking a bit... empty"}
                     message={selectedCategoryFilter 
                       ? "Move products to another category or delete them to remove this category"
-                      : "Time to stock up! Add your first product to get started."
+                      : "Time to stock up! Add your first item to get started."
                     }
-                    actionLabel={selectedCategoryFilter ? "Clear Filter" : "Add Product"}
+                    actionLabel={selectedCategoryFilter ? "Clear Filter" : "Add Item"}
                     onAction={() => {
                       if (selectedCategoryFilter) {
                         setSelectedCategoryFilter(null);
@@ -1169,15 +1214,15 @@ export default function ProductManagement() {
       <WebModal
         visible={showAddModal}
         onClose={() => { resetForm(); setShowAddModal(false); }}
-        title={editingProduct ? 'Edit Product' : 'Add New Product'}
-        subtitle={editingProduct ? 'Update product information' : 'Add a new product to your catalog'}
+        title={editingProduct ? 'Edit Item' : 'Add New Item'}
+        subtitle={editingProduct ? 'Update item information' : 'Add a new item to your inventory'}
         icon={editingProduct ? 'create-outline' : 'bag-add-outline'}
         iconColor="#2563EB"
         maxWidth={550}
       >
         <Input
-          label="Product Name *"
-          placeholder="Enter the product name"
+          label="Item Name *"
+          placeholder="Enter the item name"
           value={formName}
           onChangeText={setFormName}
         />
@@ -1645,7 +1690,7 @@ export default function ProductManagement() {
         )}
 
         <Button
-          title={editingProduct ? 'Update Product' : 'Add Product'}
+          title={editingProduct ? 'Update Item' : 'Add Item'}
           onPress={handleSaveProduct}
           loading={saving}
           style={styles.saveButton}
@@ -1674,7 +1719,7 @@ export default function ProductManagement() {
       >
         <ActionSheetItem
           icon="pencil-outline"
-          label="Edit Product"
+          label="Edit Item"
           iconColor="#4F46E5"
           iconBg="#EEF2FF"
           onPress={() => {
@@ -3195,6 +3240,17 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E5E7EB',
     flexWrap: 'wrap',
     gap: 12,
+  },
+  webCardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+  },
+  webTabsRow: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
   webTabs: {
     flexDirection: 'row',
